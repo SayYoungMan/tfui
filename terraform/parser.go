@@ -25,6 +25,10 @@ func (p *Parser) Stats() (resources, errors, warnings int) {
 
 // ParseLine parses single line of JSON into a StreamEvent
 func (p *Parser) ParseLine(line []byte) (*StreamEvent, error) {
+	if len(line) == 0 {
+		return nil, nil
+	}
+
 	var msg PlanMessage
 	if err := json.Unmarshal(line, &msg); err != nil {
 		return nil, fmt.Errorf("failed to parse plan JSON: %w", err)
@@ -61,15 +65,15 @@ func (p *Parser) parseRefreshComplete(hook *HookPayload) (*StreamEvent, error) {
 }
 
 func (p *Parser) parseApplyComplete(hook *HookPayload) (*StreamEvent, error) {
+	// We want to record events of apply_complete only when it's finished reading data block
+	if hook.Action != "read" {
+		return nil, nil
+	}
+
 	addr := hook.Resource.Addr
 	if !p.seen[addr] {
 		p.seen[addr] = true
 		p.resourceCount++
-	}
-
-	// We want to record events of apply_complete only when it's finished reading data block
-	if hook.Action != "read" {
-		return nil, nil
 	}
 
 	return &StreamEvent{Resource: extractResourceInfo(&hook.Resource, ActionRead, "")}, nil

@@ -7,6 +7,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestParseEmptyLine(t *testing.T) {
+	p := NewParser()
+	event, err := p.ParseLine([]byte(""))
+
+	require.NoError(t, err)
+	assert.Nil(t, event)
+}
+
 func TestParseRefreshComplete(t *testing.T) {
 	line := []byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Refresh complete [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_complete"}`)
 
