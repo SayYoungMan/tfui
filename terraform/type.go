@@ -25,13 +25,11 @@ const (
 	ActionNoop    Action = "no-op"
 )
 
-// Returns what symbol to be shown as resource adornment
+// Returns what symbol to be shown as pre-adornment
 func (a Action) Symbol() string {
 	switch a {
 	case ActionCreate:
 		return "+"
-	case ActionRead:
-		return "≈"
 	case ActionUpdate:
 		return "~"
 	case ActionDelete:
@@ -42,7 +40,7 @@ func (a Action) Symbol() string {
 		return "→"
 	case ActionImport:
 		return "↓"
-	case ActionNoop:
+	case ActionRead, ActionNoop:
 		return " "
 	default:
 		return "?"
@@ -64,7 +62,7 @@ type Resource struct {
 
 // --- Below are raw JSON structures from `terraform plan -json` ---
 
-// top-level envelope for every line of plan -json output.
+// struct for every line of plan -json output.
 type PlanMessage struct {
 	Level      string                 `json:"@level"`
 	Message    string                 `json:"@message"`
