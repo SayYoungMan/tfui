@@ -60,6 +60,14 @@ func TestModel_UpdateExistingResource(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
 
+	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
+		Resource: &terraform.Resource{
+			Address: testResourceAddr,
+			Action:  terraform.ActionNoop,
+		},
+	}))
+	m = newModel.(Model)
+
 	newModel, cmd := m.Update(streamEventMsg(terraform.StreamEvent{
 		Resource: &terraform.Resource{
 			Address: testResourceAddr,
@@ -77,6 +85,14 @@ func TestModel_UpdateExistingResource(t *testing.T) {
 func TestModel_DriftExistingResource(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
+
+	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
+		Resource: &terraform.Resource{
+			Address: testResourceAddr,
+			Action:  terraform.ActionNoop,
+		},
+	}))
+	m = newModel.(Model)
 
 	newModel, cmd := m.Update(streamEventMsg(terraform.StreamEvent{
 		Resource: &terraform.Resource{
