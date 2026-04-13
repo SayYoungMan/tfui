@@ -1,4 +1,4 @@
-package main
+package ui
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
-	"github.com/SayYoungMan/tfui/terraform"
+	"github.com/SayYoungMan/tfui/pkg/terraform"
 )
 
 type (
