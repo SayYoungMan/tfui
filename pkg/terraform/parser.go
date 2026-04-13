@@ -35,10 +35,10 @@ func (p *Parser) ParseLine(line []byte) (*StreamEvent, error) {
 	}
 
 	switch msg.Type {
-	case "refresh_complete":
-		return p.parseRefreshComplete(msg.Hook)
-	case "apply_complete":
-		return p.parseApplyComplete(msg.Hook)
+	case "refresh_start":
+		return p.parseRefreshStart(msg.Hook)
+	case "apply_start":
+		return p.parseApplyStart(msg.Hook)
 	case "resource_drift":
 		return p.parseResourceDrift(msg.Change)
 	case "planned_change":
@@ -54,7 +54,7 @@ func (p *Parser) ParseLine(line []byte) (*StreamEvent, error) {
 	}
 }
 
-func (p *Parser) parseRefreshComplete(hook *HookPayload) (*StreamEvent, error) {
+func (p *Parser) parseRefreshStart(hook *HookPayload) (*StreamEvent, error) {
 	addr := hook.Resource.Addr
 	if !p.seen[addr] {
 		p.seen[addr] = true
@@ -64,7 +64,7 @@ func (p *Parser) parseRefreshComplete(hook *HookPayload) (*StreamEvent, error) {
 	return &StreamEvent{Resource: extractResourceInfo(&hook.Resource, ActionNoop, "")}, nil
 }
 
-func (p *Parser) parseApplyComplete(hook *HookPayload) (*StreamEvent, error) {
+func (p *Parser) parseApplyStart(hook *HookPayload) (*StreamEvent, error) {
 	// We want to record events of apply_complete only when it's finished reading data block
 	if hook.Action != "read" {
 		return nil, nil

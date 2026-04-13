@@ -15,8 +15,8 @@ func TestParseEmptyLine(t *testing.T) {
 	assert.Nil(t, event)
 }
 
-func TestParseRefreshComplete(t *testing.T) {
-	line := []byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Refresh complete [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_complete"}`)
+func TestParseRefreshStart(t *testing.T) {
+	line := []byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Refreshing state... [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_start"}`)
 
 	p := NewParser()
 	event, err := p.ParseLine(line)
@@ -28,8 +28,8 @@ func TestParseRefreshComplete(t *testing.T) {
 	assert.Equal(t, "aws", event.Resource.ImpliedProvider)
 }
 
-func TestParseApplyComplete(t *testing.T) {
-	line := []byte(`{"@level":"info","@message":"data.aws_caller_identity.current: Refresh complete after 0s [id=123456789012]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.133445+01:00","hook":{"resource":{"addr":"data.aws_caller_identity.current","module":"","resource":"data.aws_caller_identity.current","implied_provider":"aws","resource_type":"aws_caller_identity","resource_name":"current","resource_key":null},"action":"read","id_key":"id","id_value":"123456789012","elapsed_seconds":0},"type":"apply_complete"}`)
+func TestParseApplyStart(t *testing.T) {
+	line := []byte(`{"@level":"info","@message":"data.aws_caller_identity.current: Reading...","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.133445+01:00","hook":{"resource":{"addr":"data.aws_caller_identity.current","module":"","resource":"data.aws_caller_identity.current","implied_provider":"aws","resource_type":"aws_caller_identity","resource_name":"current","resource_key":null},"action":"read","id_key":"id","id_value":"123456789012","elapsed_seconds":0},"type":"apply_start"}`)
 
 	p := NewParser()
 	event, err := p.ParseLine(line)
@@ -38,8 +38,8 @@ func TestParseApplyComplete(t *testing.T) {
 	assertResourceEvent(t, event, "data.aws_caller_identity.current", ActionRead, "")
 }
 
-func TestParseApplyComplete_IgnoresNonRead(t *testing.T) {
-	line := []byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Creation complete after 2s [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.133445+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"create","id_key":"id","id_value":"my-uploads-bucket","elapsed_seconds":2},"type":"apply_complete"}`)
+func TestParseApplyStart_IgnoresNonRead(t *testing.T) {
+	line := []byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Creating...","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.133445+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"create","id_key":"id","id_value":"my-uploads-bucket","elapsed_seconds":2},"type":"apply_start"}`)
 
 	p := NewParser()
 	event, err := p.ParseLine(line)
@@ -51,7 +51,7 @@ func TestParseApplyComplete_IgnoresNonRead(t *testing.T) {
 func TestParseResourceDrift(t *testing.T) {
 	p := NewParser()
 
-	refreshLine := []byte(`{"@level":"info","@message":"aws_lambda_function.processor: Refresh complete [id=processor]","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:47.040866+01:00","hook":{"resource":{"addr":"aws_lambda_function.processor","module":"","resource":"aws_lambda_function.processor","implied_provider":"aws","resource_type":"aws_lambda_function","resource_name":"processor","resource_key":null},"id_key":"id","id_value":"processor"},"type":"refresh_complete"}`)
+	refreshLine := []byte(`{"@level":"info","@message":"aws_lambda_function.processor: Refreshing state... [id=processor]","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:47.040866+01:00","hook":{"resource":{"addr":"aws_lambda_function.processor","module":"","resource":"aws_lambda_function.processor","implied_provider":"aws","resource_type":"aws_lambda_function","resource_name":"processor","resource_key":null},"id_key":"id","id_value":"processor"},"type":"refresh_start"}`)
 	_, err := p.ParseLine(refreshLine)
 	require.NoError(t, err)
 
@@ -65,7 +65,7 @@ func TestParseResourceDrift(t *testing.T) {
 func TestParsePlannedChange_Update(t *testing.T) {
 	p := NewParser()
 
-	refreshLine := []byte(`{"@level":"info","@message":"aws_s3_bucket_server_side_encryption_configuration.state: Refresh complete [id=my-state-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:47.040866+01:00","hook":{"resource":{"addr":"aws_s3_bucket_server_side_encryption_configuration.state","module":"","resource":"aws_s3_bucket_server_side_encryption_configuration.state","implied_provider":"aws","resource_type":"aws_s3_bucket_server_side_encryption_configuration","resource_name":"state","resource_key":null},"id_key":"id","id_value":"my-state-bucket"},"type":"refresh_complete"}`)
+	refreshLine := []byte(`{"@level":"info","@message":"aws_s3_bucket_server_side_encryption_configuration.state: Refreshing state... [id=my-state-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:47.040866+01:00","hook":{"resource":{"addr":"aws_s3_bucket_server_side_encryption_configuration.state","module":"","resource":"aws_s3_bucket_server_side_encryption_configuration.state","implied_provider":"aws","resource_type":"aws_s3_bucket_server_side_encryption_configuration","resource_name":"state","resource_key":null},"id_key":"id","id_value":"my-state-bucket"},"type":"refresh_start"}`)
 	_, err := p.ParseLine(refreshLine)
 	require.NoError(t, err)
 
@@ -184,8 +184,8 @@ func TestParseOutputs(t *testing.T) {
 func TestParseIgnoredTypes(t *testing.T) {
 	lines := [][]byte{
 		[]byte(`{"@level":"info","@message":"Terraform 1.14.8","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:38.279544+01:00","terraform":"1.14.8","type":"version","ui":"1.2"}`),
-		[]byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Refreshing state... [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.111262+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_start"}`),
-		[]byte(`{"@level":"info","@message":"data.aws_region.current: Refreshing...","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.118603+01:00","hook":{"resource":{"addr":"data.aws_region.current","module":"","resource":"data.aws_region.current","implied_provider":"aws","resource_type":"aws_region","resource_name":"current","resource_key":null},"action":"read"},"type":"apply_start"}`),
+		[]byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Refreshing state... [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.111262+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_complete"}`),
+		[]byte(`{"@level":"info","@message":"data.aws_region.current: Refreshing...","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.118603+01:00","hook":{"resource":{"addr":"data.aws_region.current","module":"","resource":"data.aws_region.current","implied_provider":"aws","resource_type":"aws_region","resource_name":"current","resource_key":null},"action":"read"},"type":"apply_complete"}`),
 	}
 
 	p := NewParser()
