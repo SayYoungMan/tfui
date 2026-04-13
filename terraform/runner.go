@@ -90,11 +90,13 @@ func (tr *TerraformRunner) streamOutput(ctx context.Context, args []string) <-ch
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
 			ch <- fmt.Sprintf("failed to pipe stdout: %v", err)
+			return
 		}
 		cmd.Stderr = cmd.Stdout
 
 		if err := cmd.Start(); err != nil {
 			ch <- fmt.Sprintf("failed to run %s %s: %v", tr.binary, strings.Join(args, " "), err)
+			return
 		}
 
 		scanner := bufio.NewScanner(stdout)

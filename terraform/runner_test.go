@@ -135,6 +135,38 @@ func TestStreamPlan_ContextCancellation(t *testing.T) {
 	}
 }
 
+func TestStreamOutput_Plan(t *testing.T) {
+	output := strings.Join([]string{
+		"Terraform will perform the following actions:",
+		"  # aws_s3_bucket.uploads will be updated in-place",
+		"  ~ resource \"aws_s3_bucket\" \"uploads\" {",
+		"      ~ tags = {",
+		"          + \"Environment\" = \"production\"",
+		"        }",
+		"    }",
+		"Plan: 0 to add, 1 to change, 0 to destroy.",
+	}, "\n")
+
+	runner := &TerraformRunner{
+		binary:     "terraform",
+		workdir:    t.TempDir(),
+		cmdFactory: mockCmdFactory(output, 0),
+	}
+
+	ctx := context.Background()
+	ch := runner.Plan(ctx, []string{"aws_s3_bucket.uploads"})
+
+	var lines []string
+	for line := range ch {
+		lines = append(lines, line)
+	}
+
+	require.Len(t, lines, 8)
+	assert.Contains(t, lines[0], "Terraform will perform the following actions")
+	assert.Contains(t, lines[1], "aws_s3_bucket.uploads")
+	assert.Contains(t, lines[7], "Plan: 0 to add, 1 to change, 0 to destroy")
+}
+
 func TestStreamOutput_Apply(t *testing.T) {
 	output := strings.Join([]string{
 		"aws_s3_bucket.uploads: Modifying...",
