@@ -11,7 +11,7 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.cancel()
 		return m, tea.Quit
 	case "j", "down":
-		if m.cursor < len(m.resources)-1 {
+		if m.cursor < len(m.filteredIdx)-1 {
 			m.cursor++
 			m.adjustOffset()
 		}
@@ -21,7 +21,7 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.adjustOffset()
 		}
 	case "space":
-		if len(m.resources) > 0 {
+		if len(m.filteredIdx) > 0 {
 			idx := m.filteredIdx[m.cursor]
 			addr := m.resources[idx].Address
 			if m.selected[addr] {

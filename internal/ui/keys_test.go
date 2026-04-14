@@ -42,6 +42,7 @@ func TestNormalModeKeys_CursorNavigation(t *testing.T) {
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
 	}
+	m.filteredIdx = []int{0, 1, 2}
 
 	assert.Equal(t, 0, m.cursor)
 
