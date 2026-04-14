@@ -18,9 +18,11 @@ type Model struct {
 	eventChannel <-chan terraform.StreamEvent
 	cancel       func()
 
-	resources []terraform.Resource
-	indexMap  map[string]int
-	cursor    int // indicates which resource idx we are pointing at
+	resources  []terraform.Resource
+	indexMap   map[string]int
+	cursor     int // indicates which resource idx we are pointing at
+	offset     int // indicates which resource is shown at the top
+	viewHeight int
 
 	isScanning bool
 	spinner    spinner.Model
@@ -60,6 +62,10 @@ func waitForEvent(ch <-chan terraform.StreamEvent) tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.viewHeight = msg.Height
+		return m, nil
+
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":
@@ -68,10 +74,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "j", "down":
 			if m.cursor < len(m.resources)-1 {
 				m.cursor++
+				m.adjustOffset()
 			}
 		case "k", "up":
 			if m.cursor > 0 {
 				m.cursor--
+				m.adjustOffset()
 			}
 		}
 
@@ -107,18 +115,22 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 		}
 	}
 
+	m.adjustOffset()
 	return m, waitForEvent(m.eventChannel)
 }
 
 func (m Model) View() tea.View {
 	var s strings.Builder
 
-	for i, r := range m.resources {
+	end := min(m.offset+m.visibleRows(), len(m.resources))
+
+	for i := m.offset; i < end; i++ {
 		cursor := " "
 		if i == m.cursor {
 			cursor = ">"
 		}
 
+		r := m.resources[i]
 		symbol := r.Action.Symbol()
 		reason := ""
 		if r.Reason != "" {
@@ -140,4 +152,29 @@ func (m Model) View() tea.View {
 	s.WriteString("\n q or ctrl+C to quit.\n")
 
 	return tea.NewView(s.String())
+}
+
+func (m Model) visibleRows() int {
+	reserved := 5
+	if m.err != nil {
+		reserved++
+	}
+
+	rows := m.viewHeight - reserved
+
+	return max(1, rows)
+}
+
+func (m *Model) adjustOffset() {
+	visible := m.visibleRows()
+
+	// Cursor went below visible area — scroll down
+	if m.cursor >= m.offset+visible {
+		m.offset = m.cursor - visible + 1
+	}
+
+	// Cursor went above visible area — scroll up
+	if m.cursor < m.offset {
+		m.offset = m.cursor
+	}
 }
