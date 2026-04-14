@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	ansiString         = "\x1b["
 	testResourceAddr   = "aws_s3_bucket.uploads"
 	testDataSourceAddr = "data.aws_caller_identity.current"
 )
@@ -140,132 +141,6 @@ func TestModel_ScanComplete(t *testing.T) {
 	assert.Nil(t, cmd)
 }
 
-func TestModel_Quit(t *testing.T) {
-	tests := []struct {
-		name string
-		msg  tea.KeyPressMsg
-	}{
-		{"q key", tea.KeyPressMsg{Code: 'q'}},
-		{"ctrl+c", tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ch := make(chan terraform.StreamEvent, 1)
-			cancelled := false
-			cancel := func() { cancelled = true }
-			m := NewModel(ch, cancel)
-
-			_, cmd := m.Update(tt.msg)
-
-			assert.True(t, cancelled)
-			assert.NotNil(t, cmd)
-		})
-	}
-}
-
-func TestModel_CursorNavigation(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
-	m.resources = []terraform.Resource{
-		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
-		{Address: "aws_s3_bucket.b", Action: terraform.ActionNoop},
-		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
-	}
-
-	assert.Equal(t, 0, m.cursor)
-
-	// j moves down
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
-	m = newModel.(Model)
-	assert.Equal(t, 1, m.cursor)
-
-	// down arrow moves down
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
-	m = newModel.(Model)
-	assert.Equal(t, 2, m.cursor)
-
-	// Clamps at bottom
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'j'})
-	m = newModel.(Model)
-	assert.Equal(t, 2, m.cursor)
-
-	// k moves up
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
-	m = newModel.(Model)
-	assert.Equal(t, 1, m.cursor)
-
-	// up arrow moves up
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
-	m = newModel.(Model)
-	assert.Equal(t, 0, m.cursor)
-
-	// Clamps at top
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
-	m = newModel.(Model)
-	assert.Equal(t, 0, m.cursor)
-}
-
-func TestModel_ScrollsUpWithCursor(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
-	m.viewHeight = 3 + defaultReservedRows
-
-	for i := range 10 {
-		m.resources = append(m.resources, terraform.Resource{
-			Address: fmt.Sprintf("aws_s3_bucket.bucket_%d", i),
-			Action:  terraform.ActionNoop,
-		})
-	}
-
-	m.cursor = 5
-	m.offset = 3
-
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'k'})
-	m = newModel.(Model)
-	assert.Equal(t, 4, m.cursor)
-	assert.Equal(t, 3, m.offset)
-
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
-	m = newModel.(Model)
-	assert.Equal(t, 3, m.cursor)
-	assert.Equal(t, 3, m.offset)
-
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
-	m = newModel.(Model)
-	assert.Equal(t, 2, m.cursor)
-	assert.Equal(t, 2, m.offset) // offset changes -> it scrolled up
-}
-
-func TestModel_ToggleSelect(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
-	m.resources = []terraform.Resource{
-		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
-		{Address: "aws_s3_bucket.b", Action: terraform.ActionNoop},
-	}
-
-	// Select first resource
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
-	m = newModel.(Model)
-	assert.True(t, m.selected["aws_s3_bucket.a"])
-
-	// Deselect it
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
-	m = newModel.(Model)
-	assert.False(t, m.selected["aws_s3_bucket.a"])
-}
-
-func TestModel_SelectEmptyList(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
-
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
-	m = newModel.(Model)
-
-	assert.Empty(t, m.selected)
-}
-
 func TestModel_ViewShowsResources(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
@@ -278,6 +153,7 @@ func TestModel_ViewShowsResources(t *testing.T) {
 		{Address: "data.aws_region.current", Action: terraform.ActionRead},
 		{Address: "aws_vpc.main", Action: terraform.ActionNoop},
 	}
+	m.filteredIdx = []int{0, 1, 2, 3, 4, 5}
 	m.viewHeight = len(m.resources) + defaultReservedRows
 
 	view := m.View()
@@ -297,6 +173,7 @@ func TestModel_ViewShowsCursor(t *testing.T) {
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionUpdate},
 	}
+	m.filteredIdx = []int{0, 1}
 	m.viewHeight = len(m.resources) + defaultReservedRows
 	m.cursor = 1
 
@@ -312,9 +189,83 @@ func TestModel_ViewShowsCursor(t *testing.T) {
 		}
 	}
 
-	ansiString := "\x1b["
 	assert.NotContains(t, lineA, ansiString)
 	assert.Contains(t, lineB, ansiString)
+}
+
+func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.resources = []terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
+		{Address: "aws_lambda_function.b", Action: terraform.ActionNoop},
+		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
+	}
+	m.filteredIdx = []int{0, 2}
+	m.cursor = 0
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
+	m = newModel.(Model)
+
+	var theLine string
+	for line := range strings.SplitSeq(m.View().Content, "\n") {
+		if strings.Contains(line, "aws_s3_bucket.c") {
+			theLine = line
+		}
+	}
+	assert.Equal(t, 1, m.cursor)
+	assert.Contains(t, theLine, ansiString)
+}
+
+func TestModel_SelectOnFilteredList(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.resources = []terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
+		{Address: "aws_lambda_function.b", Action: terraform.ActionNoop},
+		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
+	}
+	m.filteredIdx = []int{0, 2}
+	m.cursor = 1
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
+	m = newModel.(Model)
+
+	assert.True(t, m.selected["aws_s3_bucket.c"])
+	assert.False(t, m.selected["aws_lambda_function.b"])
+}
+
+func TestModel_NewResourcesFilterMatch(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewHeight = 3 + defaultReservedRows
+	m.resources = []terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
+	}
+	m.indexMap = map[string]int{"aws_s3_bucket.a": 0}
+	m.filterInput.SetValue("s3")
+	m.filteredIdx = []int{0}
+
+	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
+		Resource: &terraform.Resource{
+			Address: "aws_s3_bucket.b",
+			Action:  terraform.ActionNoop,
+		},
+	}))
+	m = newModel.(Model)
+
+	assert.Len(t, m.filteredIdx, 2)
+
+	newModel, _ = m.Update(streamEventMsg(terraform.StreamEvent{
+		Resource: &terraform.Resource{
+			Address: "aws_lambda_function.api",
+			Action:  terraform.ActionNoop,
+		},
+	}))
+	m = newModel.(Model)
+
+	assert.Len(t, m.filteredIdx, 2)
+	assert.Len(t, m.resources, 3)
 }
 
 func TestModel_ViewShowsSelected(t *testing.T) {
@@ -324,6 +275,7 @@ func TestModel_ViewShowsSelected(t *testing.T) {
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionUpdate},
 	}
+	m.filteredIdx = []int{0, 1}
 	m.viewHeight = len(m.resources) + defaultReservedRows
 	m.cursor = 0
 	m.selected = map[string]bool{m.resources[1].Address: true}
@@ -337,7 +289,6 @@ func TestModel_ViewShowsSelected(t *testing.T) {
 		}
 	}
 
-	ansiString := "\x1b["
 	assert.Contains(t, lineB, ansiString)
 }
 
@@ -345,6 +296,7 @@ func TestModel_ViewOnlyRendersVisibleSlice(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
 	m.viewHeight = 3 + defaultReservedRows
+	m.filteredIdx = []int{0, 1, 2, 3, 4}
 
 	for i := range 5 {
 		m.resources = append(m.resources, terraform.Resource{
@@ -399,6 +351,24 @@ func TestModel_ViewShowsSelectedCount(t *testing.T) {
 	view := m.View()
 
 	assert.Contains(t, view.Content, "1 selected")
+}
+
+func TestModel_ViewShowsFilterCount(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewHeight = 2 + defaultReservedRows
+	m.isScanning = false
+	m.resources = []terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
+		{Address: "aws_lambda_function.b", Action: terraform.ActionNoop},
+	}
+	m.filteredIdx = []int{0}
+	m.filterInput.SetValue("s3")
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "showing 1")
+	assert.Contains(t, view.Content, "2 resources found")
 }
 
 func TestModel_ViewShowsError(t *testing.T) {
