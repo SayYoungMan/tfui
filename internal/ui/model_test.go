@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -236,6 +237,35 @@ func TestModel_ScrollsUpWithCursor(t *testing.T) {
 	assert.Equal(t, 2, m.offset) // offset changes -> it scrolled up
 }
 
+func TestModel_ToggleSelect(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.resources = []terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
+		{Address: "aws_s3_bucket.b", Action: terraform.ActionNoop},
+	}
+
+	// Select first resource
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
+	m = newModel.(Model)
+	assert.True(t, m.selected["aws_s3_bucket.a"])
+
+	// Deselect it
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
+	m = newModel.(Model)
+	assert.False(t, m.selected["aws_s3_bucket.a"])
+}
+
+func TestModel_SelectEmptyList(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
+	m = newModel.(Model)
+
+	assert.Empty(t, m.selected)
+}
+
 func TestModel_ViewShowsResources(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
@@ -271,9 +301,29 @@ func TestModel_ViewShowsCursor(t *testing.T) {
 	m.cursor = 1
 
 	view := m.View()
+	lines := strings.Split(view.Content, "\n")
+	ansiString := "\x1b["
 
-	assert.Contains(t, view.Content, "    aws_s3_bucket.a")
-	assert.Contains(t, view.Content, "> ~ aws_s3_bucket.b")
+	assert.NotContains(t, lines[0], ansiString)
+	assert.Contains(t, lines[1], ansiString)
+}
+
+func TestModel_ViewShowsSelected(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.resources = []terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
+		{Address: "aws_s3_bucket.b", Action: terraform.ActionUpdate},
+	}
+	m.viewHeight = len(m.resources) + defaultReservedRows
+	m.cursor = 0
+	m.selected = map[string]bool{m.resources[1].Address: true}
+
+	view := m.View()
+	lines := strings.Split(view.Content, "\n")
+	ansiString := "\x1b["
+
+	assert.Contains(t, lines[1], ansiString)
 }
 
 func TestModel_ViewOnlyRendersVisibleSlice(t *testing.T) {
@@ -320,6 +370,20 @@ func TestModel_ViewShowsCompleteWhenDone(t *testing.T) {
 	assert.Contains(t, view.Content, "Scan Complete")
 	assert.Contains(t, view.Content, "5 resources")
 	assert.NotContains(t, view.Content, "Scanning...")
+}
+
+func TestModel_ViewShowsSelectedCount(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewHeight = 5 + defaultReservedRows
+	m.resources = []terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
+	}
+	m.selected = map[string]bool{"aws_s3_bucket.a": true}
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "1 selected")
 }
 
 func TestModel_ViewShowsError(t *testing.T) {
