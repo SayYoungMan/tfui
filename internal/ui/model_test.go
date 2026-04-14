@@ -208,7 +208,7 @@ func TestModel_CursorNavigation(t *testing.T) {
 func TestModel_ScrollsUpWithCursor(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
-	m.viewHeight = 3 + DEFAULT_RESERVED_ROWS_COUNT
+	m.viewHeight = 3 + defaultReservedRows
 
 	for i := range 10 {
 		m.resources = append(m.resources, terraform.Resource{
@@ -248,7 +248,7 @@ func TestModel_ViewShowsResources(t *testing.T) {
 		{Address: "data.aws_region.current", Action: terraform.ActionRead},
 		{Address: "aws_vpc.main", Action: terraform.ActionNoop},
 	}
-	m.viewHeight = len(m.resources) + DEFAULT_RESERVED_ROWS_COUNT
+	m.viewHeight = len(m.resources) + defaultReservedRows
 
 	view := m.View()
 
@@ -263,11 +263,11 @@ func TestModel_ViewShowsResources(t *testing.T) {
 func TestModel_ViewShowsCursor(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
-	m.viewHeight = 24
 	m.resources = []terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionUpdate},
 	}
+	m.viewHeight = len(m.resources) + defaultReservedRows
 	m.cursor = 1
 
 	view := m.View()
@@ -279,7 +279,7 @@ func TestModel_ViewShowsCursor(t *testing.T) {
 func TestModel_ViewOnlyRendersVisibleSlice(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
-	m.viewHeight = 3 + DEFAULT_RESERVED_ROWS_COUNT
+	m.viewHeight = 3 + defaultReservedRows
 
 	for i := range 5 {
 		m.resources = append(m.resources, terraform.Resource{

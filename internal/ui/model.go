@@ -19,6 +19,7 @@ type Model struct {
 	cancel       func()
 
 	resources  []terraform.Resource
+	selected   map[string]bool
 	indexMap   map[string]int
 	cursor     int // indicates which resource idx we are pointing at
 	offset     int // indicates which resource is shown at the top
@@ -37,6 +38,7 @@ func NewModel(ch <-chan terraform.StreamEvent, cancel func()) Model {
 		eventChannel: ch,
 		cancel:       cancel,
 		resources:    []terraform.Resource{},
+		selected:     make(map[string]bool),
 		indexMap:     make(map[string]int),
 		isScanning:   true,
 		spinner:      s,
@@ -80,6 +82,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor > 0 {
 				m.cursor--
 				m.adjustOffset()
+			}
+		case "space":
+			if len(m.resources) > 0 {
+				addr := m.resources[m.cursor].Address
+				if m.selected[addr] {
+					delete(m.selected, addr)
+				} else {
+					m.selected[addr] = true
+				}
 			}
 		}
 
@@ -125,25 +136,34 @@ func (m Model) View() tea.View {
 	end := min(m.offset+m.visibleRows(), len(m.resources))
 
 	for i := m.offset; i < end; i++ {
-		cursor := " "
-		if i == m.cursor {
-			cursor = ">"
-		}
-
 		r := m.resources[i]
 		symbol := r.Action.Symbol()
 		reason := ""
 		if r.Reason != "" {
 			reason = fmt.Sprintf(" (%s)", r.Reason)
 		}
-		fmt.Fprintf(&s, "%s %s %s%s\n", cursor, symbol, r.Address, reason)
+		line := fmt.Sprintf("%s %s%s", symbol, r.Address, reason)
+
+		switch {
+		case i == m.cursor:
+			line = cursorStyle.Render(line)
+		case m.selected[r.Address]:
+			line = selectedStyle.Render(line)
+		}
+
+		fmt.Fprintln(&s, line)
 	}
 
+	var infoLine string
 	if m.isScanning {
-		fmt.Fprintf(&s, "\n %s Scanning... (%d resources found)\n", m.spinner.View(), len(m.resources))
+		infoLine = fmt.Sprintf("\n %s Scanning... (%d resources found)", m.spinner.View(), len(m.resources))
 	} else {
-		fmt.Fprintf(&s, "\n Scan Complete (%d resources found)\n", len(m.resources))
+		infoLine = fmt.Sprintf("\n Scan Complete (%d resources found)", len(m.resources))
 	}
+	if len(m.selected) > 0 {
+		infoLine += fmt.Sprintf(" | %d selected", len(m.selected))
+	}
+	fmt.Fprintln(&s, infoLine)
 
 	if m.err != nil {
 		fmt.Fprintf(&s, "\n error occurred: %v\n", m.err)
@@ -154,10 +174,10 @@ func (m Model) View() tea.View {
 	return tea.NewView(s.String())
 }
 
-const DEFAULT_RESERVED_ROWS_COUNT = 5
+const defaultReservedRows = 5
 
 func (m Model) visibleRows() int {
-	reserved := DEFAULT_RESERVED_ROWS_COUNT
+	reserved := defaultReservedRows
 	if m.err != nil {
 		reserved++
 	}
