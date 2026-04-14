@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 )
@@ -18,12 +19,16 @@ type Model struct {
 	eventChannel <-chan terraform.StreamEvent
 	cancel       func()
 
-	resources  []terraform.Resource
+	resources  terraform.Resources
 	selected   map[string]bool
 	indexMap   map[string]int
 	cursor     int // indicates which resource idx we are pointing at
 	offset     int // indicates which resource is shown at the top
 	viewHeight int
+
+	filteredIdx   []int
+	filterInput   textinput.Model
+	filterFocused bool
 
 	isScanning bool
 	spinner    spinner.Model
@@ -40,6 +45,7 @@ func NewModel(ch <-chan terraform.StreamEvent, cancel func()) Model {
 		resources:    []terraform.Resource{},
 		selected:     make(map[string]bool),
 		indexMap:     make(map[string]int),
+		filterInput:  newFilterInput(),
 		isScanning:   true,
 		spinner:      s,
 	}
@@ -66,32 +72,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.viewHeight = msg.Height
+		m.filterInput.SetWidth(msg.Width - 6)
 		return m, nil
 
 	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
-			m.cancel()
-			return m, tea.Quit
-		case "j", "down":
-			if m.cursor < len(m.resources)-1 {
-				m.cursor++
-				m.adjustOffset()
-			}
-		case "k", "up":
-			if m.cursor > 0 {
-				m.cursor--
-				m.adjustOffset()
-			}
-		case "space":
-			if len(m.resources) > 0 {
-				addr := m.resources[m.cursor].Address
-				if m.selected[addr] {
-					delete(m.selected, addr)
-				} else {
-					m.selected[addr] = true
-				}
-			}
+		if m.filterFocused {
+			return m.filterModeKeys(msg)
+		} else {
+			return m.normalModeKeys(msg)
 		}
 
 	case streamEventMsg:
@@ -121,8 +109,13 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 		if idx, exists := m.indexMap[addr]; exists {
 			m.resources[idx] = *event.Resource
 		} else {
-			m.indexMap[addr] = len(m.resources)
+			newIdx := len(m.resources)
+			m.indexMap[addr] = newIdx
 			m.resources = append(m.resources, *event.Resource)
+
+			if m.matchesFilter(*event.Resource) {
+				m.filteredIdx = append(m.filteredIdx, newIdx)
+			}
 		}
 	}
 
@@ -133,10 +126,18 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 func (m Model) View() tea.View {
 	var s strings.Builder
 
-	end := min(m.offset+m.visibleRows(), len(m.resources))
+	filterIcon := "⌕ "
+	filterContent := filterIcon + m.filterInput.View()
+	if m.filterFocused {
+		fmt.Fprintln(&s, focusedBorderStyle.Render(filterContent))
+	} else {
+		fmt.Fprintln(&s, borderStyle.Render(filterContent))
+	}
+	fmt.Fprintln(&s)
 
+	end := min(m.offset+m.visibleRows(), len(m.filteredIdx))
 	for i := m.offset; i < end; i++ {
-		r := m.resources[i]
+		r := m.resources[m.filteredIdx[i]]
 		symbol := r.Action.Symbol()
 		reason := ""
 		if r.Reason != "" {
@@ -160,6 +161,9 @@ func (m Model) View() tea.View {
 	} else {
 		infoLine = fmt.Sprintf("\n Scan Complete (%d resources found)", len(m.resources))
 	}
+	if m.filterInput.Value() != "" {
+		infoLine += fmt.Sprintf(" | showing %d", len(m.filteredIdx))
+	}
 	if len(m.selected) > 0 {
 		infoLine += fmt.Sprintf(" | %d selected", len(m.selected))
 	}
@@ -169,12 +173,13 @@ func (m Model) View() tea.View {
 		fmt.Fprintf(&s, "\n error occurred: %v\n", m.err)
 	}
 
-	s.WriteString("\n q or ctrl+C to quit.\n")
+	s.WriteString("\n / to filter | <Space> to select | q or ctrl+C to quit.\n")
 
 	return tea.NewView(s.String())
 }
 
-const defaultReservedRows = 5
+// 4(search bar) + 3(info) + 2(Key info) + 1(extra)
+const defaultReservedRows = 10
 
 func (m Model) visibleRows() int {
 	reserved := defaultReservedRows

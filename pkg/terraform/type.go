@@ -60,6 +60,17 @@ type Resource struct {
 	Reason          string // Why this change is happening, e.g. "tainted", "cannot_update"
 }
 
+// Implement these methods to satisfy interface of fuzzy matching
+type Resources []Resource
+
+func (r Resources) String(i int) string {
+	return r[i].Address
+}
+
+func (r Resources) Len() int {
+	return len(r)
+}
+
 // --- Below are raw JSON structures from `terraform plan -json` ---
 
 // struct for every line of plan -json output.
