@@ -20,6 +20,7 @@ type Model struct {
 
 	resources []terraform.Resource
 	indexMap  map[string]int
+	cursor    int // indicates which resource idx we are pointing at
 
 	isScanning bool
 	spinner    spinner.Model
@@ -64,6 +65,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			m.cancel()
 			return m, tea.Quit
+		case "j", "down":
+			if m.cursor < len(m.resources)-1 {
+				m.cursor++
+			}
+		case "k", "up":
+			if m.cursor > 0 {
+				m.cursor--
+			}
 		}
 
 	case streamEventMsg:
@@ -104,13 +113,18 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 func (m Model) View() tea.View {
 	var s strings.Builder
 
-	for _, r := range m.resources {
+	for i, r := range m.resources {
+		cursor := " "
+		if i == m.cursor {
+			cursor = ">"
+		}
+
 		symbol := r.Action.Symbol()
 		reason := ""
 		if r.Reason != "" {
 			reason = fmt.Sprintf(" (%s)", r.Reason)
 		}
-		fmt.Fprintf(&s, " %s %s%s\n", symbol, r.Address, reason)
+		fmt.Fprintf(&s, "%s %s %s%s\n", cursor, symbol, r.Address, reason)
 	}
 
 	if m.isScanning {
