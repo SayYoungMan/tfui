@@ -163,6 +163,79 @@ func TestModel_Quit(t *testing.T) {
 	}
 }
 
+func TestModel_CursorNavigation(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.resources = []terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
+		{Address: "aws_s3_bucket.b", Action: terraform.ActionNoop},
+		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
+	}
+
+	assert.Equal(t, 0, m.cursor)
+
+	// j moves down
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.cursor)
+
+	// down arrow moves down
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.cursor)
+
+	// Clamps at bottom
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'j'})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.cursor)
+
+	// k moves up
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.cursor)
+
+	// up arrow moves up
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.cursor)
+
+	// Clamps at top
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.cursor)
+}
+
+func TestModel_ScrollsUpWithCursor(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewHeight = 3 + DEFAULT_RESERVED_ROWS_COUNT
+
+	for i := range 10 {
+		m.resources = append(m.resources, terraform.Resource{
+			Address: fmt.Sprintf("aws_s3_bucket.bucket_%d", i),
+			Action:  terraform.ActionNoop,
+		})
+	}
+
+	m.cursor = 5
+	m.offset = 3
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 4, m.cursor)
+	assert.Equal(t, 3, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 3, m.cursor)
+	assert.Equal(t, 3, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.cursor)
+	assert.Equal(t, 2, m.offset) // offset changes -> it scrolled up
+}
+
 func TestModel_ViewShowsResources(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
@@ -175,6 +248,7 @@ func TestModel_ViewShowsResources(t *testing.T) {
 		{Address: "data.aws_region.current", Action: terraform.ActionRead},
 		{Address: "aws_vpc.main", Action: terraform.ActionNoop},
 	}
+	m.viewHeight = len(m.resources) + DEFAULT_RESERVED_ROWS_COUNT
 
 	view := m.View()
 
@@ -184,6 +258,44 @@ func TestModel_ViewShowsResources(t *testing.T) {
 	assert.Contains(t, view.Content, "+/- aws_db_instance.d (cannot_update)")
 	assert.Contains(t, view.Content, "data.aws_region.current")
 	assert.Contains(t, view.Content, "aws_vpc.main")
+}
+
+func TestModel_ViewShowsCursor(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewHeight = 24
+	m.resources = []terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
+		{Address: "aws_s3_bucket.b", Action: terraform.ActionUpdate},
+	}
+	m.cursor = 1
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "    aws_s3_bucket.a")
+	assert.Contains(t, view.Content, "> ~ aws_s3_bucket.b")
+}
+
+func TestModel_ViewOnlyRendersVisibleSlice(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewHeight = 3 + DEFAULT_RESERVED_ROWS_COUNT
+
+	for i := range 5 {
+		m.resources = append(m.resources, terraform.Resource{
+			Address: fmt.Sprintf("aws_s3_bucket.bucket_%d", i),
+			Action:  terraform.ActionNoop,
+		})
+	}
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "aws_s3_bucket.bucket_0")
+	assert.Contains(t, view.Content, "aws_s3_bucket.bucket_1")
+	assert.Contains(t, view.Content, "aws_s3_bucket.bucket_2")
+
+	assert.NotContains(t, view.Content, "aws_s3_bucket.bucket_3")
+	assert.NotContains(t, view.Content, "aws_s3_bucket.bucket_4")
 }
 
 func TestModel_ViewShowsSpinner(t *testing.T) {

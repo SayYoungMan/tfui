@@ -154,8 +154,10 @@ func (m Model) View() tea.View {
 	return tea.NewView(s.String())
 }
 
+const DEFAULT_RESERVED_ROWS_COUNT = 5
+
 func (m Model) visibleRows() int {
-	reserved := 5
+	reserved := DEFAULT_RESERVED_ROWS_COUNT
 	if m.err != nil {
 		reserved++
 	}
