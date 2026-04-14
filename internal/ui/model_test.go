@@ -302,10 +302,19 @@ func TestModel_ViewShowsCursor(t *testing.T) {
 
 	view := m.View()
 	lines := strings.Split(view.Content, "\n")
-	ansiString := "\x1b["
+	var lineA, lineB string
+	for _, line := range lines {
+		if strings.Contains(line, "aws_s3_bucket.a") {
+			lineA = line
+		}
+		if strings.Contains(line, "aws_s3_bucket.b") {
+			lineB = line
+		}
+	}
 
-	assert.NotContains(t, lines[0], ansiString)
-	assert.Contains(t, lines[1], ansiString)
+	ansiString := "\x1b["
+	assert.NotContains(t, lineA, ansiString)
+	assert.Contains(t, lineB, ansiString)
 }
 
 func TestModel_ViewShowsSelected(t *testing.T) {
@@ -321,9 +330,15 @@ func TestModel_ViewShowsSelected(t *testing.T) {
 
 	view := m.View()
 	lines := strings.Split(view.Content, "\n")
-	ansiString := "\x1b["
+	var lineB string
+	for _, line := range lines {
+		if strings.Contains(line, "aws_s3_bucket.b") {
+			lineB = line
+		}
+	}
 
-	assert.Contains(t, lines[1], ansiString)
+	ansiString := "\x1b["
+	assert.Contains(t, lineB, ansiString)
 }
 
 func TestModel_ViewOnlyRendersVisibleSlice(t *testing.T) {
