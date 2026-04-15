@@ -30,6 +30,7 @@ type Model struct {
 	filterInput   textinput.Model
 	filterFocused bool
 
+	hideNoops  bool
 	isScanning bool
 	spinner    spinner.Model
 	err        error
@@ -112,10 +113,9 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 			newIdx := len(m.resources)
 			m.indexMap[addr] = newIdx
 			m.resources = append(m.resources, *event.Resource)
-
-			if m.matchesFilter(*event.Resource) {
-				m.filteredIdx = append(m.filteredIdx, newIdx)
-			}
+		}
+		if m.matchesFilter(*event.Resource) {
+			m.filteredIdx = append(m.filteredIdx, m.indexMap[addr])
 		}
 	}
 
@@ -176,7 +176,14 @@ func (m Model) View() tea.View {
 		fmt.Fprintf(&s, "\n error occurred: %v\n", m.err)
 	}
 
-	s.WriteString("\n / to filter | <Space> to select | q or ctrl+C to quit.\n")
+	var hKeyInfo string
+	if m.hideNoops {
+		hKeyInfo = "h to show unchanged"
+	} else {
+		hKeyInfo = "h to hide unchanged"
+	}
+	keyInfoLine := fmt.Sprintf("\n / to filter | <Space> to select | %s | q or ctrl+C to quit.\n", hKeyInfo)
+	s.WriteString(keyInfoLine)
 
 	return tea.NewView(s.String())
 }

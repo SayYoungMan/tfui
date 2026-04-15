@@ -8,10 +8,10 @@ import (
 )
 
 var testResources = []terraform.Resource{
-	{Address: "aws_s3_bucket.uploads"},
-	{Address: "aws_lambda_function.api"},
-	{Address: "aws_s3_bucket.logs"},
-	{Address: "aws_dynamodb_table.items"},
+	{Address: "aws_s3_bucket.uploads", Action: terraform.ActionCreate},
+	{Address: "aws_lambda_function.api", Action: terraform.ActionDelete},
+	{Address: "aws_s3_bucket.logs", Action: terraform.ActionNoop},
+	{Address: "aws_dynamodb_table.items", Action: terraform.ActionUpdate},
 }
 
 func TestRebuildFilter_EmptyShowsAll(t *testing.T) {
@@ -68,6 +68,29 @@ func TestRebuildFilter_ResetsCursorAndOffset(t *testing.T) {
 	assert.Equal(t, 0, m.offset)
 }
 
+func TestRebuildFilter_HideNoops(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.resources = testResources
+
+	m.hideNoops = true
+	m.rebuildFilter()
+
+	assert.Len(t, m.filteredIdx, 3)
+}
+
+func TestRebuildFilter_HideNoopsFiltered(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.resources = testResources
+
+	m.filterInput.SetValue("s3")
+	m.hideNoops = true
+	m.rebuildFilter()
+
+	assert.Len(t, m.filteredIdx, 1)
+}
+
 func TestMatchesFilter_EmptyAlwaysTrue(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
@@ -83,4 +106,14 @@ func TestMatchesFilter_MatchAndMiss(t *testing.T) {
 
 	assert.True(t, m.matchesFilter(terraform.Resource{Address: "aws_s3_bucket.a"}))
 	assert.False(t, m.matchesFilter(terraform.Resource{Address: "aws_lambda_function.b"}))
+}
+
+func TestMatchesFilter_NoopIgnored(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+
+	m.hideNoops = true
+
+	assert.False(t, m.matchesFilter(terraform.Resource{Address: "resource", Action: terraform.ActionNoop}))
+	assert.False(t, m.matchesFilter(terraform.Resource{Address: "resource", Action: terraform.ActionRead}))
 }

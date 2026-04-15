@@ -31,15 +31,23 @@ func (m *Model) rebuildFilter() {
 	filter := m.filterInput.Value()
 
 	if filter == "" {
-		m.filteredIdx = make([]int, len(m.resources))
-		for i := range m.resources {
-			m.filteredIdx[i] = i
+		m.filteredIdx = make([]int, 0, len(m.resources))
+		for i, r := range m.resources {
+			if m.hideNoops && (r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead) {
+				continue
+			}
+			m.filteredIdx = append(m.filteredIdx, i)
 		}
 	} else {
 		results := fuzzy.FindFrom(filter, m.resources)
-		m.filteredIdx = make([]int, len(results))
-		for i, result := range results {
-			m.filteredIdx[i] = result.Index
+		m.filteredIdx = make([]int, 0, len(results))
+		for _, result := range results {
+			idx := result.Index
+			r := m.resources[idx]
+			if m.hideNoops && (r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead) {
+				continue
+			}
+			m.filteredIdx = append(m.filteredIdx, idx)
 		}
 	}
 
@@ -49,6 +57,10 @@ func (m *Model) rebuildFilter() {
 }
 
 func (m Model) matchesFilter(r terraform.Resource) bool {
+	if m.hideNoops && (r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead) {
+		return false
+	}
+
 	filter := m.filterInput.Value()
 	if filter == "" {
 		return true

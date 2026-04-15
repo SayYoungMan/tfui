@@ -387,6 +387,18 @@ func TestModel_ViewShowsFilterCount(t *testing.T) {
 	assert.Contains(t, view.Content, "2 resources found")
 }
 
+func TestModel_ViewShowsHideNoopMessage(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+
+	require.Contains(t, m.View().Content, "h to hide unchanged")
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'h'})
+	m = newModel.(Model)
+
+	assert.Contains(t, m.View().Content, "h to show unchanged")
+}
+
 func TestModel_ViewShowsError(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
