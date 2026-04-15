@@ -150,11 +150,13 @@ func TestModel_ViewShowsResources(t *testing.T) {
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionUpdate, Reason: "drift"},
 		{Address: "aws_iam_role.c", Action: terraform.ActionDelete, Reason: "delete_because_no_resource_config"},
 		{Address: "aws_db_instance.d", Action: terraform.ActionReplace, Reason: "cannot_update"},
+		{Address: "aws_s3_bucket.c", Action: terraform.ActionImport},
 		{Address: "data.aws_region.current", Action: terraform.ActionRead},
 		{Address: "aws_vpc.main", Action: terraform.ActionNoop},
 	}
-	m.filteredIdx = []int{0, 1, 2, 3, 4, 5}
+	m.filteredIdx = []int{0, 1, 2, 3, 4, 5, 6}
 	m.viewHeight = len(m.resources) + defaultReservedRows
+	m.cursor = -1 // Remove cursor so that it doesn't color any of the lines
 
 	view := m.View()
 
@@ -162,8 +164,22 @@ func TestModel_ViewShowsResources(t *testing.T) {
 	assert.Contains(t, view.Content, "~ aws_s3_bucket.b (drift)")
 	assert.Contains(t, view.Content, "- aws_iam_role.c (delete_because_no_resource_config)")
 	assert.Contains(t, view.Content, "+/- aws_db_instance.d (cannot_update)")
+	assert.Contains(t, view.Content, "↓ aws_s3_bucket.c")
 	assert.Contains(t, view.Content, "data.aws_region.current")
 	assert.Contains(t, view.Content, "aws_vpc.main")
+
+	// Check for ANSI string for color
+	for _, r := range m.resources {
+		for line := range strings.SplitSeq(view.Content, "\n") {
+			if strings.Contains(line, r.Address) {
+				if r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead {
+					assert.NotContains(t, line, ansiString)
+				} else {
+					assert.Contains(t, line, ansiString)
+				}
+			}
+		}
+	}
 }
 
 func TestModel_ViewShowsCursor(t *testing.T) {

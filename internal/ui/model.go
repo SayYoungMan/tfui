@@ -72,7 +72,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.viewHeight = msg.Height
-		m.filterInput.SetWidth(msg.Width - 6)
+		m.filterInput.SetWidth(msg.Width - 7)
 		return m, nil
 
 	case tea.KeyPressMsg:
@@ -150,6 +150,9 @@ func (m Model) View() tea.View {
 			line = cursorStyle.Render(line)
 		case m.selected[r.Address]:
 			line = selectedStyle.Render(line)
+		}
+		if style, ok := actionStyles[r.Action]; ok {
+			line = style.Render(line)
 		}
 
 		fmt.Fprintln(&s, line)

@@ -1,8 +1,15 @@
 package ui
 
-import "charm.land/lipgloss/v2"
+import (
+	"charm.land/lipgloss/v2"
+	"github.com/SayYoungMan/tfui/pkg/terraform"
+)
 
 var (
+	colorBlue       = lipgloss.Color("111")
+	colorGreen      = lipgloss.Color("114")
+	colorCoral      = lipgloss.Color("167")
+	colorAmber      = lipgloss.Color("178")
 	colorCreamWhite = lipgloss.Color("230")
 	colorCharcoal   = lipgloss.Color("234")
 	colorLightGrey  = lipgloss.Color("240")
@@ -15,3 +22,12 @@ var (
 	borderStyle        = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorDimGrey).Padding(0, 1)
 	focusedBorderStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorCreamWhite).Padding(0, 1)
 )
+
+var actionStyles = map[terraform.Action]lipgloss.Style{
+	terraform.ActionCreate:  lipgloss.NewStyle().Foreground(colorGreen),
+	terraform.ActionDelete:  lipgloss.NewStyle().Foreground(colorCoral),
+	terraform.ActionUpdate:  lipgloss.NewStyle().Foreground(colorAmber),
+	terraform.ActionReplace: lipgloss.NewStyle().Foreground(colorAmber),
+	terraform.ActionMove:    lipgloss.NewStyle().Foreground(colorBlue),
+	terraform.ActionImport:  lipgloss.NewStyle().Foreground(colorBlue),
+}
