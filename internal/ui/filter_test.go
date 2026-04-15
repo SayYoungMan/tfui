@@ -73,7 +73,7 @@ func TestRebuildFilter_HideNoops(t *testing.T) {
 	m := NewModel(ch, func() {})
 	m.resources = testResources
 
-	m.hideNoops = true
+	m.hideUnchanged = true
 	m.rebuildFilter()
 
 	assert.Len(t, m.filteredIdx, 3)
@@ -85,7 +85,7 @@ func TestRebuildFilter_HideNoopsFiltered(t *testing.T) {
 	m.resources = testResources
 
 	m.filterInput.SetValue("s3")
-	m.hideNoops = true
+	m.hideUnchanged = true
 	m.rebuildFilter()
 
 	assert.Len(t, m.filteredIdx, 1)
@@ -112,7 +112,7 @@ func TestMatchesFilter_NoopIgnored(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
 
-	m.hideNoops = true
+	m.hideUnchanged = true
 
 	assert.False(t, m.matchesFilter(terraform.Resource{Address: "resource", Action: terraform.ActionNoop}))
 	assert.False(t, m.matchesFilter(terraform.Resource{Address: "resource", Action: terraform.ActionRead}))

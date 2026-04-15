@@ -33,7 +33,7 @@ func (m *Model) rebuildFilter() {
 	if filter == "" {
 		m.filteredIdx = make([]int, 0, len(m.resources))
 		for i, r := range m.resources {
-			if m.hideNoops && (r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead) {
+			if m.hideUnchanged && isUnchanged(r) {
 				continue
 			}
 			m.filteredIdx = append(m.filteredIdx, i)
@@ -44,7 +44,7 @@ func (m *Model) rebuildFilter() {
 		for _, result := range results {
 			idx := result.Index
 			r := m.resources[idx]
-			if m.hideNoops && (r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead) {
+			if m.hideUnchanged && isUnchanged(r) {
 				continue
 			}
 			m.filteredIdx = append(m.filteredIdx, idx)
@@ -57,7 +57,7 @@ func (m *Model) rebuildFilter() {
 }
 
 func (m Model) matchesFilter(r terraform.Resource) bool {
-	if m.hideNoops && (r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead) {
+	if m.hideUnchanged && isUnchanged(r) {
 		return false
 	}
 
@@ -68,4 +68,8 @@ func (m Model) matchesFilter(r terraform.Resource) bool {
 
 	results := fuzzy.FindNoSort(filter, []string{r.Address})
 	return len(results) > 0
+}
+
+func isUnchanged(r terraform.Resource) bool {
+	return r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead
 }

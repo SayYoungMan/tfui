@@ -30,10 +30,10 @@ type Model struct {
 	filterInput   textinput.Model
 	filterFocused bool
 
-	hideNoops  bool
-	isScanning bool
-	spinner    spinner.Model
-	err        error
+	hideUnchanged bool
+	isScanning    bool
+	spinner       spinner.Model
+	err           error
 }
 
 func NewModel(ch <-chan terraform.StreamEvent, cancel func()) Model {
@@ -108,14 +108,21 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 	if event.Resource != nil {
 		addr := event.Resource.Address
 		if idx, exists := m.indexMap[addr]; exists {
+			wasUnchanged := isUnchanged(m.resources[idx])
 			m.resources[idx] = *event.Resource
+
+			// handle the case where it was matching but hidden due to hideUnchanged but now showing because it's changed now
+			if m.hideUnchanged && wasUnchanged && isUnchanged(*event.Resource) && m.matchesFilter(*event.Resource) {
+				m.filteredIdx = append(m.filteredIdx, idx)
+			}
 		} else {
 			newIdx := len(m.resources)
 			m.indexMap[addr] = newIdx
 			m.resources = append(m.resources, *event.Resource)
-		}
-		if m.matchesFilter(*event.Resource) {
-			m.filteredIdx = append(m.filteredIdx, m.indexMap[addr])
+
+			if m.matchesFilter(*event.Resource) {
+				m.filteredIdx = append(m.filteredIdx, m.indexMap[addr])
+			}
 		}
 	}
 
@@ -177,7 +184,7 @@ func (m Model) View() tea.View {
 	}
 
 	var hKeyInfo string
-	if m.hideNoops {
+	if m.hideUnchanged {
 		hKeyInfo = "h to show unchanged"
 	} else {
 		hKeyInfo = "h to hide unchanged"

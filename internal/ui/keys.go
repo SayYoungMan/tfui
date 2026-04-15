@@ -35,7 +35,7 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.filterInput.Focus()
 		return m, textinput.Blink
 	case "h":
-		m.hideNoops = !m.hideNoops
+		m.hideUnchanged = !m.hideUnchanged
 		m.rebuildFilter()
 	}
 
