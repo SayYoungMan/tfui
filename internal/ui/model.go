@@ -131,7 +131,7 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 			m.resources[idx] = *event.Resource
 
 			// handle the case where it was matching but hidden due to hideUnchanged but now showing because it's changed now
-			if m.hideUnchanged && wasUnchanged && isUnchanged(*event.Resource) && m.matchesFilter(*event.Resource) {
+			if m.hideUnchanged && wasUnchanged && !isUnchanged(*event.Resource) && m.matchesFilter(*event.Resource) {
 				m.filteredIdx = append(m.filteredIdx, idx)
 			}
 		} else {

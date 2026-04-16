@@ -111,6 +111,34 @@ func TestModel_DriftExistingResource(t *testing.T) {
 	assert.NotNil(t, cmd)
 }
 
+func TestModel_HideUnchanged_ResourceBecomesChanged(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.hideUnchanged = true
+
+	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
+		Resource: &terraform.Resource{
+			Address: testResourceAddr,
+			Action:  terraform.ActionNoop,
+		},
+	}))
+	m = newModel.(Model)
+
+	require.Len(t, m.resources, 1)
+	assert.Empty(t, m.filteredIdx)
+
+	newModel, _ = m.Update(streamEventMsg(terraform.StreamEvent{
+		Resource: &terraform.Resource{
+			Address: testResourceAddr,
+			Action:  terraform.ActionUpdate,
+		},
+	}))
+	m = newModel.(Model)
+
+	assert.Equal(t, terraform.ActionUpdate, m.resources[0].Action)
+	require.Len(t, m.filteredIdx, 1)
+}
+
 func TestModel_HandleError(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
