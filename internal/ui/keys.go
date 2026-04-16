@@ -86,6 +86,8 @@ func (m Model) confirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		if m.confirmCursor == 0 {
 			m.viewState = viewActionPicker
+		} else {
+			m.viewState = viewOutput
 		}
 	case "esc":
 		m.viewState = viewActionPicker

@@ -270,3 +270,83 @@ func TestActionPickerKeys_CursorResetsOnEntry(t *testing.T) {
 
 	assert.Equal(t, 0, m.actionCursor)
 }
+
+func TestActionPickerKeys_EnterGoesConfirmView(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewState = viewActionPicker
+	m.actionCursor = 2
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+
+	assert.Equal(t, "destroy", actionChoices[m.actionCursor])
+	assert.Equal(t, 0, m.confirmCursor)
+	assert.Equal(t, viewConfirm, m.viewState)
+}
+
+func TestConfirmKeys_DefaultsToCancel(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewState = viewActionPicker
+	m.selected = map[string]bool{"aws_s3_bucket.a": true}
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+
+	assert.Equal(t, 0, m.confirmCursor)
+}
+
+func TestConfirmKeys_Navigation(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewState = viewConfirm
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'l'})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.confirmCursor)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.confirmCursor)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'h'})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.confirmCursor)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.confirmCursor)
+}
+
+func TestConfirmKeys_CancelToPicker(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewState = viewConfirm
+	m.confirmCursor = 0
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+	assert.Equal(t, viewActionPicker, m.viewState)
+}
+
+func TestConfirmKeys_ConfirmToOutput(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewState = viewConfirm
+	m.confirmCursor = 1
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+	assert.Equal(t, viewOutput, m.viewState)
+}
+
+func TestConfirmKeys_EscToPicker(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewState = viewConfirm
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	m = newModel.(Model)
+	assert.Equal(t, viewActionPicker, m.viewState)
+}

@@ -222,3 +222,53 @@ func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {
 	assert.Contains(t, view.Content, "untaint")
 	assert.Contains(t, view.Content, "Esc to cancel")
 }
+
+func TestRenderConfirmView_ShowsResourcesAndButtons(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewState = viewConfirm
+	m.actionCursor = 1
+	m.viewWidth = 80
+	m.viewHeight = 24
+	m.resources = []terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionCreate},
+		{Address: "aws_lambda.b", Action: terraform.ActionUpdate},
+	}
+	m.indexMap = map[string]int{"aws_s3_bucket.a": 0, "aws_lambda.b": 1}
+	m.selected = map[string]bool{"aws_s3_bucket.a": true, "aws_lambda.b": true}
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "apply 2 resource(s)?")
+	assert.Contains(t, view.Content, "aws_s3_bucket.a")
+	assert.Contains(t, view.Content, "aws_lambda.b")
+	assert.Contains(t, view.Content, "Cancel")
+	assert.Contains(t, view.Content, "Confirm")
+}
+
+func TestRenderConfirmView_TruncatesLongSelections(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewState = viewConfirm
+	m.actionCursor = 2
+	m.viewWidth = 80
+	m.viewHeight = 100
+	m.selected = map[string]bool{}
+	m.indexMap = map[string]int{}
+
+	for i := range 15 {
+		addr := fmt.Sprintf("aws_s3_bucket.b_%02d", i)
+		m.resources = append(m.resources, terraform.Resource{
+			Address: addr, Action: terraform.ActionDelete,
+		})
+		m.indexMap[addr] = i
+		m.selected[addr] = true
+	}
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "... and 5 more")
+	assert.Contains(t, view.Content, "aws_s3_bucket.b_00")
+	assert.Contains(t, view.Content, "aws_s3_bucket.b_09")
+	assert.NotContains(t, view.Content, "aws_s3_bucket.b_10")
+}
