@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -101,6 +102,77 @@ func (m Model) renderActionPickerView() string {
 
 	fmt.Fprintln(&s)
 	fmt.Fprintln(&s, centered.Render(help))
+
+	modal := focusedBorderStyle.Render(s.String())
+	modalWidth := lipgloss.Width(modal)
+	modalHeight := lipgloss.Height(modal)
+	x := max(0, (m.viewWidth-modalWidth)/2)
+	y := max(0, (m.viewHeight-modalHeight)/2)
+
+	background := lipgloss.NewLayer(m.renderListView())
+	foreground := lipgloss.NewLayer(modal).X(x).Y(y).Z(1)
+
+	return lipgloss.NewCompositor(background, foreground).Render()
+}
+
+const (
+	maxConfirmResources        = 10
+	defaultConfirmReservedRows = 10 // borders + title + blanks + buttons + help
+)
+
+func (m Model) renderConfirmView() string {
+	chosenAction := actionChoices[m.actionCursor]
+	title := fmt.Sprintf("⚠  %s %d resource(s)?", chosenAction, len(m.selected))
+
+	maxResourceRows := max(min(maxConfirmResources, m.viewHeight-defaultConfirmReservedRows), 1)
+
+	addrs := make([]string, 0, len(m.selected))
+	for addr := range m.selected {
+		addrs = append(addrs, addr)
+	}
+	sort.Strings(addrs)
+	if len(addrs) > maxResourceRows {
+		addrs = addrs[:maxResourceRows]
+	}
+
+	var resourceLines []string
+	for _, addr := range addrs {
+		r := m.resources[m.indexMap[addr]]
+		line := fmt.Sprintf("  %s %s", r.Action.Symbol(), addr)
+		if style, ok := actionStyles[r.Action]; ok {
+			line = style.Render(line)
+		}
+		resourceLines = append(resourceLines, line)
+	}
+
+	truncated := len(m.selected) - len(addrs)
+	if truncated > 0 {
+		dim := lipgloss.NewStyle().Foreground(colorDimGrey)
+		resourceLines = append(resourceLines, dim.Render(fmt.Sprintf("  ... and %d more", truncated)))
+	}
+
+	cancelButton := buttonStyle.Render("Cancel")
+	confirmButton := buttonStyle.Render("Confirm")
+	if m.confirmCursor == 0 {
+		cancelButton = focusedButtonStyle.Render("Cancel")
+	} else {
+		confirmButton = focusedButtonStyle.Render("Confirm")
+	}
+	buttons := lipgloss.JoinHorizontal(lipgloss.Top, cancelButton, "  ", confirmButton)
+
+	help := "Enter to select | Esc to cancel"
+
+	var s strings.Builder
+	fmt.Fprintln(&s, title)
+	fmt.Fprintln(&s)
+	for _, line := range resourceLines {
+		fmt.Fprintln(&s, line)
+	}
+	fmt.Fprintln(&s)
+	fmt.Fprintln(&s, buttons)
+	fmt.Fprintln(&s)
+	fmt.Fprint(&s, help)
+	fmt.Fprintln(&s)
 
 	modal := focusedBorderStyle.Render(s.String())
 	modalWidth := lipgloss.Width(modal)

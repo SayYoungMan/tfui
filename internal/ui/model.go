@@ -33,7 +33,8 @@ type Model struct {
 	spinner       spinner.Model
 	err           error
 
-	actionCursor int
+	actionCursor  int
+	confirmCursor int
 }
 
 var actionChoices []string = []string{"plan", "apply", "destroy", "taint", "untaint"}
@@ -95,6 +96,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.filterModeKeys(msg)
 		case viewActionPicker:
 			return m.actionPickerKeys(msg)
+		case viewConfirm:
+			return m.confirmKeys(msg)
 		default:
 			return m.normalModeKeys(msg)
 		}
@@ -147,10 +150,14 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 }
 
 func (m Model) View() tea.View {
-	if m.viewState == viewActionPicker {
+	switch m.viewState {
+	case viewActionPicker:
 		return tea.NewView(m.renderActionPickerView())
+	case viewConfirm:
+		return tea.NewView(m.renderConfirmView())
+	default:
+		return tea.NewView(m.renderListView())
 	}
-	return tea.NewView(m.renderListView())
 }
 
 // 4(search bar) + 3(info) + 2(Key info) + 1(extra)

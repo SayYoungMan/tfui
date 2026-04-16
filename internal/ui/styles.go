@@ -21,6 +21,8 @@ var (
 	selectedStyle      = lipgloss.NewStyle().Background(colorLightGrey)
 	borderStyle        = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorDimGrey).Padding(0, 1)
 	focusedBorderStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorCreamWhite).Padding(0, 1)
+	buttonStyle        = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorDimGrey).Padding(0, 2)
+	focusedButtonStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorCreamWhite).Padding(0, 2)
 )
 
 var actionStyles = map[terraform.Action]lipgloss.Style{
