@@ -203,3 +203,22 @@ func TestRenderListView_ViewShowsError(t *testing.T) {
 
 	assert.Contains(t, view.Content, "error occurred: something broke")
 }
+
+func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewState = viewActionPicker
+	m.selected = map[string]bool{"aws_s3_bucket.a": true, "aws_lambda_function.api": true}
+	m.viewWidth = 80
+	m.viewHeight = 24
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "2 resource(s) selected")
+	assert.Contains(t, view.Content, "plan")
+	assert.Contains(t, view.Content, "apply")
+	assert.Contains(t, view.Content, "destroy")
+	assert.Contains(t, view.Content, "taint")
+	assert.Contains(t, view.Content, "untaint")
+	assert.Contains(t, view.Content, "Esc to cancel")
+}

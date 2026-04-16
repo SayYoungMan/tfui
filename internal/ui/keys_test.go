@@ -138,6 +138,42 @@ func TestNormalModeKeys_SelectEmptyList(t *testing.T) {
 	assert.Empty(t, m.selected)
 }
 
+func TestNormalModeKeys_EnterBlockedWhileScanning(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.isScanning = true
+	m.selected = map[string]bool{"aws_s3_bucket.a": true}
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewList, m.viewState)
+}
+
+func TestNormalModeKeys_EnterBlockedWithNoSelection(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.isScanning = false
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewList, m.viewState)
+}
+
+func TestNormalModeKeys_EnterOpensActionPicker(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.isScanning = false
+	m.selected = map[string]bool{"aws_s3_bucket.a": true}
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewActionPicker, m.viewState)
+	assert.Equal(t, 0, m.actionCursor)
+}
+
 func TestFilterModeKeys_FilterFocusAndUnfocus(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
@@ -183,4 +219,54 @@ func TestFilterModeKeys_SelectOnFilteredList(t *testing.T) {
 
 	assert.True(t, m.selected["aws_s3_bucket.c"])
 	assert.False(t, m.selected["aws_lambda_function.b"])
+}
+
+func TestActionPickerKeys_Navigation(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewState = viewActionPicker
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.actionCursor)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.actionCursor)
+
+	// Clamp at top
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.actionCursor)
+
+	// Clamp at bottom
+	for range len(actionChoices) {
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: 'j'})
+		m = newModel.(Model)
+	}
+	assert.Equal(t, len(actionChoices)-1, m.actionCursor)
+}
+
+func TestActionPickerKeys_EscReturnsToList(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.viewState = viewActionPicker
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewList, m.viewState)
+}
+
+func TestActionPickerKeys_CursorResetsOnEntry(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.isScanning = false
+	m.selected = map[string]bool{"aws_s3_bucket.a": true}
+	m.actionCursor = 3
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+
+	assert.Equal(t, 0, m.actionCursor)
 }
