@@ -80,10 +80,16 @@ func (m Model) renderFilterBox() string {
 }
 
 func (m Model) renderActionPickerView() string {
+	title := fmt.Sprintf("%d resource(s) selected", len(m.selected))
+	help := "Enter to choose | Esc to cancel"
+
+	width := max(lipgloss.Width(title), lipgloss.Width(help)) + 6
+	centered := lipgloss.NewStyle().Width(width).Align(lipgloss.Center)
+
 	var s strings.Builder
 
-	fmt.Fprintf(&s, "  %d resource(s) selected\n", len(m.selected))
-	fmt.Fprintln(&s, "  "+strings.Repeat("─", 24))
+	fmt.Fprintln(&s, centered.Render(title))
+	fmt.Fprintln(&s, centered.Render(strings.Repeat("─", width-6)))
 
 	for i, choice := range actionChoices {
 		if i == m.actionCursor {
@@ -94,7 +100,7 @@ func (m Model) renderActionPickerView() string {
 	}
 
 	fmt.Fprintln(&s)
-	fmt.Fprintln(&s, "  Enter to choose | Esc to cancel")
+	fmt.Fprintln(&s, centered.Render(help))
 
 	modal := focusedBorderStyle.Render(s.String())
 	modalWidth := lipgloss.Width(modal)
