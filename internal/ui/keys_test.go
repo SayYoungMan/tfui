@@ -166,3 +166,21 @@ func TestFilterModeKeys_FilterFocusAndUnfocus(t *testing.T) {
 	require.Equal(t, viewList, m.viewState)
 	assert.Equal(t, "s3", m.filterInput.Value())
 }
+
+func TestFilterModeKeys_SelectOnFilteredList(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(ch, func() {})
+	m.resources = []terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
+		{Address: "aws_lambda_function.b", Action: terraform.ActionNoop},
+		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
+	}
+	m.filteredIdx = []int{0, 2}
+	m.cursor = 1
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
+	m = newModel.(Model)
+
+	assert.True(t, m.selected["aws_s3_bucket.c"])
+	assert.False(t, m.selected["aws_lambda_function.b"])
+}
