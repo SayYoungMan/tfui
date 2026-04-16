@@ -1,9 +1,6 @@
 package ui
 
 import (
-	"fmt"
-	"strings"
-
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -153,69 +150,7 @@ func (m Model) View() tea.View {
 	if m.viewState == viewActionPicker {
 		return tea.NewView(m.renderActionPickerView())
 	}
-
-	var s strings.Builder
-
-	filterIcon := "⌕ "
-	filterContent := filterIcon + m.filterInput.View()
-	if m.viewState == viewFilter {
-		fmt.Fprintln(&s, focusedBorderStyle.Render(filterContent))
-	} else {
-		fmt.Fprintln(&s, borderStyle.Render(filterContent))
-	}
-	fmt.Fprintln(&s)
-
-	end := min(m.offset+m.visibleRows(), len(m.filteredIdx))
-	for i := m.offset; i < end; i++ {
-		r := m.resources[m.filteredIdx[i]]
-		symbol := r.Action.Symbol()
-		reason := ""
-		if r.Reason != "" {
-			reason = fmt.Sprintf(" (%s)", r.Reason)
-		}
-		line := fmt.Sprintf("%s %s%s", symbol, r.Address, reason)
-
-		switch {
-		case i == m.cursor:
-			line = cursorStyle.Render(line)
-		case m.selected[r.Address]:
-			line = selectedStyle.Render(line)
-		}
-		if style, ok := actionStyles[r.Action]; ok {
-			line = style.Render(line)
-		}
-
-		fmt.Fprintln(&s, line)
-	}
-
-	var infoLine string
-	if m.isScanning {
-		infoLine = fmt.Sprintf("\n %s Scanning... (%d resources found)", m.spinner.View(), len(m.resources))
-	} else {
-		infoLine = fmt.Sprintf("\n Scan Complete (%d resources found)", len(m.resources))
-	}
-	if m.filterInput.Value() != "" {
-		infoLine += fmt.Sprintf(" | showing %d", len(m.filteredIdx))
-	}
-	if len(m.selected) > 0 {
-		infoLine += fmt.Sprintf(" | %d selected", len(m.selected))
-	}
-	fmt.Fprintln(&s, infoLine)
-
-	if m.err != nil {
-		fmt.Fprintf(&s, "\n error occurred: %v\n", m.err)
-	}
-
-	var hKeyInfo string
-	if m.hideUnchanged {
-		hKeyInfo = "h to show unchanged"
-	} else {
-		hKeyInfo = "h to hide unchanged"
-	}
-	keyInfoLine := fmt.Sprintf("\n / to filter | <Space> to select | %s | q or ctrl+C to quit.\n", hKeyInfo)
-	s.WriteString(keyInfoLine)
-
-	return tea.NewView(s.String())
+	return tea.NewView(m.renderListView())
 }
 
 // 4(search bar) + 3(info) + 2(Key info) + 1(extra)
