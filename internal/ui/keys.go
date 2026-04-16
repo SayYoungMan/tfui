@@ -30,6 +30,11 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				m.selected[addr] = true
 			}
 		}
+	case "enter":
+		if !m.isScanning && len(m.selected) > 0 {
+			m.actionCursor = 0
+			m.viewState = viewActionPicker
+		}
 	case "/":
 		m.viewState = viewFilter
 		m.filterInput.Focus()
@@ -51,4 +56,23 @@ func (m Model) filterModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m.updateFilter(msg)
+}
+
+func (m Model) actionPickerKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "j", "down":
+		if m.actionCursor < len(actionChoices)-1 {
+			m.actionCursor++
+		}
+	case "k", "up":
+		if m.actionCursor > 0 {
+			m.actionCursor--
+		}
+	case "enter", "space":
+		// TODO: uncomment after confirmation screen is implemented
+		// m.viewState = viewConfirm
+	case "esc":
+		m.viewState = viewList
+	}
+	return m, nil
 }

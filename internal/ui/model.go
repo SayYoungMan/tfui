@@ -17,15 +17,16 @@ type (
 
 type Model struct {
 	viewState    viewState
+	viewHeight   int
+	viewWidth    int
 	eventChannel <-chan terraform.StreamEvent
 	cancel       func()
 
-	resources  terraform.Resources
-	selected   map[string]bool
-	indexMap   map[string]int
-	cursor     int // indicates which resource idx we are pointing at
-	offset     int // indicates which resource is shown at the top
-	viewHeight int
+	resources terraform.Resources
+	selected  map[string]bool
+	indexMap  map[string]int
+	cursor    int // indicates which resource idx we are pointing at
+	offset    int // indicates which resource is shown at the top
 
 	filteredIdx []int
 	filterInput textinput.Model
@@ -34,7 +35,11 @@ type Model struct {
 	isScanning    bool
 	spinner       spinner.Model
 	err           error
+
+	actionCursor int
 }
+
+var actionChoices []string = []string{"plan", "apply", "destroy", "taint", "untaint"}
 
 type viewState int
 
@@ -83,6 +88,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.viewHeight = msg.Height
+		m.viewWidth = msg.Width
 		m.filterInput.SetWidth(msg.Width - 7)
 		return m, nil
 
@@ -90,6 +96,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.viewState {
 		case viewFilter:
 			return m.filterModeKeys(msg)
+		case viewActionPicker:
+			return m.actionPickerKeys(msg)
 		default:
 			return m.normalModeKeys(msg)
 		}
@@ -142,6 +150,10 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 }
 
 func (m Model) View() tea.View {
+	if m.viewState == viewActionPicker {
+		return tea.NewView(m.renderActionPickerView())
+	}
+
 	var s strings.Builder
 
 	filterIcon := "⌕ "
