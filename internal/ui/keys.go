@@ -31,7 +31,7 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case "/":
-		m.filterFocused = true
+		m.viewState = viewFilter
 		m.filterInput.Focus()
 		return m, textinput.Blink
 	case "h":
@@ -45,7 +45,7 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) filterModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc", "enter":
-		m.filterFocused = false
+		m.viewState = viewList
 		m.filterInput.Blur()
 		return m, nil
 	}

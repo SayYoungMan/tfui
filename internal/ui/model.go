@@ -16,6 +16,7 @@ type (
 )
 
 type Model struct {
+	viewState    viewState
 	eventChannel <-chan terraform.StreamEvent
 	cancel       func()
 
@@ -26,15 +27,24 @@ type Model struct {
 	offset     int // indicates which resource is shown at the top
 	viewHeight int
 
-	filteredIdx   []int
-	filterInput   textinput.Model
-	filterFocused bool
+	filteredIdx []int
+	filterInput textinput.Model
 
 	hideUnchanged bool
 	isScanning    bool
 	spinner       spinner.Model
 	err           error
 }
+
+type viewState int
+
+const (
+	viewList viewState = iota
+	viewFilter
+	viewActionPicker
+	viewConfirm
+	viewOutput
+)
 
 func NewModel(ch <-chan terraform.StreamEvent, cancel func()) Model {
 	s := spinner.New()
@@ -77,9 +87,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
-		if m.filterFocused {
+		switch m.viewState {
+		case viewFilter:
 			return m.filterModeKeys(msg)
-		} else {
+		default:
 			return m.normalModeKeys(msg)
 		}
 
@@ -135,7 +146,7 @@ func (m Model) View() tea.View {
 
 	filterIcon := "⌕ "
 	filterContent := filterIcon + m.filterInput.View()
-	if m.filterFocused {
+	if m.viewState == viewFilter {
 		fmt.Fprintln(&s, focusedBorderStyle.Render(filterContent))
 	} else {
 		fmt.Fprintln(&s, borderStyle.Render(filterContent))

@@ -142,27 +142,27 @@ func TestFilterModeKeys_FilterFocusAndUnfocus(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
 	m := NewModel(ch, func() {})
 
-	require.False(t, m.filterFocused)
+	require.Equal(t, viewList, m.viewState)
 
 	newModel, cmd := m.Update(tea.KeyPressMsg{Code: '/'})
 	m = newModel.(Model)
-	assert.True(t, m.filterFocused)
+	require.Equal(t, viewFilter, m.viewState)
 	assert.NotNil(t, cmd)
 
 	m.filterInput.SetValue("s3")
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	m = newModel.(Model)
-	assert.False(t, m.filterFocused)
+	require.Equal(t, viewList, m.viewState)
 	assert.Equal(t, "s3", m.filterInput.Value())
 
 	newModel, cmd = m.Update(tea.KeyPressMsg{Code: '/'})
 	m = newModel.(Model)
-	assert.True(t, m.filterFocused)
+	require.Equal(t, viewFilter, m.viewState)
 	assert.NotNil(t, cmd)
 
 	m.filterInput.SetValue("s3")
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
-	assert.False(t, m.filterFocused)
+	require.Equal(t, viewList, m.viewState)
 	assert.Equal(t, "s3", m.filterInput.Value())
 }
