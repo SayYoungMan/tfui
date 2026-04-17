@@ -337,3 +337,26 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 		waitForEvent(ch),
 	)
 }
+
+func (m Model) startAction() (tea.Model, tea.Cmd) {
+	ctx, cancel := context.WithCancel(context.Background())
+	m.cancel = cancel
+
+	addrs := m.selectedAddresses()
+	action := actionChoices[m.actionCursor]
+
+	actionFuncs := map[string]func(context.Context, []string) <-chan string{
+		"plan":    m.runner.Plan,
+		"apply":   m.runner.Apply,
+		"destroy": m.runner.Destroy,
+		"taint":   m.runner.Taint,
+		"untaint": m.runner.Untaint,
+	}
+	m.outputCh = actionFuncs[action](ctx, addrs)
+	m.outputLines = nil
+	m.isRunning = true
+	m.offset = 0
+	m.viewState = viewOutput
+
+	return m, waitForOutput(m.outputCh)
+}

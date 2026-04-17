@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"context"
 	"sort"
 
 	"charm.land/bubbles/v2/textinput"
@@ -87,26 +86,7 @@ func (m Model) confirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.confirmCursor == 0 {
 			m.viewState = viewActionPicker
 		} else {
-			ctx, cancel := context.WithCancel(context.Background())
-			m.cancel = cancel
-
-			addrs := m.selectedAddresses()
-			action := actionChoices[m.actionCursor]
-
-			actionFuncs := map[string]func(context.Context, []string) <-chan string{
-				"plan":    m.runner.Plan,
-				"apply":   m.runner.Apply,
-				"destroy": m.runner.Destroy,
-				"taint":   m.runner.Taint,
-				"untaint": m.runner.Untaint,
-			}
-			m.outputCh = actionFuncs[action](ctx, addrs)
-			m.outputLines = nil
-			m.isRunning = true
-			m.offset = 0
-			m.viewState = viewOutput
-
-			return m, waitForOutput(m.outputCh)
+			return m.startAction()
 		}
 	case "esc":
 		m.viewState = viewActionPicker
