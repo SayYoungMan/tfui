@@ -332,7 +332,7 @@ func TestConfirmKeys_CancelToPicker(t *testing.T) {
 
 func TestConfirmKeys_ConfirmToOutput(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := NewModel(terraform.NewTerraformRunner(t.TempDir(), "true"), ch, func() {})
 	m.viewState = viewConfirm
 	m.confirmCursor = 1
 

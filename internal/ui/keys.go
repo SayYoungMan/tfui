@@ -105,7 +105,7 @@ func (m Model) confirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			}
 			m.outputChannel = actionFuncs[action](ctx, addrs)
 			m.outputLines = nil
-			m.isOutputing = false
+			m.isOutputing = true
 			m.outputOffset = 0
 			m.viewState = viewOutput
 

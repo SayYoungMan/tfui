@@ -210,13 +210,14 @@ func (m Model) renderOutputView() string {
 
 	var help string
 	if m.isOutputing {
-		help = "↑/↓ scroll | Esc to close and re-plan"
-	} else {
 		help = "↑/↓ scroll | Running..."
+	} else {
+		help = "↑/↓ scroll | Esc to close and re-plan"
 	}
 	fmt.Fprint(&s, help)
 
-	modal := focusedBorderStyle.Render(s.String())
+	modalStyle := focusedBorderStyle.Width(m.viewWidth - 4)
+	modal := modalStyle.Render(s.String())
 
 	background := lipgloss.NewLayer(m.renderListView())
 	foreground := lipgloss.NewLayer(modal).X(1).Y(0).Z(1)
