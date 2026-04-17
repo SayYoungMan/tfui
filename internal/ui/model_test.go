@@ -151,12 +151,12 @@ func TestModel_HandleError(t *testing.T) {
 func TestModel_ScanComplete(t *testing.T) {
 	m := newTestModelEmpty()
 
-	assert.True(t, m.isScanning)
+	assert.True(t, m.isRunning)
 
 	newModel, cmd := m.Update(scanCompleteMsg{})
 	m = newModel.(Model)
 
-	assert.False(t, m.isScanning)
+	assert.False(t, m.isRunning)
 	assert.Nil(t, cmd)
 }
 
@@ -215,7 +215,7 @@ func TestModel_OutputLineMsg(t *testing.T) {
 	outputCh := make(chan string, 1)
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
-	m.isOutputting = true
+	m.isRunning = true
 	m.outputCh = outputCh
 
 	newModel, cmd := m.Update(outputLineMsg("first line"))
@@ -229,12 +229,12 @@ func TestModel_OutputLineMsg(t *testing.T) {
 func TestModel_OutputCompleteMsg(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
-	m.isOutputting = true
+	m.isRunning = true
 
 	newModel, cmd := m.Update(outputCompleteMsg{})
 	m = newModel.(Model)
 
-	assert.False(t, m.isOutputting)
+	assert.False(t, m.isRunning)
 	assert.Nil(t, cmd)
 }
 
@@ -286,28 +286,28 @@ func TestModel_MouseWheelScrollsOutput(t *testing.T) {
 	// Scroll down
 	newModel, _ := m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
 	m = newModel.(Model)
-	assert.Equal(t, 1, m.outputOffset)
+	assert.Equal(t, 1, m.offset)
 
 	// Scroll to max
 	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
 	m = newModel.(Model)
 	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
 	m = newModel.(Model)
-	assert.Equal(t, 3, m.outputOffset) // 5 lines - 2 visible = 3
+	assert.Equal(t, 3, m.offset) // 5 lines - 2 visible = 3
 
 	// Clamp at bottom
 	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
 	m = newModel.(Model)
-	assert.Equal(t, 3, m.outputOffset)
+	assert.Equal(t, 3, m.offset)
 
 	// Scroll back up
 	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelUp})
 	m = newModel.(Model)
-	assert.Equal(t, 2, m.outputOffset)
+	assert.Equal(t, 2, m.offset)
 
 	// Back to top
-	m.outputOffset = 0
+	m.offset = 0
 	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelUp})
 	m = newModel.(Model)
-	assert.Equal(t, 0, m.outputOffset)
+	assert.Equal(t, 0, m.offset)
 }

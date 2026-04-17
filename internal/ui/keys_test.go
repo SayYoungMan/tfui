@@ -130,7 +130,7 @@ func TestNormalModeKeys_SelectEmptyList(t *testing.T) {
 
 func TestNormalModeKeys_EnterBlockedWhileScanning(t *testing.T) {
 	m := newTestModel()
-	m.isScanning = true
+	m.isRunning = true
 	m.selected = map[string]bool{m.resources[0].Address: true}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -141,7 +141,7 @@ func TestNormalModeKeys_EnterBlockedWhileScanning(t *testing.T) {
 
 func TestNormalModeKeys_EnterBlockedWithNoSelection(t *testing.T) {
 	m := newTestModel()
-	m.isScanning = false
+	m.isRunning = false
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
@@ -151,7 +151,7 @@ func TestNormalModeKeys_EnterBlockedWithNoSelection(t *testing.T) {
 
 func TestNormalModeKeys_EnterOpensActionPicker(t *testing.T) {
 	m := newTestModel()
-	m.isScanning = false
+	m.isRunning = false
 	m.selected = map[string]bool{m.resources[0].Address: true}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -238,7 +238,7 @@ func TestActionPickerKeys_EscReturnsToList(t *testing.T) {
 
 func TestActionPickerKeys_CursorResetsOnEntry(t *testing.T) {
 	m := newTestModel()
-	m.isScanning = false
+	m.isRunning = false
 	m.selected = map[string]bool{m.resources[0].Address: true}
 	m.actionCursor = 3
 
@@ -326,7 +326,7 @@ func TestConfirmKeys_EscToPicker(t *testing.T) {
 func TestOutputKeys_EscBlockedWhileOutputing(t *testing.T) {
 	m := newTestModel()
 	m.viewState = viewOutput
-	m.isOutputting = true
+	m.isRunning = true
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	m = newModel.(Model)
@@ -343,21 +343,21 @@ func TestOutputKeys_Navigation(t *testing.T) {
 	// j scrolls down
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
 	m = newModel.(Model)
-	assert.Equal(t, 1, m.outputOffset)
+	assert.Equal(t, 1, m.offset)
 
 	// k scrolls up
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
 	m = newModel.(Model)
-	assert.Equal(t, 0, m.outputOffset)
+	assert.Equal(t, 0, m.offset)
 
 	// Clamp at top
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
 	m = newModel.(Model)
-	assert.Equal(t, 0, m.outputOffset)
+	assert.Equal(t, 0, m.offset)
 
 	// Clamp at bottom
-	m.outputOffset = 2 // max = 4 lines - 2 visible
+	m.offset = 2 // max = 4 lines - 2 visible
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'j'})
 	m = newModel.(Model)
-	assert.Equal(t, 2, m.outputOffset)
+	assert.Equal(t, 2, m.offset)
 }

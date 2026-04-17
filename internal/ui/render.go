@@ -36,7 +36,7 @@ func (m Model) renderListView() string {
 	}
 
 	var infoLine string
-	if m.isScanning {
+	if m.isRunning {
 		infoLine = fmt.Sprintf("\n %s Scanning... (%d resources found)", m.spinner.View(), len(m.resources))
 	} else {
 		infoLine = fmt.Sprintf("\n Scan Complete (%d resources found)", len(m.resources))
@@ -186,8 +186,8 @@ func (m Model) renderOutputView() string {
 	title := fmt.Sprintf("terraform %s", action)
 
 	visible := m.visibleOutputRows()
-	start := m.outputOffset
-	end := min(m.outputOffset+visible, len(m.outputLines))
+	start := m.offset
+	end := min(m.offset+visible, len(m.outputLines))
 
 	var s strings.Builder
 	fmt.Fprintln(&s, title)
@@ -204,7 +204,7 @@ func (m Model) renderOutputView() string {
 	}
 
 	var help string
-	if m.isOutputting {
+	if m.isRunning {
 		help = "↑/↓ scroll | Running..."
 	} else {
 		help = "↑/↓ scroll | Esc to close and re-plan"

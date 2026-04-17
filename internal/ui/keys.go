@@ -34,7 +34,7 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case "enter":
-		if !m.isScanning && len(m.selected) > 0 {
+		if !m.isRunning && len(m.selected) > 0 {
 			m.actionCursor = 0
 			m.viewState = viewActionPicker
 		}
@@ -105,8 +105,8 @@ func (m Model) confirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			}
 			m.outputCh = actionFuncs[action](ctx, addrs)
 			m.outputLines = nil
-			m.isOutputting = true
-			m.outputOffset = 0
+			m.isRunning = true
+			m.offset = 0
 			m.viewState = viewOutput
 
 			return m, waitForOutput(m.outputCh)
@@ -130,16 +130,16 @@ func (m Model) selectedAddresses() []string {
 func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "k", "up":
-		if m.outputOffset > 0 {
-			m.outputOffset--
+		if m.offset > 0 {
+			m.offset--
 		}
 	case "j", "down":
 		maxOffset := max(0, len(m.outputLines)-m.visibleOutputRows())
-		if m.outputOffset < maxOffset {
-			m.outputOffset++
+		if m.offset < maxOffset {
+			m.offset++
 		}
 	case "esc":
-		if !m.isOutputting {
+		if !m.isRunning {
 			return m.startRescan()
 		}
 	case "q", "ctrl+c":

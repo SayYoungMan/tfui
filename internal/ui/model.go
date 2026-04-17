@@ -27,22 +27,20 @@ type Model struct {
 	indexMap  map[string]int
 	cursor    int // indicates which resource idx we are pointing at
 	offset    int // indicates which resource is shown at the top
+	isRunning bool
 
 	filteredIdx []int
 	filterInput textinput.Model
 
 	hideUnchanged bool
-	isScanning    bool
 	spinner       spinner.Model
 	err           error
 
 	actionCursor  int
 	confirmCursor int
 
-	outputLines  []string
-	outputCh     <-chan string
-	isOutputting bool
-	outputOffset int
+	outputLines []string
+	outputCh    <-chan string
 }
 
 var actionChoices []string = []string{"plan", "apply", "destroy", "taint", "untaint"}
@@ -69,7 +67,7 @@ func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent
 		selected:    make(map[string]bool),
 		indexMap:    make(map[string]int),
 		filterInput: newFilterInput(),
-		isScanning:  true,
+		isRunning:   true,
 		spinner:     s,
 	}
 }
@@ -131,12 +129,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseWheelMsg:
 		switch m.viewState {
 		case viewOutput:
-			if msg.Button == tea.MouseWheelUp && m.outputOffset > 0 {
-				m.outputOffset--
+			if msg.Button == tea.MouseWheelUp && m.offset > 0 {
+				m.offset--
 			} else if msg.Button == tea.MouseWheelDown {
 				maxOff := max(0, len(m.outputLines)-m.visibleOutputRows())
-				if m.outputOffset < maxOff {
-					m.outputOffset++
+				if m.offset < maxOff {
+					m.offset++
 				}
 			}
 		case viewList:
@@ -154,19 +152,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleStreamEvent(terraform.StreamEvent(msg))
 
 	case scanCompleteMsg:
-		m.isScanning = false
+		m.isRunning = false
 		return m, nil
 
 	case outputLineMsg:
 		m.outputLines = append(m.outputLines, string(msg))
 		maxOff := max(0, len(m.outputLines)-m.visibleOutputRows())
-		if m.outputOffset >= maxOff {
-			m.outputOffset = maxOff
+		if m.offset >= maxOff {
+			m.offset = maxOff
 		}
 		return m, waitForOutput(m.outputCh)
 
 	case outputCompleteMsg:
-		m.isOutputting = false
+		m.isRunning = false
 		return m, nil
 
 	case spinner.TickMsg:
@@ -272,10 +270,9 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	m.cursor = 0
 	m.offset = 0
 	m.err = nil
-	m.isScanning = true
+	m.isRunning = true
 	m.outputLines = nil
 	m.outputCh = nil
-	m.isOutputting = false
 	m.viewState = viewList
 
 	ch := m.runner.StreamPlan(ctx)
