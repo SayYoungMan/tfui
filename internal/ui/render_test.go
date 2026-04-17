@@ -237,3 +237,25 @@ func TestRenderOutputView_HelpTextChangesWhenDone(t *testing.T) {
 	assert.Contains(t, view.Content, "Esc to close")
 	assert.NotContains(t, view.Content, "Running...")
 }
+
+func TestRenderShutdownLayer_ShowsWaitingMessage(t *testing.T) {
+	m := newTestModel()
+	m.isQuitting = true
+	m.forceQuitReady = false
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "Waiting for terraform to finish...")
+	assert.NotContains(t, view.Content, "Press q or ctrl+c again to force quit")
+}
+
+func TestRenderShutdownLayer_ShowsForceQuitAfterTimeout(t *testing.T) {
+	m := newTestModel()
+	m.isQuitting = true
+	m.forceQuitReady = true
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "Waiting for terraform to finish...")
+	assert.Contains(t, view.Content, "Press q or ctrl+c again to force quit")
+}

@@ -216,3 +216,18 @@ func (m Model) renderOutputView() string {
 
 	return lipgloss.Place(m.viewWidth, m.viewHeight, lipgloss.Center, lipgloss.Center, modal)
 }
+
+func (m Model) renderShutdownLayer() *lipgloss.Layer {
+	msg := "Exiting the program...\n\nWaiting for terraform to finish..."
+	if m.forceQuitReady {
+		msg += "\n\nPress q or ctrl+c again to force quit"
+	}
+
+	modal := shutdownBorderStyle.Render(msg)
+	modalWidth := lipgloss.Width(modal)
+	modalHeight := lipgloss.Height(modal)
+	x := max(0, (m.viewWidth-modalWidth)/2)
+	y := max(0, (m.viewHeight-modalHeight)/2)
+
+	return lipgloss.NewLayer(modal).X(x).Y(y).Z(2)
+}

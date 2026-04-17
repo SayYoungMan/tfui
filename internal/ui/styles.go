@@ -17,12 +17,17 @@ var (
 )
 
 var (
-	cursorStyle        = lipgloss.NewStyle().Background(colorCreamWhite).Foreground(colorCharcoal)
-	selectedStyle      = lipgloss.NewStyle().Background(colorLightGrey)
-	borderStyle        = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorDimGrey).Padding(0, 1)
-	focusedBorderStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorCreamWhite).Padding(0, 1)
-	buttonStyle        = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorDimGrey).Padding(0, 2)
-	focusedButtonStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorCreamWhite).Padding(0, 2)
+	cursorStyle         = lipgloss.NewStyle().Background(colorCreamWhite).Foreground(colorCharcoal)
+	selectedStyle       = lipgloss.NewStyle().Background(colorLightGrey)
+	borderStyle         = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorDimGrey).Padding(0, 1)
+	focusedBorderStyle  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorCreamWhite).Padding(0, 1)
+	buttonStyle         = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorDimGrey).Padding(0, 2)
+	focusedButtonStyle  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorCreamWhite).Padding(0, 2)
+	dimStyle            = lipgloss.NewStyle().Foreground(colorDimGrey)
+	shutdownBorderStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(colorCoral).
+				Padding(6, 6)
 )
 
 var actionStyles = map[terraform.Action]lipgloss.Style{

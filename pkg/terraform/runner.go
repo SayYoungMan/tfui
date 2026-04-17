@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -39,6 +40,9 @@ func (tr *TerraformRunner) StreamPlan(ctx context.Context) <-chan StreamEvent {
 		args := []string{"plan", "-json"}
 		cmd := tr.cmdFactory(ctx, tr.binary, args...)
 		cmd.Dir = tr.workdir
+		cmd.Cancel = func() error {
+			return cmd.Process.Signal(os.Interrupt)
+		}
 
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
@@ -86,6 +90,9 @@ func (tr *TerraformRunner) streamOutput(ctx context.Context, args []string) <-ch
 
 		cmd := tr.cmdFactory(ctx, tr.binary, args...)
 		cmd.Dir = tr.workdir
+		cmd.Cancel = func() error {
+			return cmd.Process.Signal(os.Interrupt)
+		}
 
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {

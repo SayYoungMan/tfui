@@ -2,10 +2,12 @@ package ui
 
 import (
 	"context"
+	"time"
 
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 )
 
@@ -20,7 +22,10 @@ type Model struct {
 	viewHeight int
 	viewWidth  int
 	eventCh    <-chan terraform.StreamEvent
-	cancel     func()
+
+	cancel         func()
+	isQuitting     bool
+	forceQuitReady bool
 
 	resources terraform.Resources
 	selected  map[string]bool
@@ -104,6 +109,23 @@ func waitForOutput(ch <-chan string) tea.Cmd {
 	}
 }
 
+type forceQuitReadyMsg struct{}
+
+func waitForForceQuit() tea.Cmd {
+	return tea.Tick(10*time.Second, func(t time.Time) tea.Msg {
+		return forceQuitReadyMsg{}
+	})
+}
+
+func (m Model) gracefulQuit() (tea.Model, tea.Cmd) {
+	m.isQuitting = true
+	m.cancel()
+	if !m.isRunning {
+		return m, tea.Quit
+	}
+	return m, waitForForceQuit()
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -113,6 +135,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
+		if msg.String() == "ctrl+c" || msg.String() == "q" {
+			if m.isQuitting && m.forceQuitReady {
+				return m, tea.Quit
+			}
+			if !m.isQuitting {
+				return m.gracefulQuit()
+			}
+			return m, nil
+		}
+		// ignore input if it's quitting
+		if m.isQuitting {
+			return m, nil
+		}
+
 		switch m.viewState {
 		case viewFilter:
 			return m.filterModeKeys(msg)
@@ -153,6 +189,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case scanCompleteMsg:
 		m.isRunning = false
+		if m.isQuitting {
+			return m, tea.Quit
+		}
 		return m, nil
 
 	case outputLineMsg:
@@ -165,6 +204,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case outputCompleteMsg:
 		m.isRunning = false
+		if m.isQuitting {
+			return m, tea.Quit
+		}
+		return m, nil
+
+	case forceQuitReadyMsg:
+		m.forceQuitReady = true
 		return m, nil
 
 	case spinner.TickMsg:
@@ -208,18 +254,25 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 }
 
 func (m Model) View() tea.View {
-	var v tea.View
+	var viewString string
 	switch m.viewState {
 	case viewActionPicker:
-		v = tea.NewView(m.renderActionPickerView())
+		viewString = m.renderActionPickerView()
 	case viewConfirm:
-		v = tea.NewView(m.renderConfirmView())
+		viewString = m.renderConfirmView()
 	case viewOutput:
-		v = tea.NewView(m.renderOutputView())
+		viewString = m.renderOutputView()
 	default:
-		v = tea.NewView(m.renderListView())
+		viewString = m.renderListView()
 	}
+
+	if m.isQuitting {
+		viewString = lipgloss.NewCompositor(lipgloss.NewLayer(dimStyle.Render(viewString)), m.renderShutdownLayer()).Render()
+	}
+
+	v := tea.NewView(viewString)
 	v.MouseMode = tea.MouseModeCellMotion
+
 	return v
 }
 
@@ -252,6 +305,7 @@ func (m *Model) adjustOffset() {
 }
 
 // 2(borders) + 1(title) + 2(blank) + 1(help)
+// TODO: There is a bug where the upper border explodes to top with lots of outputs
 const defaultReservedOutputRows = 10
 
 func (m Model) visibleOutputRows() int {

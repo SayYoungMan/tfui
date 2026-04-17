@@ -311,3 +311,83 @@ func TestModel_MouseWheelScrollsOutput(t *testing.T) {
 	m = newModel.(Model)
 	assert.Equal(t, 0, m.offset)
 }
+
+func TestGracefulQuit_QuitsImmediatelyWhenIdle(t *testing.T) {
+	m := newTestModel()
+	m.isRunning = false
+
+	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
+	m = newModel.(Model)
+
+	assert.True(t, m.isQuitting)
+	assert.NotNil(t, cmd)
+}
+
+func TestGracefulQuit_WaitsWhenRunning(t *testing.T) {
+	m := newTestModel()
+	m.isRunning = true
+	cancelled := false
+	m.cancel = func() { cancelled = true }
+
+	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
+	m = newModel.(Model)
+
+	assert.True(t, m.isQuitting)
+	assert.True(t, cancelled)
+	assert.NotNil(t, cmd)
+
+	_, cmd = m.Update(tea.KeyPressMsg{Code: 'q'})
+
+	assert.Nil(t, cmd)
+}
+
+func TestGracefulQuit_ForceQuitsAfterTimeout(t *testing.T) {
+	m := newTestModel()
+	m.isQuitting = true
+	m.forceQuitReady = true
+
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
+
+	assert.NotNil(t, cmd)
+}
+
+func TestGracefulQuit_QuitsOnScanComplete(t *testing.T) {
+	m := newTestModel()
+	m.isQuitting = true
+	m.isRunning = true
+
+	_, cmd := m.Update(scanCompleteMsg{})
+
+	assert.NotNil(t, cmd)
+}
+
+func TestGracefulQuit_QuitsOnOutputComplete(t *testing.T) {
+	m := newTestModel()
+	m.isQuitting = true
+	m.isRunning = true
+
+	_, cmd := m.Update(outputCompleteMsg{})
+
+	assert.NotNil(t, cmd)
+}
+
+func TestGracefulQuit_BlocksKeysWhileQuitting(t *testing.T) {
+	m := newTestModel()
+	m.isQuitting = true
+	m.viewState = viewList
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
+	m = newModel.(Model)
+
+	assert.Equal(t, 0, m.cursor)
+}
+
+func TestGracefulQuit_ForceQuitReadyMsg(t *testing.T) {
+	m := newTestModel()
+	m.isQuitting = true
+
+	newModel, _ := m.Update(forceQuitReadyMsg{})
+	m = newModel.(Model)
+
+	assert.True(t, m.forceQuitReady)
+}

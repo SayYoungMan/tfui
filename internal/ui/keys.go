@@ -10,9 +10,6 @@ import (
 
 func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "q", "ctrl+c":
-		m.cancel()
-		return m, tea.Quit
 	case "j", "down":
 		if m.cursor < len(m.filteredIdx)-1 {
 			m.cursor++
