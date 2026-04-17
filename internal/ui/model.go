@@ -252,7 +252,7 @@ func (m *Model) adjustOffset() {
 }
 
 // 2(borders) + 1(title) + 2(blank) + 1(help)
-const defaultReservedOutputRows = 6
+const defaultReservedOutputRows = 10
 
 func (m Model) visibleOutputRows() int {
 	return max(1, m.viewHeight-defaultReservedOutputRows)

@@ -214,8 +214,5 @@ func (m Model) renderOutputView() string {
 	modalStyle := focusedBorderStyle.Width(m.viewWidth - 4)
 	modal := modalStyle.Render(s.String())
 
-	background := lipgloss.NewLayer(m.renderListView())
-	foreground := lipgloss.NewLayer(modal).X(1).Y(0).Z(1)
-
-	return lipgloss.NewCompositor(background, foreground).Render()
+	return lipgloss.Place(m.viewWidth, m.viewHeight, lipgloss.Center, lipgloss.Center, modal)
 }
