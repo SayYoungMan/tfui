@@ -326,7 +326,7 @@ func TestConfirmKeys_EscToPicker(t *testing.T) {
 func TestOutputKeys_EscBlockedWhileOutputing(t *testing.T) {
 	m := newTestModel()
 	m.viewState = viewOutput
-	m.isOutputing = true
+	m.isOutputting = true
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	m = newModel.(Model)

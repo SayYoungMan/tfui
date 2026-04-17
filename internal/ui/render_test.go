@@ -209,7 +209,7 @@ func TestRenderOutputView_ShowsContent(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
 	m.actionCursor = 1
-	m.isOutputing = true
+	m.isOutputting = true
 	m.outputLines = []string{
 		"aws_s3_bucket.uploads: Modifying...",
 		"aws_s3_bucket.uploads: Modifications complete after 2s",
@@ -226,13 +226,13 @@ func TestRenderOutputView_ShowsContent(t *testing.T) {
 func TestRenderOutputView_HelpTextChangesWhenDone(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
-	m.isOutputing = true
+	m.isOutputting = true
 
 	view := m.View()
 	assert.Contains(t, view.Content, "Running...")
 	assert.NotContains(t, view.Content, "Esc to close")
 
-	m.isOutputing = false
+	m.isOutputting = false
 	view = m.View()
 	assert.Contains(t, view.Content, "Esc to close")
 	assert.NotContains(t, view.Content, "Running...")

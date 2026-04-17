@@ -215,8 +215,8 @@ func TestModel_OutputLineMsg(t *testing.T) {
 	outputCh := make(chan string, 1)
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
-	m.isOutputing = true
-	m.outputChannel = outputCh
+	m.isOutputting = true
+	m.outputCh = outputCh
 
 	newModel, cmd := m.Update(outputLineMsg("first line"))
 	m = newModel.(Model)
@@ -229,12 +229,12 @@ func TestModel_OutputLineMsg(t *testing.T) {
 func TestModel_OutputCompleteMsg(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
-	m.isOutputing = true
+	m.isOutputting = true
 
 	newModel, cmd := m.Update(outputCompleteMsg{})
 	m = newModel.(Model)
 
-	assert.False(t, m.isOutputing)
+	assert.False(t, m.isOutputting)
 	assert.Nil(t, cmd)
 }
 

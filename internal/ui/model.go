@@ -15,12 +15,12 @@ type (
 )
 
 type Model struct {
-	runner       *terraform.TerraformRunner
-	viewState    viewState
-	viewHeight   int
-	viewWidth    int
-	eventChannel <-chan terraform.StreamEvent
-	cancel       func()
+	runner     *terraform.TerraformRunner
+	viewState  viewState
+	viewHeight int
+	viewWidth  int
+	eventCh    <-chan terraform.StreamEvent
+	cancel     func()
 
 	resources terraform.Resources
 	selected  map[string]bool
@@ -39,10 +39,10 @@ type Model struct {
 	actionCursor  int
 	confirmCursor int
 
-	outputLines   []string
-	outputChannel <-chan string
-	isOutputing   bool
-	outputOffset  int
+	outputLines  []string
+	outputCh     <-chan string
+	isOutputting bool
+	outputOffset int
 }
 
 var actionChoices []string = []string{"plan", "apply", "destroy", "taint", "untaint"}
@@ -62,22 +62,22 @@ func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent
 	s.Spinner = spinner.Dot
 
 	return Model{
-		runner:       runner,
-		eventChannel: ch,
-		cancel:       cancel,
-		resources:    []terraform.Resource{},
-		selected:     make(map[string]bool),
-		indexMap:     make(map[string]int),
-		filterInput:  newFilterInput(),
-		isScanning:   true,
-		spinner:      s,
+		runner:      runner,
+		eventCh:     ch,
+		cancel:      cancel,
+		resources:   []terraform.Resource{},
+		selected:    make(map[string]bool),
+		indexMap:    make(map[string]int),
+		filterInput: newFilterInput(),
+		isScanning:  true,
+		spinner:     s,
 	}
 }
 
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
-		waitForEvent(m.eventChannel),
+		waitForEvent(m.eventCh),
 	)
 }
 
@@ -160,13 +160,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case outputLineMsg:
 		m.outputLines = append(m.outputLines, string(msg))
 		maxOff := max(0, len(m.outputLines)-m.visibleOutputRows())
-		if m.outputOffset >= maxOff-1 {
+		if m.outputOffset >= maxOff {
 			m.outputOffset = maxOff
 		}
-		return m, waitForOutput(m.outputChannel)
+		return m, waitForOutput(m.outputCh)
 
 	case outputCompleteMsg:
-		m.isOutputing = false
+		m.isOutputting = false
 		return m, nil
 
 	case spinner.TickMsg:
@@ -181,7 +181,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cmd) {
 	if event.Error != nil {
 		m.err = event.Error
-		return m, waitForEvent(m.eventChannel)
+		return m, waitForEvent(m.eventCh)
 	}
 
 	if event.Resource != nil {
@@ -206,7 +206,7 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 	}
 
 	m.adjustOffset()
-	return m, waitForEvent(m.eventChannel)
+	return m, waitForEvent(m.eventCh)
 }
 
 func (m Model) View() tea.View {
@@ -274,12 +274,12 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	m.err = nil
 	m.isScanning = true
 	m.outputLines = nil
-	m.outputChannel = nil
-	m.isOutputing = false
+	m.outputCh = nil
+	m.isOutputting = false
 	m.viewState = viewList
 
 	ch := m.runner.StreamPlan(ctx)
-	m.eventChannel = ch
+	m.eventCh = ch
 
 	return m, tea.Batch(
 		m.spinner.Tick,

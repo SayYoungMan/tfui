@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -126,11 +125,7 @@ func (m Model) renderConfirmView() string {
 
 	maxResourceRows := max(min(maxConfirmResources, m.viewHeight-defaultConfirmReservedRows), 1)
 
-	addrs := make([]string, 0, len(m.selected))
-	for addr := range m.selected {
-		addrs = append(addrs, addr)
-	}
-	sort.Strings(addrs)
+	addrs := m.selectedAddresses()
 	if len(addrs) > maxResourceRows {
 		addrs = addrs[:maxResourceRows]
 	}
@@ -209,7 +204,7 @@ func (m Model) renderOutputView() string {
 	}
 
 	var help string
-	if m.isOutputing {
+	if m.isOutputting {
 		help = "↑/↓ scroll | Running..."
 	} else {
 		help = "↑/↓ scroll | Esc to close and re-plan"

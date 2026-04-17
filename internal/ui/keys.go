@@ -103,13 +103,13 @@ func (m Model) confirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				"taint":   m.runner.Taint,
 				"untaint": m.runner.Untaint,
 			}
-			m.outputChannel = actionFuncs[action](ctx, addrs)
+			m.outputCh = actionFuncs[action](ctx, addrs)
 			m.outputLines = nil
-			m.isOutputing = true
+			m.isOutputting = true
 			m.outputOffset = 0
 			m.viewState = viewOutput
 
-			return m, waitForOutput(m.outputChannel)
+			return m, waitForOutput(m.outputCh)
 		}
 	case "esc":
 		m.viewState = viewActionPicker
@@ -118,8 +118,6 @@ func (m Model) confirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// helper function to get addresses out of m.selected
-// TODO: Refactor selected to be field of resource and remove this
 func (m Model) selectedAddresses() []string {
 	addrs := make([]string, 0, len(m.selected))
 	for addr := range m.selected {
@@ -141,7 +139,7 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.outputOffset++
 		}
 	case "esc":
-		if !m.isOutputing {
+		if !m.isOutputting {
 			return m.startRescan()
 		}
 	case "q", "ctrl+c":
