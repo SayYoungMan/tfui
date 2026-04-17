@@ -40,6 +40,7 @@ type Model struct {
 	hideUnchanged bool
 	spinner       spinner.Model
 	err           error
+	diagnostics   []terraform.Diagnostic
 
 	actionCursor  int
 	confirmCursor int
@@ -228,6 +229,11 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 		return m, waitForEvent(m.eventCh)
 	}
 
+	if event.Diagnostic != nil {
+		m.diagnostics = append(m.diagnostics, *event.Diagnostic)
+		return m, waitForEvent(m.eventCh)
+	}
+
 	if event.Resource != nil {
 		addr := event.Resource.Address
 		if idx, exists := m.indexMap[addr]; exists {
@@ -284,6 +290,12 @@ func (m Model) visibleRows() int {
 	if m.err != nil {
 		reserved++
 	}
+	for _, d := range m.diagnostics {
+		reserved += 2
+		if d.Detail != "" {
+			reserved++
+		}
+	}
 
 	rows := m.viewHeight - reserved
 
@@ -324,6 +336,7 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	m.cursor = 0
 	m.offset = 0
 	m.err = nil
+	m.diagnostics = nil
 	m.isRunning = true
 	m.outputLines = nil
 	m.outputCh = nil

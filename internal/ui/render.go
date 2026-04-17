@@ -52,6 +52,19 @@ func (m Model) renderListView() string {
 	if m.err != nil {
 		fmt.Fprintf(&s, "\n error occurred: %v\n", m.err)
 	}
+	for _, d := range m.diagnostics {
+		var style lipgloss.Style
+		if d.Severity == "error" {
+			style = lipgloss.NewStyle().Foreground(colorCoral)
+			fmt.Fprintf(&s, "\n %s\n", style.Render("Error: "+d.Summary))
+		} else {
+			style = lipgloss.NewStyle().Foreground(colorAmber)
+			fmt.Fprintf(&s, "\n %s\n", style.Render("Warning: "+d.Summary))
+		}
+		if d.Detail != "" {
+			fmt.Fprintf(&s, " %s\n", d.Detail)
+		}
+	}
 
 	var hKeyInfo string
 	if m.hideUnchanged {
