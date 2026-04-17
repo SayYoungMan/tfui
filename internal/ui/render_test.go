@@ -272,3 +272,42 @@ func TestRenderConfirmView_TruncatesLongSelections(t *testing.T) {
 	assert.Contains(t, view.Content, "aws_s3_bucket.b_09")
 	assert.NotContains(t, view.Content, "aws_s3_bucket.b_10")
 }
+
+func TestRenderOutputView_ShowsContent(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m.viewState = viewOutput
+	m.actionCursor = 1 // "apply"
+	m.viewWidth = 80
+	m.viewHeight = 24
+	m.isOutputing = true
+	m.outputLines = []string{
+		"aws_s3_bucket.uploads: Modifying...",
+		"aws_s3_bucket.uploads: Modifications complete after 2s",
+		"Apply complete! Resources: 0 added, 1 changed, 0 destroyed.",
+	}
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "terraform apply")
+	assert.Contains(t, view.Content, "aws_s3_bucket.uploads: Modifying...")
+	assert.Contains(t, view.Content, "Apply complete!")
+}
+
+func TestRenderOutputView_HelpTextChangesWhenDone(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m.viewState = viewOutput
+	m.viewWidth = 80
+	m.viewHeight = 24
+	m.isOutputing = true
+
+	view := m.View()
+	assert.Contains(t, view.Content, "Running...")
+	assert.NotContains(t, view.Content, "Esc to close")
+
+	m.isOutputing = false
+	view = m.View()
+	assert.Contains(t, view.Content, "Esc to close")
+	assert.NotContains(t, view.Content, "Running...")
+}

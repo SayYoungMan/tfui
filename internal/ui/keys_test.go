@@ -350,3 +350,44 @@ func TestConfirmKeys_EscToPicker(t *testing.T) {
 	m = newModel.(Model)
 	assert.Equal(t, viewActionPicker, m.viewState)
 }
+
+func TestOutputKeys_EscBlockedWhileOutputing(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m.viewState = viewOutput
+	m.isOutputing = true
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewOutput, m.viewState)
+}
+
+func TestOutputKeys_Navigation(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m.viewState = viewOutput
+	m.viewHeight = defaultReservedOutputRows + 2 // 2 visible rows
+	m.outputLines = []string{"line 0", "line 1", "line 2", "line 3"}
+
+	// j scrolls down
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.outputOffset)
+
+	// k scrolls up
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.outputOffset)
+
+	// Clamp at top
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.outputOffset)
+
+	// Clamp at bottom
+	m.outputOffset = 2 // max = 4 lines - 2 visible
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'j'})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.outputOffset)
+}

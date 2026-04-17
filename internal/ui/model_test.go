@@ -224,3 +224,111 @@ func TestModel_NewResourcesFilterMatch(t *testing.T) {
 	assert.Len(t, m.filteredIdx, 2)
 	assert.Len(t, m.resources, 3)
 }
+
+func TestModel_OutputLineMsg(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	outputCh := make(chan string, 1)
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m.viewState = viewOutput
+	m.isOutputing = true
+	m.outputChannel = outputCh
+	m.viewHeight = 20
+
+	newModel, cmd := m.Update(outputLineMsg("first line"))
+	m = newModel.(Model)
+
+	require.Len(t, m.outputLines, 1)
+	assert.Equal(t, "first line", m.outputLines[0])
+	assert.NotNil(t, cmd)
+}
+
+func TestModel_OutputCompleteMsg(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m.viewState = viewOutput
+	m.isOutputing = true
+
+	newModel, cmd := m.Update(outputCompleteMsg{})
+	m = newModel.(Model)
+
+	assert.False(t, m.isOutputing)
+	assert.Nil(t, cmd)
+}
+
+func TestModel_MouseWheelScrollsList(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m.viewState = viewList
+	m.resources = []terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
+		{Address: "aws_s3_bucket.b", Action: terraform.ActionNoop},
+		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
+	}
+	m.filteredIdx = []int{0, 1, 2}
+
+	// Scroll down
+	newModel, _ := m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.cursor)
+
+	// Scroll down again
+	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.cursor)
+
+	// Clamp at bottom
+	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.cursor)
+
+	// Scroll up
+	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelUp})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.cursor)
+
+	// Back to top
+	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelUp})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.cursor)
+
+	// Clamp at top
+	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelUp})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.cursor)
+}
+
+func TestModel_MouseWheelScrollsOutput(t *testing.T) {
+	ch := make(chan terraform.StreamEvent, 1)
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m.viewState = viewOutput
+	m.viewHeight = defaultReservedOutputRows + 2 // 2 visible rows
+	m.outputLines = []string{"line 0", "line 1", "line 2", "line 3", "line 4"}
+
+	// Scroll down
+	newModel, _ := m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.outputOffset)
+
+	// Scroll to max
+	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
+	m = newModel.(Model)
+	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
+	m = newModel.(Model)
+	assert.Equal(t, 3, m.outputOffset) // 5 lines - 2 visible = 3
+
+	// Clamp at bottom
+	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
+	m = newModel.(Model)
+	assert.Equal(t, 3, m.outputOffset)
+
+	// Scroll back up
+	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelUp})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.outputOffset)
+
+	// Back to top
+	m.outputOffset = 0
+	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelUp})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.outputOffset)
+}
