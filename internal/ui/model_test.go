@@ -12,14 +12,12 @@ import (
 )
 
 const (
-	ansiString         = "\x1b["
 	testResourceAddr   = "aws_s3_bucket.uploads"
 	testDataSourceAddr = "data.aws_caller_identity.current"
 )
 
 func TestModel_Handle_RefreshComplete(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 
 	event := terraform.StreamEvent{
 		Resource: &terraform.Resource{
@@ -38,8 +36,7 @@ func TestModel_Handle_RefreshComplete(t *testing.T) {
 }
 
 func TestModel_Handle_DataSourceRead(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 
 	event := terraform.StreamEvent{
 		Resource: &terraform.Resource{
@@ -58,8 +55,7 @@ func TestModel_Handle_DataSourceRead(t *testing.T) {
 }
 
 func TestModel_UpdateExistingResource(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
 		Resource: &terraform.Resource{
@@ -84,8 +80,7 @@ func TestModel_UpdateExistingResource(t *testing.T) {
 }
 
 func TestModel_DriftExistingResource(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
 		Resource: &terraform.Resource{
@@ -112,8 +107,7 @@ func TestModel_DriftExistingResource(t *testing.T) {
 }
 
 func TestModel_HideUnchanged_ResourceBecomesChanged(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 	m.hideUnchanged = true
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
@@ -140,8 +134,7 @@ func TestModel_HideUnchanged_ResourceBecomesChanged(t *testing.T) {
 }
 
 func TestModel_HandleError(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 
 	errMsg := "terraform plan failed"
 	event := terraform.StreamEvent{
@@ -156,8 +149,7 @@ func TestModel_HandleError(t *testing.T) {
 }
 
 func TestModel_ScanComplete(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 
 	assert.True(t, m.isScanning)
 
@@ -169,13 +161,12 @@ func TestModel_ScanComplete(t *testing.T) {
 }
 
 func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
-	m.resources = []terraform.Resource{
+	resources := []terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_lambda_function.b", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
 	}
+	m := newTestModelWithResources(resources)
 	m.filteredIdx = []int{0, 2}
 	m.cursor = 0
 
@@ -184,7 +175,7 @@ func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
 
 	var theLine string
 	for line := range strings.SplitSeq(m.View().Content, "\n") {
-		if strings.Contains(line, "aws_s3_bucket.c") {
+		if strings.Contains(line, m.resources[2].Address) {
 			theLine = line
 		}
 	}
@@ -193,15 +184,10 @@ func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
 }
 
 func TestModel_NewResourcesFilterMatch(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
-	m.viewHeight = 3 + defaultReservedRows
-	m.resources = []terraform.Resource{
+	m := newTestModelWithResources([]terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
-	}
-	m.indexMap = map[string]int{"aws_s3_bucket.a": 0}
+	})
 	m.filterInput.SetValue("s3")
-	m.filteredIdx = []int{0}
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
 		Resource: &terraform.Resource{
@@ -226,13 +212,11 @@ func TestModel_NewResourcesFilterMatch(t *testing.T) {
 }
 
 func TestModel_OutputLineMsg(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
 	outputCh := make(chan string, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 	m.viewState = viewOutput
 	m.isOutputing = true
 	m.outputChannel = outputCh
-	m.viewHeight = 20
 
 	newModel, cmd := m.Update(outputLineMsg("first line"))
 	m = newModel.(Model)
@@ -243,8 +227,7 @@ func TestModel_OutputLineMsg(t *testing.T) {
 }
 
 func TestModel_OutputCompleteMsg(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 	m.viewState = viewOutput
 	m.isOutputing = true
 
@@ -256,15 +239,12 @@ func TestModel_OutputCompleteMsg(t *testing.T) {
 }
 
 func TestModel_MouseWheelScrollsList(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
-	m.viewState = viewList
-	m.resources = []terraform.Resource{
+	resources := []terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
 	}
-	m.filteredIdx = []int{0, 1, 2}
+	m := newTestModelWithResources(resources)
 
 	// Scroll down
 	newModel, _ := m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
@@ -298,8 +278,7 @@ func TestModel_MouseWheelScrollsList(t *testing.T) {
 }
 
 func TestModel_MouseWheelScrollsOutput(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 	m.viewState = viewOutput
 	m.viewHeight = defaultReservedOutputRows + 2 // 2 visible rows
 	m.outputLines = []string{"line 0", "line 1", "line 2", "line 3", "line 4"}

@@ -21,10 +21,10 @@ func TestNormalModeKeys_Quit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ch := make(chan terraform.StreamEvent, 1)
 			cancelled := false
 			cancel := func() { cancelled = true }
-			m := NewModel(&terraform.TerraformRunner{}, ch, cancel)
+			m := newTestModelEmpty()
+			m.cancel = cancel
 
 			_, cmd := m.Update(tt.msg)
 
@@ -35,14 +35,12 @@ func TestNormalModeKeys_Quit(t *testing.T) {
 }
 
 func TestNormalModeKeys_CursorNavigation(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
-	m.resources = []terraform.Resource{
+	resources := []terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
 	}
-	m.filteredIdx = []int{0, 1, 2}
+	m := newTestModelWithResources(resources)
 
 	assert.Equal(t, 0, m.cursor)
 
@@ -78,8 +76,7 @@ func TestNormalModeKeys_CursorNavigation(t *testing.T) {
 }
 
 func TestNormalModeKeys_ScrollsUpWithCursor(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 	m.viewHeight = 3 + defaultReservedRows
 
 	for i := range 10 {
@@ -109,28 +106,21 @@ func TestNormalModeKeys_ScrollsUpWithCursor(t *testing.T) {
 }
 
 func TestNormalModeKeys_ToggleSelect(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
-	m.resources = []terraform.Resource{
-		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
-		{Address: "aws_s3_bucket.b", Action: terraform.ActionNoop},
-	}
-	m.filteredIdx = []int{0, 1}
+	m := newTestModel()
 
 	// Select first resource
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	m = newModel.(Model)
-	assert.True(t, m.selected["aws_s3_bucket.a"])
+	assert.True(t, m.selected[m.resources[0].Address])
 
 	// Deselect it
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	m = newModel.(Model)
-	assert.False(t, m.selected["aws_s3_bucket.a"])
+	assert.False(t, m.selected[m.resources[0].Address])
 }
 
 func TestNormalModeKeys_SelectEmptyList(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	m = newModel.(Model)
@@ -139,10 +129,9 @@ func TestNormalModeKeys_SelectEmptyList(t *testing.T) {
 }
 
 func TestNormalModeKeys_EnterBlockedWhileScanning(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.isScanning = true
-	m.selected = map[string]bool{"aws_s3_bucket.a": true}
+	m.selected = map[string]bool{m.resources[0].Address: true}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
@@ -151,8 +140,7 @@ func TestNormalModeKeys_EnterBlockedWhileScanning(t *testing.T) {
 }
 
 func TestNormalModeKeys_EnterBlockedWithNoSelection(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.isScanning = false
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -162,10 +150,9 @@ func TestNormalModeKeys_EnterBlockedWithNoSelection(t *testing.T) {
 }
 
 func TestNormalModeKeys_EnterOpensActionPicker(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.isScanning = false
-	m.selected = map[string]bool{"aws_s3_bucket.a": true}
+	m.selected = map[string]bool{m.resources[0].Address: true}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
@@ -175,8 +162,7 @@ func TestNormalModeKeys_EnterOpensActionPicker(t *testing.T) {
 }
 
 func TestFilterModeKeys_FilterFocusAndUnfocus(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 
 	require.Equal(t, viewList, m.viewState)
 
@@ -204,26 +190,19 @@ func TestFilterModeKeys_FilterFocusAndUnfocus(t *testing.T) {
 }
 
 func TestFilterModeKeys_SelectOnFilteredList(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
-	m.resources = []terraform.Resource{
-		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
-		{Address: "aws_lambda_function.b", Action: terraform.ActionNoop},
-		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
-	}
+	m := newTestModel()
 	m.filteredIdx = []int{0, 2}
 	m.cursor = 1
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	m = newModel.(Model)
 
-	assert.True(t, m.selected["aws_s3_bucket.c"])
-	assert.False(t, m.selected["aws_lambda_function.b"])
+	assert.False(t, m.selected[m.resources[0].Address])
+	assert.True(t, m.selected[m.resources[2].Address])
 }
 
 func TestActionPickerKeys_Navigation(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.viewState = viewActionPicker
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
@@ -248,8 +227,7 @@ func TestActionPickerKeys_Navigation(t *testing.T) {
 }
 
 func TestActionPickerKeys_EscReturnsToList(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.viewState = viewActionPicker
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
@@ -259,10 +237,9 @@ func TestActionPickerKeys_EscReturnsToList(t *testing.T) {
 }
 
 func TestActionPickerKeys_CursorResetsOnEntry(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.isScanning = false
-	m.selected = map[string]bool{"aws_s3_bucket.a": true}
+	m.selected = map[string]bool{m.resources[0].Address: true}
 	m.actionCursor = 3
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -272,8 +249,7 @@ func TestActionPickerKeys_CursorResetsOnEntry(t *testing.T) {
 }
 
 func TestActionPickerKeys_EnterGoesConfirmView(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.viewState = viewActionPicker
 	m.actionCursor = 2
 
@@ -286,10 +262,9 @@ func TestActionPickerKeys_EnterGoesConfirmView(t *testing.T) {
 }
 
 func TestConfirmKeys_DefaultsToCancel(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.viewState = viewActionPicker
-	m.selected = map[string]bool{"aws_s3_bucket.a": true}
+	m.selected = map[string]bool{m.resources[0].Address: true}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
@@ -298,8 +273,7 @@ func TestConfirmKeys_DefaultsToCancel(t *testing.T) {
 }
 
 func TestConfirmKeys_Navigation(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.viewState = viewConfirm
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'l'})
@@ -320,8 +294,7 @@ func TestConfirmKeys_Navigation(t *testing.T) {
 }
 
 func TestConfirmKeys_CancelToPicker(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.viewState = viewConfirm
 	m.confirmCursor = 0
 
@@ -342,8 +315,7 @@ func TestConfirmKeys_ConfirmToOutput(t *testing.T) {
 }
 
 func TestConfirmKeys_EscToPicker(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.viewState = viewConfirm
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
@@ -352,8 +324,7 @@ func TestConfirmKeys_EscToPicker(t *testing.T) {
 }
 
 func TestOutputKeys_EscBlockedWhileOutputing(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.viewState = viewOutput
 	m.isOutputing = true
 
@@ -364,8 +335,7 @@ func TestOutputKeys_EscBlockedWhileOutputing(t *testing.T) {
 }
 
 func TestOutputKeys_Navigation(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.viewState = viewOutput
 	m.viewHeight = defaultReservedOutputRows + 2 // 2 visible rows
 	m.outputLines = []string{"line 0", "line 1", "line 2", "line 3"}

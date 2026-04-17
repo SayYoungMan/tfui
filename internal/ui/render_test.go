@@ -12,20 +12,7 @@ import (
 )
 
 func TestRenderListView_ShowsResources(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
-
-	m.resources = []terraform.Resource{
-		{Address: "aws_s3_bucket.a", Action: terraform.ActionCreate},
-		{Address: "aws_s3_bucket.b", Action: terraform.ActionUpdate, Reason: "drift"},
-		{Address: "aws_iam_role.c", Action: terraform.ActionDelete, Reason: "delete_because_no_resource_config"},
-		{Address: "aws_db_instance.d", Action: terraform.ActionReplace, Reason: "cannot_update"},
-		{Address: "aws_s3_bucket.c", Action: terraform.ActionImport},
-		{Address: "data.aws_region.current", Action: terraform.ActionRead},
-		{Address: "aws_vpc.main", Action: terraform.ActionNoop},
-	}
-	m.filteredIdx = []int{0, 1, 2, 3, 4, 5, 6}
-	m.viewHeight = len(m.resources) + defaultReservedRows
+	m := newTestModel()
 	m.cursor = -1 // Remove cursor so that it doesn't color any of the lines
 
 	view := m.View()
@@ -53,68 +40,47 @@ func TestRenderListView_ShowsResources(t *testing.T) {
 }
 
 func TestRenderListView_ShowsCursor(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
-	m.resources = []terraform.Resource{
-		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
-		{Address: "aws_s3_bucket.b", Action: terraform.ActionUpdate},
-	}
-	m.filteredIdx = []int{0, 1}
-	m.viewHeight = len(m.resources) + defaultReservedRows
+	m := newTestModel()
 	m.cursor = 1
 
 	view := m.View()
 	lines := strings.Split(view.Content, "\n")
 	var lineA, lineB string
 	for _, line := range lines {
-		if strings.Contains(line, "aws_s3_bucket.a") {
+		if strings.Contains(line, testResources[0].Address) {
 			lineA = line
 		}
-		if strings.Contains(line, "aws_s3_bucket.b") {
+		if strings.Contains(line, testResources[1].Address) {
 			lineB = line
 		}
 	}
 
-	assert.NotContains(t, lineA, ansiString)
-	assert.Contains(t, lineB, ansiString)
+	assert.NotContains(t, lineA, cursorAnsiString)
+	assert.Contains(t, lineB, cursorAnsiString)
 }
 
 func TestRenderListView_ShowsSelected(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
-	m.resources = []terraform.Resource{
-		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
-		{Address: "aws_s3_bucket.b", Action: terraform.ActionUpdate},
-	}
-	m.filteredIdx = []int{0, 1}
-	m.viewHeight = len(m.resources) + defaultReservedRows
-	m.cursor = 0
+	m := newTestModel()
 	m.selected = map[string]bool{m.resources[1].Address: true}
 
 	view := m.View()
-	lines := strings.Split(view.Content, "\n")
-	var lineB string
-	for _, line := range lines {
-		if strings.Contains(line, "aws_s3_bucket.b") {
-			lineB = line
+	for line := range strings.SplitSeq(view.Content, "\n") {
+		if strings.Contains(line, m.resources[1].Address) {
+			assert.Contains(t, line, ansiString)
 		}
 	}
-
-	assert.Contains(t, lineB, ansiString)
 }
 
 func TestRenderListView_OnlyRendersVisibleSlice(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
-	m.viewHeight = 3 + defaultReservedRows
-	m.filteredIdx = []int{0, 1, 2, 3, 4}
-
+	var resources []terraform.Resource
 	for i := range 5 {
-		m.resources = append(m.resources, terraform.Resource{
+		resources = append(resources, terraform.Resource{
 			Address: fmt.Sprintf("aws_s3_bucket.bucket_%d", i),
 			Action:  terraform.ActionNoop,
 		})
 	}
+	m := newTestModelWithResources(resources)
+	m.viewHeight = 3 + defaultReservedRows
 
 	view := m.View()
 
@@ -127,8 +93,7 @@ func TestRenderListView_OnlyRendersVisibleSlice(t *testing.T) {
 }
 
 func TestRenderListView_ViewShowsSpinner(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 	m.isScanning = true
 
 	view := m.View()
@@ -138,10 +103,8 @@ func TestRenderListView_ViewShowsSpinner(t *testing.T) {
 }
 
 func TestRenderListView_ViewShowsCompleteWhenDone(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelWithResources(make([]terraform.Resource, 5))
 	m.isScanning = false
-	m.resources = make([]terraform.Resource, 5)
 
 	view := m.View()
 
@@ -151,13 +114,8 @@ func TestRenderListView_ViewShowsCompleteWhenDone(t *testing.T) {
 }
 
 func TestRenderListView_ViewShowsSelectedCount(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
-	m.viewHeight = 5 + defaultReservedRows
-	m.resources = []terraform.Resource{
-		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
-	}
-	m.selected = map[string]bool{"aws_s3_bucket.a": true}
+	m := newTestModel()
+	m.selected = map[string]bool{m.resources[0].Address: true}
 
 	view := m.View()
 
@@ -165,26 +123,18 @@ func TestRenderListView_ViewShowsSelectedCount(t *testing.T) {
 }
 
 func TestRenderListView_ViewShowsFilterCount(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
-	m.viewHeight = 2 + defaultReservedRows
-	m.isScanning = false
-	m.resources = []terraform.Resource{
-		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
-		{Address: "aws_lambda_function.b", Action: terraform.ActionNoop},
-	}
-	m.filteredIdx = []int{0}
-	m.filterInput.SetValue("s3")
+	m := newTestModel()
+	m.filteredIdx = []int{2}
+	m.filterInput.SetValue("iam")
 
 	view := m.View()
 
 	assert.Contains(t, view.Content, "showing 1")
-	assert.Contains(t, view.Content, "2 resources found")
+	assert.Contains(t, view.Content, fmt.Sprintf("%d resources found", len(testResources)))
 }
 
-func TestRenderListView_ViewShowsHideNoopMessage(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+func TestRenderListView_ShowsHideUnchangedInfo(t *testing.T) {
+	m := newTestModelEmpty()
 
 	require.Contains(t, m.View().Content, "h to hide unchanged")
 
@@ -195,8 +145,7 @@ func TestRenderListView_ViewShowsHideNoopMessage(t *testing.T) {
 }
 
 func TestRenderListView_ViewShowsError(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 	m.err = fmt.Errorf("something broke")
 
 	view := m.View()
@@ -205,12 +154,9 @@ func TestRenderListView_ViewShowsError(t *testing.T) {
 }
 
 func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
 	m.viewState = viewActionPicker
-	m.selected = map[string]bool{"aws_s3_bucket.a": true, "aws_lambda_function.api": true}
-	m.viewWidth = 80
-	m.viewHeight = 24
+	m.selected = map[string]bool{m.resources[0].Address: true, m.resources[1].Address: true}
 
 	view := m.View()
 
@@ -224,37 +170,23 @@ func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {
 }
 
 func TestRenderConfirmView_ShowsResourcesAndButtons(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModel()
+	m.selected = map[string]bool{m.resources[0].Address: true, m.resources[2].Address: true}
 	m.viewState = viewConfirm
 	m.actionCursor = 1
-	m.viewWidth = 80
-	m.viewHeight = 24
-	m.resources = []terraform.Resource{
-		{Address: "aws_s3_bucket.a", Action: terraform.ActionCreate},
-		{Address: "aws_lambda.b", Action: terraform.ActionUpdate},
-	}
-	m.indexMap = map[string]int{"aws_s3_bucket.a": 0, "aws_lambda.b": 1}
-	m.selected = map[string]bool{"aws_s3_bucket.a": true, "aws_lambda.b": true}
 
 	view := m.View()
 
 	assert.Contains(t, view.Content, "apply 2 resource(s)?")
-	assert.Contains(t, view.Content, "aws_s3_bucket.a")
-	assert.Contains(t, view.Content, "aws_lambda.b")
+	assert.Contains(t, view.Content, m.resources[0].Address)
+	assert.Contains(t, view.Content, m.resources[2].Address)
 	assert.Contains(t, view.Content, "Cancel")
 	assert.Contains(t, view.Content, "Confirm")
 }
 
 func TestRenderConfirmView_TruncatesLongSelections(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 	m.viewState = viewConfirm
-	m.actionCursor = 2
-	m.viewWidth = 80
-	m.viewHeight = 100
-	m.selected = map[string]bool{}
-	m.indexMap = map[string]int{}
 
 	for i := range 15 {
 		addr := fmt.Sprintf("aws_s3_bucket.b_%02d", i)
@@ -274,12 +206,9 @@ func TestRenderConfirmView_TruncatesLongSelections(t *testing.T) {
 }
 
 func TestRenderOutputView_ShowsContent(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 	m.viewState = viewOutput
-	m.actionCursor = 1 // "apply"
-	m.viewWidth = 80
-	m.viewHeight = 24
+	m.actionCursor = 1
 	m.isOutputing = true
 	m.outputLines = []string{
 		"aws_s3_bucket.uploads: Modifying...",
@@ -295,11 +224,8 @@ func TestRenderOutputView_ShowsContent(t *testing.T) {
 }
 
 func TestRenderOutputView_HelpTextChangesWhenDone(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := newTestModelEmpty()
 	m.viewState = viewOutput
-	m.viewWidth = 80
-	m.viewHeight = 24
 	m.isOutputing = true
 
 	view := m.View()
