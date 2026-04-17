@@ -13,7 +13,7 @@ import (
 
 func TestRenderListView_ShowsResources(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 
 	m.resources = []terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionCreate},
@@ -54,7 +54,7 @@ func TestRenderListView_ShowsResources(t *testing.T) {
 
 func TestRenderListView_ShowsCursor(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.resources = []terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionUpdate},
@@ -81,7 +81,7 @@ func TestRenderListView_ShowsCursor(t *testing.T) {
 
 func TestRenderListView_ShowsSelected(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.resources = []terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionUpdate},
@@ -105,7 +105,7 @@ func TestRenderListView_ShowsSelected(t *testing.T) {
 
 func TestRenderListView_OnlyRendersVisibleSlice(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.viewHeight = 3 + defaultReservedRows
 	m.filteredIdx = []int{0, 1, 2, 3, 4}
 
@@ -128,7 +128,7 @@ func TestRenderListView_OnlyRendersVisibleSlice(t *testing.T) {
 
 func TestRenderListView_ViewShowsSpinner(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.isScanning = true
 
 	view := m.View()
@@ -139,7 +139,7 @@ func TestRenderListView_ViewShowsSpinner(t *testing.T) {
 
 func TestRenderListView_ViewShowsCompleteWhenDone(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.isScanning = false
 	m.resources = make([]terraform.Resource, 5)
 
@@ -152,7 +152,7 @@ func TestRenderListView_ViewShowsCompleteWhenDone(t *testing.T) {
 
 func TestRenderListView_ViewShowsSelectedCount(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.viewHeight = 5 + defaultReservedRows
 	m.resources = []terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
@@ -166,7 +166,7 @@ func TestRenderListView_ViewShowsSelectedCount(t *testing.T) {
 
 func TestRenderListView_ViewShowsFilterCount(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.viewHeight = 2 + defaultReservedRows
 	m.isScanning = false
 	m.resources = []terraform.Resource{
@@ -184,7 +184,7 @@ func TestRenderListView_ViewShowsFilterCount(t *testing.T) {
 
 func TestRenderListView_ViewShowsHideNoopMessage(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 
 	require.Contains(t, m.View().Content, "h to hide unchanged")
 
@@ -196,7 +196,7 @@ func TestRenderListView_ViewShowsHideNoopMessage(t *testing.T) {
 
 func TestRenderListView_ViewShowsError(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.err = fmt.Errorf("something broke")
 
 	view := m.View()
@@ -206,7 +206,7 @@ func TestRenderListView_ViewShowsError(t *testing.T) {
 
 func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.viewState = viewActionPicker
 	m.selected = map[string]bool{"aws_s3_bucket.a": true, "aws_lambda_function.api": true}
 	m.viewWidth = 80
@@ -225,7 +225,7 @@ func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {
 
 func TestRenderConfirmView_ShowsResourcesAndButtons(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.viewState = viewConfirm
 	m.actionCursor = 1
 	m.viewWidth = 80
@@ -248,7 +248,7 @@ func TestRenderConfirmView_ShowsResourcesAndButtons(t *testing.T) {
 
 func TestRenderConfirmView_TruncatesLongSelections(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.viewState = viewConfirm
 	m.actionCursor = 2
 	m.viewWidth = 80

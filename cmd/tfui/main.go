@@ -21,7 +21,7 @@ func main() {
 	runner := terraform.NewTerraformRunner(workdir, "terraform")
 	ch := runner.StreamPlan(ctx)
 
-	m := ui.NewModel(ch, cancel)
+	m := ui.NewModel(runner, ch, cancel)
 	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error occurred while running program: %v\n", err)

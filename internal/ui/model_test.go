@@ -19,7 +19,7 @@ const (
 
 func TestModel_Handle_RefreshComplete(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 
 	event := terraform.StreamEvent{
 		Resource: &terraform.Resource{
@@ -39,7 +39,7 @@ func TestModel_Handle_RefreshComplete(t *testing.T) {
 
 func TestModel_Handle_DataSourceRead(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 
 	event := terraform.StreamEvent{
 		Resource: &terraform.Resource{
@@ -59,7 +59,7 @@ func TestModel_Handle_DataSourceRead(t *testing.T) {
 
 func TestModel_UpdateExistingResource(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
 		Resource: &terraform.Resource{
@@ -85,7 +85,7 @@ func TestModel_UpdateExistingResource(t *testing.T) {
 
 func TestModel_DriftExistingResource(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
 		Resource: &terraform.Resource{
@@ -113,7 +113,7 @@ func TestModel_DriftExistingResource(t *testing.T) {
 
 func TestModel_HideUnchanged_ResourceBecomesChanged(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.hideUnchanged = true
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
@@ -141,7 +141,7 @@ func TestModel_HideUnchanged_ResourceBecomesChanged(t *testing.T) {
 
 func TestModel_HandleError(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 
 	errMsg := "terraform plan failed"
 	event := terraform.StreamEvent{
@@ -157,7 +157,7 @@ func TestModel_HandleError(t *testing.T) {
 
 func TestModel_ScanComplete(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 
 	assert.True(t, m.isScanning)
 
@@ -170,7 +170,7 @@ func TestModel_ScanComplete(t *testing.T) {
 
 func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.resources = []terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_lambda_function.b", Action: terraform.ActionNoop},
@@ -194,7 +194,7 @@ func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
 
 func TestModel_NewResourcesFilterMatch(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.viewHeight = 3 + defaultReservedRows
 	m.resources = []terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},

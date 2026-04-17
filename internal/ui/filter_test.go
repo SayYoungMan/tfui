@@ -16,7 +16,7 @@ var testResources = []terraform.Resource{
 
 func TestRebuildFilter_EmptyShowsAll(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.resources = testResources
 
 	m.filterInput.SetValue("")
@@ -27,7 +27,7 @@ func TestRebuildFilter_EmptyShowsAll(t *testing.T) {
 
 func TestRebuildFilter_MatchesSubset(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.resources = testResources
 
 	m.filterInput.SetValue("s3")
@@ -45,7 +45,7 @@ func TestRebuildFilter_MatchesSubset(t *testing.T) {
 
 func TestRebuildFilter_NoMatch(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.resources = testResources
 
 	m.filterInput.SetValue("zzzzz")
@@ -56,7 +56,7 @@ func TestRebuildFilter_NoMatch(t *testing.T) {
 
 func TestRebuildFilter_ResetsCursorAndOffset(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.resources = testResources
 	m.cursor = 2
 	m.offset = 1
@@ -70,7 +70,7 @@ func TestRebuildFilter_ResetsCursorAndOffset(t *testing.T) {
 
 func TestRebuildFilter_HideNoops(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.resources = testResources
 
 	m.hideUnchanged = true
@@ -81,7 +81,7 @@ func TestRebuildFilter_HideNoops(t *testing.T) {
 
 func TestRebuildFilter_HideNoopsFiltered(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.resources = testResources
 
 	m.filterInput.SetValue("s3")
@@ -93,7 +93,7 @@ func TestRebuildFilter_HideNoopsFiltered(t *testing.T) {
 
 func TestMatchesFilter_EmptyAlwaysTrue(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 
 	r := terraform.Resource{Address: "anything"}
 	assert.True(t, m.matchesFilter(r))
@@ -101,7 +101,7 @@ func TestMatchesFilter_EmptyAlwaysTrue(t *testing.T) {
 
 func TestMatchesFilter_MatchAndMiss(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 	m.filterInput.SetValue("s3")
 
 	assert.True(t, m.matchesFilter(terraform.Resource{Address: "aws_s3_bucket.a"}))
@@ -110,7 +110,7 @@ func TestMatchesFilter_MatchAndMiss(t *testing.T) {
 
 func TestMatchesFilter_NoopIgnored(t *testing.T) {
 	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
 
 	m.hideUnchanged = true
 

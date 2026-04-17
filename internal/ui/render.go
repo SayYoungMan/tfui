@@ -185,3 +185,41 @@ func (m Model) renderConfirmView() string {
 
 	return lipgloss.NewCompositor(background, foreground).Render()
 }
+
+func (m Model) renderOutputView() string {
+	action := actionChoices[m.actionCursor]
+	title := fmt.Sprintf("terraform %s", action)
+
+	visible := m.visibleOutputRows()
+	start := m.outputOffset
+	end := min(m.outputOffset+visible, len(m.outputLines))
+
+	var s strings.Builder
+	fmt.Fprintln(&s, title)
+	fmt.Fprintln(&s)
+
+	for i := start; i < end; i++ {
+		fmt.Fprintln(&s, m.outputLines[i])
+	}
+
+	// Padding empty lines so modal looks same size
+	rendered := end - start
+	for range visible - rendered {
+		fmt.Fprintln(&s)
+	}
+
+	var help string
+	if m.isOutputing {
+		help = "↑/↓ scroll | Esc to close and re-plan"
+	} else {
+		help = "↑/↓ scroll | Running..."
+	}
+	fmt.Fprint(&s, help)
+
+	modal := focusedBorderStyle.Render(s.String())
+
+	background := lipgloss.NewLayer(m.renderListView())
+	foreground := lipgloss.NewLayer(modal).X(1).Y(0).Z(1)
+
+	return lipgloss.NewCompositor(background, foreground).Render()
+}

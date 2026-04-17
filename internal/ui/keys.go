@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"context"
+	"sort"
+
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 )
@@ -87,11 +90,63 @@ func (m Model) confirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.confirmCursor == 0 {
 			m.viewState = viewActionPicker
 		} else {
+			ctx, cancel := context.WithCancel(context.Background())
+			m.cancel = cancel
+
+			addrs := m.selectedAddresses()
+			action := actionChoices[m.actionCursor]
+
+			actionFuncs := map[string]func(context.Context, []string) <-chan string{
+				"plan":    m.runner.Plan,
+				"apply":   m.runner.Apply,
+				"destroy": m.runner.Destroy,
+				"taint":   m.runner.Taint,
+				"untaint": m.runner.Untaint,
+			}
+			m.outputChannel = actionFuncs[action](ctx, addrs)
+			m.outputLines = nil
+			m.isOutputing = false
+			m.outputOffset = 0
 			m.viewState = viewOutput
+
+			return m, waitForOutput(m.outputChannel)
 		}
 	case "esc":
 		m.viewState = viewActionPicker
 	}
 
+	return m, nil
+}
+
+// helper function to get addresses out of m.selected
+// TODO: Refactor selected to be field of resource and remove this
+func (m Model) selectedAddresses() []string {
+	addrs := make([]string, 0, len(m.selected))
+	for addr := range m.selected {
+		addrs = append(addrs, addr)
+	}
+	sort.Strings(addrs)
+	return addrs
+}
+
+func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "k", "up":
+		if m.outputOffset > 0 {
+			m.outputOffset--
+		}
+	case "j", "down":
+		maxOffset := max(0, len(m.outputLines)-m.visibleOutputRows())
+		if m.outputOffset < maxOffset {
+			m.outputOffset++
+		}
+	case "esc":
+		if !m.isOutputing {
+			return m.startRescan()
+		}
+	case "q", "ctrl+c":
+		m.cancel()
+		return m, tea.Quit
+	}
 	return m, nil
 }

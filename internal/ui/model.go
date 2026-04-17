@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"context"
+
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -13,6 +15,7 @@ type (
 )
 
 type Model struct {
+	runner       *terraform.TerraformRunner
 	viewState    viewState
 	viewHeight   int
 	viewWidth    int
@@ -35,6 +38,11 @@ type Model struct {
 
 	actionCursor  int
 	confirmCursor int
+
+	outputLines   []string
+	outputChannel <-chan string
+	isOutputing   bool
+	outputOffset  int
 }
 
 var actionChoices []string = []string{"plan", "apply", "destroy", "taint", "untaint"}
@@ -49,11 +57,12 @@ const (
 	viewOutput
 )
 
-func NewModel(ch <-chan terraform.StreamEvent, cancel func()) Model {
+func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent, cancel func()) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 
 	return Model{
+		runner:       runner,
 		eventChannel: ch,
 		cancel:       cancel,
 		resources:    []terraform.Resource{},
@@ -82,6 +91,21 @@ func waitForEvent(ch <-chan terraform.StreamEvent) tea.Cmd {
 	}
 }
 
+type (
+	outputLineMsg     string
+	outputCompleteMsg struct{}
+)
+
+func waitForOutput(ch <-chan string) tea.Cmd {
+	return func() tea.Msg {
+		line, ok := <-ch
+		if !ok {
+			return outputCompleteMsg{}
+		}
+		return outputLineMsg(line)
+	}
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -98,6 +122,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.actionPickerKeys(msg)
 		case viewConfirm:
 			return m.confirmKeys(msg)
+		case viewOutput:
+			return m.outputKeys(msg)
 		default:
 			return m.normalModeKeys(msg)
 		}
@@ -107,6 +133,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case scanCompleteMsg:
 		m.isScanning = false
+		return m, nil
+
+	case outputLineMsg:
+		m.outputLines = append(m.outputLines, string(msg))
+		maxOff := max(0, len(m.outputLines)-m.visibleOutputRows())
+		if m.outputOffset >= maxOff-1 {
+			m.outputOffset = maxOff
+		}
+		return m, waitForOutput(m.outputChannel)
+
+	case outputCompleteMsg:
+		m.isOutputing = false
 		return m, nil
 
 	case spinner.TickMsg:
@@ -155,6 +193,8 @@ func (m Model) View() tea.View {
 		return tea.NewView(m.renderActionPickerView())
 	case viewConfirm:
 		return tea.NewView(m.renderConfirmView())
+	case viewOutput:
+		return tea.NewView(m.renderOutputView())
 	default:
 		return tea.NewView(m.renderListView())
 	}
@@ -186,4 +226,38 @@ func (m *Model) adjustOffset() {
 	if m.cursor < m.offset {
 		m.offset = m.cursor
 	}
+}
+
+// 2(borders) + 1(title) + 2(blank) + 1(help)
+const defaultReservedOutputRows = 6
+
+func (m Model) visibleOutputRows() int {
+	return max(1, m.viewHeight-defaultReservedOutputRows)
+}
+
+func (m Model) startRescan() (tea.Model, tea.Cmd) {
+	ctx, cancel := context.WithCancel(context.Background())
+	m.cancel = cancel
+
+	// initialize
+	m.resources = m.resources[:0]
+	m.indexMap = make(map[string]int)
+	m.filteredIdx = m.filteredIdx[:0]
+	m.selected = make(map[string]bool)
+	m.cursor = 0
+	m.offset = 0
+	m.err = nil
+	m.isScanning = true
+	m.outputLines = nil
+	m.outputChannel = nil
+	m.isOutputing = false
+	m.viewState = viewList
+
+	ch := m.runner.StreamPlan(ctx)
+	m.eventChannel = ch
+
+	return m, tea.Batch(
+		m.spinner.Tick,
+		waitForEvent(ch),
+	)
 }
