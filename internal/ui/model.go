@@ -128,6 +128,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.normalModeKeys(msg)
 		}
 
+	case tea.MouseWheelMsg:
+		switch m.viewState {
+		case viewOutput:
+			if msg.Button == tea.MouseWheelUp && m.outputOffset > 0 {
+				m.outputOffset--
+			} else if msg.Button == tea.MouseWheelDown {
+				maxOff := max(0, len(m.outputLines)-m.visibleOutputRows())
+				if m.outputOffset < maxOff {
+					m.outputOffset++
+				}
+			}
+		case viewList:
+			if msg.Button == tea.MouseWheelUp && m.cursor > 0 {
+				m.cursor--
+				m.adjustOffset()
+			} else if msg.Button == tea.MouseWheelDown && m.cursor < len(m.filteredIdx)-1 {
+				m.cursor++
+				m.adjustOffset()
+			}
+		}
+		return m, nil
+
 	case streamEventMsg:
 		return m.handleStreamEvent(terraform.StreamEvent(msg))
 
@@ -188,16 +210,19 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 }
 
 func (m Model) View() tea.View {
+	var v tea.View
 	switch m.viewState {
 	case viewActionPicker:
-		return tea.NewView(m.renderActionPickerView())
+		v = tea.NewView(m.renderActionPickerView())
 	case viewConfirm:
-		return tea.NewView(m.renderConfirmView())
+		v = tea.NewView(m.renderConfirmView())
 	case viewOutput:
-		return tea.NewView(m.renderOutputView())
+		v = tea.NewView(m.renderOutputView())
 	default:
-		return tea.NewView(m.renderListView())
+		v = tea.NewView(m.renderListView())
 	}
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 // 4(search bar) + 3(info) + 2(Key info) + 1(extra)
