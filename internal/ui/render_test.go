@@ -133,6 +133,19 @@ func TestRenderListView_ViewShowsFilterCount(t *testing.T) {
 	assert.Contains(t, view.Content, fmt.Sprintf("%d resources found", len(testResources)))
 }
 
+func TestRenderListView_ShowsWarningCount(t *testing.T) {
+	m := newTestModel()
+	m.isRunning = false
+	m.diagnostics = []terraform.Diagnostic{
+		{Severity: "warning", Summary: "Deprecated"},
+		{Severity: "warning", Summary: "Also deprecated"},
+	}
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "2 warnings")
+}
+
 func TestRenderListView_ShowsHideUnchangedInfo(t *testing.T) {
 	m := newTestModelEmpty()
 
@@ -142,15 +155,6 @@ func TestRenderListView_ShowsHideUnchangedInfo(t *testing.T) {
 	m = newModel.(Model)
 
 	assert.Contains(t, m.View().Content, "h to show unchanged")
-}
-
-func TestRenderListView_ViewShowsError(t *testing.T) {
-	m := newTestModelEmpty()
-	m.err = fmt.Errorf("something broke")
-
-	view := m.View()
-
-	assert.Contains(t, view.Content, "error occurred: something broke")
 }
 
 func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {
@@ -258,4 +262,23 @@ func TestRenderShutdownLayer_ShowsForceQuitAfterTimeout(t *testing.T) {
 
 	assert.Contains(t, view.Content, "Waiting for terraform to finish...")
 	assert.Contains(t, view.Content, "Press q or ctrl+c again to force quit")
+}
+
+func TestRenderErrorView_ShowsDiagnosticsAndError(t *testing.T) {
+	m := newTestModelEmpty()
+	m.viewState = viewError
+	m.diagnostics = []terraform.Diagnostic{
+		{Severity: "error", Summary: "Invalid reference", Detail: "Resource not declared"},
+		{Severity: "warning", Summary: "Deprecated attribute"},
+	}
+	m.err = fmt.Errorf("failed to start terraform")
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "Scanning Failed")
+	assert.Contains(t, view.Content, "Invalid reference")
+	assert.Contains(t, view.Content, "Resource not declared")
+	assert.Contains(t, view.Content, "Deprecated attribute")
+	assert.Contains(t, view.Content, "failed to start terraform")
+	assert.Contains(t, view.Content, "Esc")
 }

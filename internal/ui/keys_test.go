@@ -361,3 +361,27 @@ func TestOutputKeys_Navigation(t *testing.T) {
 	m = newModel.(Model)
 	assert.Equal(t, 2, m.offset)
 }
+
+func TestErrorViewKeys_Quit(t *testing.T) {
+	tests := []struct {
+		name string
+		msg  tea.KeyPressMsg
+	}{
+		{"enter", tea.KeyPressMsg{Code: tea.KeyEnter}},
+		{"esc", tea.KeyPressMsg{Code: tea.KeyEscape}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newTestModel()
+			m.viewState = viewError
+			cancelled := false
+			m.cancel = func() { cancelled = true }
+
+			_, cmd := m.Update(tt.msg)
+
+			assert.True(t, cancelled)
+			assert.NotNil(t, cmd)
+		})
+	}
+}

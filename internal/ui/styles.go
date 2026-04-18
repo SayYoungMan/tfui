@@ -28,6 +28,8 @@ var (
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(colorCoral).
 				Padding(6, 6)
+	errorStyle   = lipgloss.NewStyle().Foreground(colorCoral)
+	warningStyle = lipgloss.NewStyle().Foreground(colorAmber)
 )
 
 var actionStyles = map[terraform.Action]lipgloss.Style{

@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"errors"
 	"strings"
 	"testing"
 
@@ -133,19 +132,40 @@ func TestModel_HideUnchanged_ResourceBecomesChanged(t *testing.T) {
 	require.Len(t, m.filteredIdx, 1)
 }
 
-func TestModel_HandleError(t *testing.T) {
+func TestModel_HandleErrorDiagnostic(t *testing.T) {
 	m := newTestModelEmpty()
 
-	errMsg := "terraform plan failed"
-	event := terraform.StreamEvent{
-		Error: errors.New(errMsg),
-	}
-
-	newModel, cmd := m.Update(streamEventMsg(event))
+	newModel, cmd := m.Update(streamEventMsg(terraform.StreamEvent{
+		Diagnostic: &terraform.Diagnostic{
+			Severity: "error",
+			Summary:  "Invalid reference",
+			Detail:   "Resource not declared",
+		},
+	}))
 	m = newModel.(Model)
 
-	assert.EqualError(t, m.err, errMsg)
-	assert.NotNil(t, cmd) // should continue listening for events
+	require.Len(t, m.diagnostics, 1)
+	assert.Equal(t, "error", m.diagnostics[0].Severity)
+	assert.Equal(t, "Invalid reference", m.diagnostics[0].Summary)
+	assert.NotNil(t, cmd)
+
+	newModel, cmd = m.Update(scanCompleteMsg{})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewError, m.viewState)
+	assert.False(t, m.isRunning)
+}
+
+func TestModel_ScanComplete_WarningsOnly(t *testing.T) {
+	m := newTestModelEmpty()
+	m.diagnostics = []terraform.Diagnostic{
+		{Severity: "warning", Summary: "Deprecated attribute"},
+	}
+
+	newModel, _ := m.Update(scanCompleteMsg{})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewList, m.viewState)
 }
 
 func TestModel_ScanComplete(t *testing.T) {

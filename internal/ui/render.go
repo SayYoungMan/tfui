@@ -47,24 +47,10 @@ func (m Model) renderListView() string {
 	if len(m.selected) > 0 {
 		infoLine += fmt.Sprintf(" | %d selected", len(m.selected))
 	}
+	if len(m.diagnostics) > 0 {
+		infoLine += fmt.Sprintf(" | %d warnings", len(m.diagnostics))
+	}
 	fmt.Fprintln(&s, infoLine)
-
-	if m.err != nil {
-		fmt.Fprintf(&s, "\n error occurred: %v\n", m.err)
-	}
-	for _, d := range m.diagnostics {
-		var style lipgloss.Style
-		if d.Severity == "error" {
-			style = lipgloss.NewStyle().Foreground(colorCoral)
-			fmt.Fprintf(&s, "\n %s\n", style.Render("Error: "+d.Summary))
-		} else {
-			style = lipgloss.NewStyle().Foreground(colorAmber)
-			fmt.Fprintf(&s, "\n %s\n", style.Render("Warning: "+d.Summary))
-		}
-		if d.Detail != "" {
-			fmt.Fprintf(&s, " %s\n", d.Detail)
-		}
-	}
 
 	var hKeyInfo string
 	if m.hideUnchanged {
@@ -243,4 +229,34 @@ func (m Model) renderShutdownLayer() *lipgloss.Layer {
 	y := max(0, (m.viewHeight-modalHeight)/2)
 
 	return lipgloss.NewLayer(modal).X(x).Y(y).Z(2)
+}
+
+func (m Model) renderErrorView() string {
+	var s strings.Builder
+	fmt.Fprintln(&s, errorStyle.Render("Scanning Failed"))
+	fmt.Fprintln(&s)
+
+	for _, d := range m.diagnostics {
+		if d.Severity == "error" {
+			fmt.Fprintln(&s, errorStyle.Render("Error: "+d.Summary))
+		} else {
+			fmt.Fprintln(&s, warningStyle.Render("Warning: "+d.Summary))
+		}
+		if d.Detail != "" {
+			fmt.Fprintln(&s, "  "+d.Detail)
+		}
+		fmt.Fprintln(&s)
+	}
+
+	if m.err != nil {
+		fmt.Fprintln(&s, errorStyle.Render(fmt.Sprintf("Error: %v", m.err)))
+		fmt.Fprintln(&s)
+	}
+
+	fmt.Fprint(&s, "Press Esc or Enter to quit")
+
+	modalStyle := focusedBorderStyle.Width(m.viewWidth - 4)
+	modal := modalStyle.Render(s.String())
+
+	return lipgloss.Place(m.viewWidth, m.viewHeight, lipgloss.Center, lipgloss.Center, modal)
 }

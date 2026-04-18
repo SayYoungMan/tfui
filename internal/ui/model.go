@@ -59,6 +59,7 @@ const (
 	viewActionPicker
 	viewConfirm
 	viewOutput
+	viewError
 )
 
 func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent, cancel func()) Model {
@@ -159,6 +160,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.confirmKeys(msg)
 		case viewOutput:
 			return m.outputKeys(msg)
+		case viewError:
+			return m.errorKeys(msg)
 		default:
 			return m.normalModeKeys(msg)
 		}
@@ -193,6 +196,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.isQuitting {
 			return m, tea.Quit
 		}
+		if m.hasError() {
+			m.viewState = viewError
+		}
 		return m, nil
 
 	case outputLineMsg:
@@ -221,6 +227,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m Model) hasError() bool {
+	for _, d := range m.diagnostics {
+		if d.Severity == "error" {
+			return true
+		}
+	}
+	return m.err != nil
 }
 
 func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cmd) {
@@ -268,6 +283,8 @@ func (m Model) View() tea.View {
 		viewString = m.renderConfirmView()
 	case viewOutput:
 		viewString = m.renderOutputView()
+	case viewError:
+		viewString = m.renderErrorView()
 	default:
 		viewString = m.renderListView()
 	}
@@ -286,18 +303,7 @@ func (m Model) View() tea.View {
 const defaultReservedRows = 10
 
 func (m Model) visibleRows() int {
-	reserved := defaultReservedRows
-	if m.err != nil {
-		reserved++
-	}
-	for _, d := range m.diagnostics {
-		reserved += 2
-		if d.Detail != "" {
-			reserved++
-		}
-	}
-
-	rows := m.viewHeight - reserved
+	rows := m.viewHeight - defaultReservedRows
 
 	return max(1, rows)
 }
