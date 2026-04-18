@@ -63,8 +63,13 @@ func (m Model) renderResourcesBox() string {
 		fmt.Fprintln(&resources, line)
 	}
 
-	renderString := strings.TrimRight(resources.String(), "\n")
-	return resourceBorderStyle.Width(m.viewWidth).Height(m.visibleRows()).Render(renderString)
+	rendered := end - m.offset
+	for range m.visibleRows() - rendered {
+		fmt.Fprintln(&resources)
+	}
+
+	renderString := strings.TrimSuffix(resources.String(), "\n")
+	return resourceBorderStyle.Width(m.viewWidth).Render(renderString)
 }
 
 func (m Model) renderInfoBar() string {
