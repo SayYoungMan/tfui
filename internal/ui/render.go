@@ -106,6 +106,7 @@ func (m Model) renderHelpBar() string {
 		renderKeyHint("Space", "select"),
 		renderKeyHint("Enter", "action"),
 		renderKeyHint("h", hKeyInfo),
+		renderKeyHint("Ctrl+r", "refresh"),
 		renderKeyHint("q", "quit"),
 	}
 

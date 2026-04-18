@@ -41,6 +41,10 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "h":
 		m.hideUnchanged = !m.hideUnchanged
 		m.rebuildFilter()
+	case "ctrl+r":
+		if !m.isRunning {
+			return m.startRescan()
+		}
 	}
 
 	return m, nil

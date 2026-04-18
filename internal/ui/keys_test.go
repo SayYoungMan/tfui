@@ -149,6 +149,30 @@ func TestNormalModeKeys_EnterBlockedWithNoSelection(t *testing.T) {
 	assert.Equal(t, viewList, m.viewState)
 }
 
+func TestNormalModeKeys_RefreshRescan(t *testing.T) {
+	m := newTestModel()
+	m.isRunning = false
+	m.runner = terraform.NewTerraformRunner(t.TempDir(), "true")
+
+	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'r', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+
+	assert.True(t, m.isRunning)
+	assert.Equal(t, viewList, m.viewState)
+	assert.Empty(t, m.selected)
+	assert.NotNil(t, cmd)
+}
+
+func TestNormalModeKeys_RefreshBlockedWhileScanning(t *testing.T) {
+	m := newTestModel()
+	m.isRunning = true
+
+	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'r', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+
+	assert.Nil(t, cmd)
+}
+
 func TestNormalModeKeys_EnterOpensActionPicker(t *testing.T) {
 	m := newTestModel()
 	m.isRunning = false
