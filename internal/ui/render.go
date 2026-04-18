@@ -74,11 +74,13 @@ func (m Model) renderResourcesBox() string {
 }
 
 func (m Model) renderInfoBar() string {
-	var info string
+	var adornment, info string
 	if m.isRunning {
-		info = fmt.Sprintf("%s Scanning... (%d resources found)", m.spinner.View(), len(m.resources))
+		adornment = infoBarStyle.Render(m.spinner.View())
+		info = fmt.Sprintf(" Scanning... (%d resources found)", len(m.resources))
 	} else {
-		info = fmt.Sprintf("Scan Complete (%d resources found)", len(m.resources))
+		adornment = lipgloss.NewStyle().Foreground(colorGreen).Render("✓")
+		info = fmt.Sprintf("  Scan Complete (%d resources found)", len(m.resources))
 	}
 	if m.filterInput.Value() != "" {
 		info += fmt.Sprintf(" | showing %d", len(m.filteredIdx))
@@ -89,7 +91,7 @@ func (m Model) renderInfoBar() string {
 	if len(m.diagnostics) > 0 {
 		info += fmt.Sprintf(" | %d warnings", len(m.diagnostics))
 	}
-	return " " + infoBarStyle.Render(info)
+	return " " + adornment + infoBarStyle.Render(info)
 }
 
 func renderKeyHint(key, desc string) string {
