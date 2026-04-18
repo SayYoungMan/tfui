@@ -10,8 +10,30 @@ import (
 func (m Model) renderListView() string {
 	var s strings.Builder
 
-	fmt.Fprintln(&s, m.renderFilterBox())
+	fmt.Fprint(&s, m.renderFilterBox())
+	fmt.Fprintln(&s, m.renderResourcesBox())
+	fmt.Fprintln(&s, m.renderInfoBar())
+	s.WriteString("\n" + m.renderHelpBar() + "\n")
 
+	return s.String()
+}
+
+func (m Model) renderFilterBox() string {
+	var s strings.Builder
+
+	filterIcon := "⌕ "
+	filterContent := filterIcon + m.filterInput.View()
+	if m.viewState == viewFilter {
+		fmt.Fprintln(&s, focusedBorderStyle.Width(m.viewWidth).Render(filterContent))
+	} else {
+		fmt.Fprintln(&s, borderStyle.Width(m.viewWidth).Render(filterContent))
+	}
+
+	return s.String()
+}
+
+func (m Model) renderResourcesBox() string {
+	var resources strings.Builder
 	end := min(m.offset+m.visibleRows(), len(m.filteredIdx))
 	for i := m.offset; i < end; i++ {
 		r := m.resources[m.filteredIdx[i]]
@@ -21,6 +43,12 @@ func (m Model) renderListView() string {
 			reason = fmt.Sprintf(" (%s)", r.Reason)
 		}
 		line := fmt.Sprintf("%s %s%s", symbol, r.Address, reason)
+
+		// Truncate the end to fit to screen
+		maxLineWidth := m.viewWidth - 4
+		if len(line) > maxLineWidth {
+			line = line[:maxLineWidth-1] + "…"
+		}
 
 		switch {
 		case i == m.cursor:
@@ -32,57 +60,67 @@ func (m Model) renderListView() string {
 			line = style.Render(line)
 		}
 
-		fmt.Fprintln(&s, line)
+		fmt.Fprintln(&resources, line)
 	}
 
-	var infoLine string
+	// Padding for visual consistency
+	rendered := end - m.offset
+	for range m.visibleRows() - rendered {
+		fmt.Fprintln(&resources)
+	}
+
+	renderString := strings.TrimRight(resources.String(), "\n")
+	return resourceBorderStyle.Width(m.viewWidth).Height(m.visibleRows()).Render(renderString)
+}
+
+func (m Model) renderInfoBar() string {
+	var info string
 	if m.isRunning {
-		infoLine = fmt.Sprintf("\n %s Scanning... (%d resources found)", m.spinner.View(), len(m.resources))
+		info = fmt.Sprintf("%s Scanning... (%d resources found)", m.spinner.View(), len(m.resources))
 	} else {
-		infoLine = fmt.Sprintf("\n Scan Complete (%d resources found)", len(m.resources))
+		info = fmt.Sprintf("Scan Complete (%d resources found)", len(m.resources))
 	}
 	if m.filterInput.Value() != "" {
-		infoLine += fmt.Sprintf(" | showing %d", len(m.filteredIdx))
+		info += fmt.Sprintf(" | showing %d", len(m.filteredIdx))
 	}
 	if len(m.selected) > 0 {
-		infoLine += fmt.Sprintf(" | %d selected", len(m.selected))
+		info += fmt.Sprintf(" | %d selected", len(m.selected))
 	}
 	if len(m.diagnostics) > 0 {
-		infoLine += fmt.Sprintf(" | %d warnings", len(m.diagnostics))
+		info += fmt.Sprintf(" | %d warnings", len(m.diagnostics))
 	}
-	fmt.Fprintln(&s, infoLine)
+	return " " + infoBarStyle.Render(info)
+}
 
-	s.WriteString("\n" + m.renderHelpBar() + "\n")
-
-	return s.String()
+func renderKeyHint(key, desc string) string {
+	key = "'" + key + "'"
+	return helpKeyStyle.Render(key) + helpDescStyle.Render(" "+desc)
 }
 
 func (m Model) renderHelpBar() string {
 	var hKeyInfo string
 	if m.hideUnchanged {
-		hKeyInfo = "'h' show unchanged"
+		hKeyInfo = "show unchanged"
 	} else {
-		hKeyInfo = "'h' hide unchanged"
+		hKeyInfo = "hide unchanged"
 	}
 
-	if m.viewWidth > 90 {
-		return fmt.Sprintf(" '/' filter | 'Space' select | 'Enter' action | %s | 'q' quit", hKeyInfo)
-	}
-	return fmt.Sprintf(" '/' filter | 'Space' select | 'Enter' action \n %s | 'q' quit", hKeyInfo)
-}
-
-func (m Model) renderFilterBox() string {
-	var s strings.Builder
-
-	filterIcon := "⌕ "
-	filterContent := filterIcon + m.filterInput.View()
-	if m.viewState == viewFilter {
-		fmt.Fprintln(&s, focusedBorderStyle.Render(filterContent))
-	} else {
-		fmt.Fprintln(&s, borderStyle.Render(filterContent))
+	hints := []string{
+		renderKeyHint("/", "filter"),
+		renderKeyHint("Space", "select"),
+		renderKeyHint("Enter", "action"),
+		renderKeyHint("h", hKeyInfo),
+		renderKeyHint("q", "quit"),
 	}
 
-	return s.String()
+	if m.viewWidth >= 90 {
+		return " " + strings.Join(hints, "  ")
+	}
+
+	mid := (len(hints) + 1) / 2
+	line1 := " " + strings.Join(hints[:mid], "  ")
+	line2 := " " + strings.Join(hints[mid:], "  ")
+	return line1 + "\n" + line2
 }
 
 func (m Model) renderActionPickerView() string {

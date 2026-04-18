@@ -14,6 +14,7 @@ var (
 	colorCharcoal   = lipgloss.Color("234")
 	colorLightGrey  = lipgloss.Color("240")
 	colorDimGrey    = lipgloss.Color("245")
+	colorSoftGrey   = lipgloss.Color("248")
 )
 
 var (
@@ -28,8 +29,14 @@ var (
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(colorCoral).
 				Padding(6, 6)
-	errorStyle   = lipgloss.NewStyle().Foreground(colorCoral)
-	warningStyle = lipgloss.NewStyle().Foreground(colorAmber)
+	errorStyle          = lipgloss.NewStyle().Foreground(colorCoral)
+	warningStyle        = lipgloss.NewStyle().Foreground(colorAmber)
+	infoBarStyle        = lipgloss.NewStyle().Foreground(colorCreamWhite)
+	helpKeyStyle        = lipgloss.NewStyle().Foreground(colorCreamWhite)
+	helpDescStyle       = lipgloss.NewStyle().Foreground(colorSoftGrey)
+	resourceBorderStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(colorDimGrey).Padding(0, 1)
 )
 
 var actionStyles = map[terraform.Action]lipgloss.Style{

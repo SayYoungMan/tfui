@@ -328,7 +328,11 @@ func (m *Model) adjustOffset() {
 const defaultReservedOutputRows = 10
 
 func (m Model) visibleOutputRows() int {
-	return max(1, m.viewHeight-defaultReservedOutputRows)
+	reserved := defaultReservedRows
+	if m.viewWidth < 90 {
+		reserved++
+	}
+	return max(1, m.viewHeight-reserved)
 }
 
 func (m Model) startRescan() (tea.Model, tea.Cmd) {
