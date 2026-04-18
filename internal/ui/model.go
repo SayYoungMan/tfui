@@ -300,8 +300,8 @@ func (m Model) View() tea.View {
 	return v
 }
 
-// 4(search bar) + 3(info) + 2(Key info) + 1(extra)
-const defaultReservedRows = 10
+// 3(search bar) + 3(info) + 2(Key info) + 1(extra)
+const defaultReservedRows = 9
 
 func (m Model) visibleRows() int {
 	rows := m.viewHeight - defaultReservedRows

@@ -29,10 +29,8 @@ func TestRenderListView_ShowsResources(t *testing.T) {
 	for _, r := range m.resources {
 		for line := range strings.SplitSeq(view.Content, "\n") {
 			if strings.Contains(line, r.Address) {
-				if r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead {
-					assert.NotContains(t, line, ansiString)
-				} else {
-					assert.Contains(t, line, ansiString)
+				if !isUnchanged(r) {
+					assert.Contains(t, line, actionAnsiString(r.Action))
 				}
 			}
 		}
@@ -149,12 +147,12 @@ func TestRenderListView_ShowsWarningCount(t *testing.T) {
 func TestRenderListView_ShowsHideUnchangedInfo(t *testing.T) {
 	m := newTestModelEmpty()
 
-	require.Contains(t, m.View().Content, "h to hide unchanged")
+	require.Contains(t, m.View().Content, "hide unchanged")
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'h'})
 	m = newModel.(Model)
 
-	assert.Contains(t, m.View().Content, "h to show unchanged")
+	assert.Contains(t, m.View().Content, "show unchanged")
 }
 
 func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {

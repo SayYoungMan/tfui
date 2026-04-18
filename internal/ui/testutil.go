@@ -1,6 +1,8 @@
 package ui
 
-import "github.com/SayYoungMan/tfui/pkg/terraform"
+import (
+	"github.com/SayYoungMan/tfui/pkg/terraform"
+)
 
 func newTestModelEmpty() Model {
 	return newTestModelWithResources([]terraform.Resource{})
@@ -42,3 +44,16 @@ const (
 	cursorAnsiString = "\x1b[38;5;234;48;5;230"
 	ansiString       = "\x1b["
 )
+
+var actionAnsiStrings = map[terraform.Action]string{
+	terraform.ActionCreate:  "\x1b[38;5;114",
+	terraform.ActionDelete:  "\x1b[38;5;167",
+	terraform.ActionUpdate:  "\x1b[38;5;178",
+	terraform.ActionReplace: "\x1b[38;5;178",
+	terraform.ActionMove:    "\x1b[38;5;111",
+	terraform.ActionImport:  "\x1b[38;5;111",
+}
+
+func actionAnsiString(a terraform.Action) string {
+	return actionAnsiStrings[a]
+}
