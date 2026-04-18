@@ -52,16 +52,23 @@ func (m Model) renderListView() string {
 	}
 	fmt.Fprintln(&s, infoLine)
 
-	var hKeyInfo string
-	if m.hideUnchanged {
-		hKeyInfo = "h to show unchanged"
-	} else {
-		hKeyInfo = "h to hide unchanged"
-	}
-	keyInfoLine := fmt.Sprintf("\n / to filter | Space to select | Enter to perform action | %s | q or ctrl+C to quit.\n", hKeyInfo)
-	s.WriteString(keyInfoLine)
+	s.WriteString("\n" + m.renderHelpBar() + "\n")
 
 	return s.String()
+}
+
+func (m Model) renderHelpBar() string {
+	var hKeyInfo string
+	if m.hideUnchanged {
+		hKeyInfo = "'h' show unchanged"
+	} else {
+		hKeyInfo = "'h' hide unchanged"
+	}
+
+	if m.viewWidth > 90 {
+		return fmt.Sprintf(" '/' filter | 'Space' select | 'Enter' action | %s | 'q' quit", hKeyInfo)
+	}
+	return fmt.Sprintf(" '/' filter | 'Space' select | 'Enter' action \n %s | 'q' quit", hKeyInfo)
 }
 
 func (m Model) renderFilterBox() string {
