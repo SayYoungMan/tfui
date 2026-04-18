@@ -63,12 +63,6 @@ func (m Model) renderResourcesBox() string {
 		fmt.Fprintln(&resources, line)
 	}
 
-	// Padding for visual consistency
-	rendered := end - m.offset
-	for range m.visibleRows() - rendered {
-		fmt.Fprintln(&resources)
-	}
-
 	renderString := strings.TrimRight(resources.String(), "\n")
 	return resourceBorderStyle.Width(m.viewWidth).Height(m.visibleRows()).Render(renderString)
 }
