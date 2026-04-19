@@ -300,7 +300,7 @@ func TestModel_MouseWheelScrollsList(t *testing.T) {
 func TestModel_MouseWheelScrollsOutput(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
-	m.viewHeight = defaultReservedOutputRows + 2 // 2 visible rows
+	m.viewHeight = 6 + 2 // 2 visible rows
 	m.outputLines = []string{"line 0", "line 1", "line 2", "line 3", "line 4"}
 
 	// Scroll down

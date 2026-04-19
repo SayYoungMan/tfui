@@ -115,8 +115,7 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.offset--
 		}
 	case "j", "down":
-		maxOffset := max(0, len(m.outputLines)-m.visibleOutputRows())
-		if m.offset < maxOffset {
+		if m.offset < m.maxOutputOffset() {
 			m.offset++
 		}
 	case "esc":

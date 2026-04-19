@@ -231,23 +231,25 @@ func (m Model) renderOutputView() string {
 	action := actionChoices[m.actionCursor]
 	title := fmt.Sprintf("terraform %s", action)
 
-	visible := m.visibleOutputRows()
-	start := m.offset
-	end := min(m.offset+visible, len(m.outputLines))
+	boxHeight := max(1, m.viewHeight-6)
+	contentWidth := max(1, m.viewWidth-6) // box Width(viewWidth-2) minus border(2) and padding(2)
+	innerHeight := boxHeight - 2          // subtract top and bottom border rows
 
-	var s strings.Builder
-	fmt.Fprintln(&s, title)
-	fmt.Fprintln(&s)
-
-	for i := start; i < end; i++ {
-		fmt.Fprintln(&s, m.outputLines[i])
+	var content strings.Builder
+	visualRows := 0
+	for i := m.offset; i < len(m.outputLines); i++ {
+		lineRows := max(1, (lipgloss.Width(m.outputLines[i])+contentWidth-1)/contentWidth)
+		if visualRows+lineRows > innerHeight {
+			break
+		}
+		fmt.Fprintln(&content, m.outputLines[i])
+		visualRows += lineRows
 	}
 
-	// Padding empty lines so modal looks same size
-	rendered := end - start
-	for range visible - rendered {
-		fmt.Fprintln(&s)
-	}
+	box := resourceBorderStyle.
+		Width(m.viewWidth - 2).
+		Height(boxHeight).
+		Render(strings.TrimSuffix(content.String(), "\n"))
 
 	var help string
 	if m.isRunning {
@@ -255,12 +257,15 @@ func (m Model) renderOutputView() string {
 	} else {
 		help = "↑/↓ scroll | Esc to close and re-plan"
 	}
+
+	var s strings.Builder
+	fmt.Fprintln(&s, title)
+	fmt.Fprintln(&s)
+	fmt.Fprintln(&s, box)
+	fmt.Fprintln(&s)
 	fmt.Fprint(&s, help)
 
-	modalStyle := focusedBorderStyle.Width(m.viewWidth - 4)
-	modal := modalStyle.Render(s.String())
-
-	return lipgloss.Place(m.viewWidth, m.viewHeight, lipgloss.Center, lipgloss.Center, modal)
+	return s.String()
 }
 
 func (m Model) renderShutdownLayer() *lipgloss.Layer {

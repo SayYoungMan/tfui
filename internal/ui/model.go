@@ -172,8 +172,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.Button == tea.MouseWheelUp && m.offset > 0 {
 				m.offset--
 			} else if msg.Button == tea.MouseWheelDown {
-				maxOff := max(0, len(m.outputLines)-m.visibleOutputRows())
-				if m.offset < maxOff {
+				if m.offset < m.maxOutputOffset() {
 					m.offset++
 				}
 			}
@@ -203,7 +202,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case outputLineMsg:
 		m.outputLines = append(m.outputLines, string(msg))
-		maxOff := max(0, len(m.outputLines)-m.visibleOutputRows())
+		maxOff := m.maxOutputOffset()
 		if m.offset >= maxOff {
 			m.offset = maxOff
 		}
@@ -326,16 +325,20 @@ func (m *Model) adjustOffset() {
 	}
 }
 
-// border (2) + title (1) + blank (1) + help (1)
-// TODO: There is a bug where the upper border explodes to top with lots of outputs
-const defaultReservedOutputRows = 5
+func (m Model) maxOutputOffset() int {
+	contentWidth := max(1, m.viewWidth-4)
+	boxHeight := max(1, m.viewHeight-6)
 
-func (m Model) visibleOutputRows() int {
-	reserved := defaultReservedOutputRows
-	if m.viewWidth < 90 {
-		reserved++
+	total := 0
+	for i := len(m.outputLines) - 1; i >= 0; i-- {
+		lineWidth := lipgloss.Width(m.outputLines[i])
+		rows := max(1, (lineWidth+contentWidth-1)/contentWidth)
+		total += rows
+		if total >= boxHeight {
+			return i
+		}
 	}
-	return max(1, m.viewHeight-reserved)
+	return 0
 }
 
 func (m Model) startRescan() (tea.Model, tea.Cmd) {
