@@ -33,3 +33,6 @@ tfui-debug.log
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# MAC Stuff
+.DS_Store
