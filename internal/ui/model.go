@@ -172,8 +172,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.Button == tea.MouseWheelUp && m.offset > 0 {
 				m.offset--
 			} else if msg.Button == tea.MouseWheelDown {
-				maxOff := max(0, len(m.outputLines)-m.visibleOutputRows())
-				if m.offset < maxOff {
+				if m.offset < m.maxOutputOffset() {
 					m.offset++
 				}
 			}
@@ -203,7 +202,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case outputLineMsg:
 		m.outputLines = append(m.outputLines, string(msg))
-		maxOff := max(0, len(m.outputLines)-m.visibleOutputRows())
+		maxOff := m.maxOutputOffset()
 		if m.offset >= maxOff {
 			m.offset = maxOff
 		}
@@ -300,13 +299,16 @@ func (m Model) View() tea.View {
 	return v
 }
 
-// 3(search bar) + 3(info) + 2(Key info) + 1(extra)
-const defaultReservedRows = 9
+// filter box (3) + resource borders (2) + info bar (1) + blank + help bar
+const defaultReservedRows = 8
 
 func (m Model) visibleRows() int {
-	rows := m.viewHeight - defaultReservedRows
+	reserved := defaultReservedRows
+	if m.viewWidth < 90 {
+		reserved++
+	}
 
-	return max(1, rows)
+	return max(1, m.viewHeight-reserved)
 }
 
 func (m *Model) adjustOffset() {
@@ -323,16 +325,25 @@ func (m *Model) adjustOffset() {
 	}
 }
 
-// 2(borders) + 1(title) + 2(blank) + 1(help)
-// TODO: There is a bug where the upper border explodes to top with lots of outputs
-const defaultReservedOutputRows = 10
+const (
+	defaultReservedOutputWidth = 6
+	defaultReservedOutputRows  = 6
+)
 
-func (m Model) visibleOutputRows() int {
-	reserved := defaultReservedRows
-	if m.viewWidth < 90 {
-		reserved++
+func (m Model) maxOutputOffset() int {
+	contentWidth := max(1, m.viewWidth-defaultReservedOutputWidth)
+	boxHeight := max(1, m.viewHeight-defaultReservedOutputRows)
+
+	total := 0
+	for i := len(m.outputLines) - 1; i >= 0; i-- {
+		lineWidth := lipgloss.Width(m.outputLines[i])
+		rows := max(1, (lineWidth+contentWidth-1)/contentWidth)
+		total += rows
+		if total >= boxHeight {
+			return i
+		}
 	}
-	return max(1, m.viewHeight-reserved)
+	return 0
 }
 
 func (m Model) startRescan() (tea.Model, tea.Cmd) {
