@@ -325,9 +325,14 @@ func (m *Model) adjustOffset() {
 	}
 }
 
+const (
+	defaultReservedOutputWidth = 6
+	defaultReservedOutputRows  = 6
+)
+
 func (m Model) maxOutputOffset() int {
-	contentWidth := max(1, m.viewWidth-4)
-	boxHeight := max(1, m.viewHeight-6)
+	contentWidth := max(1, m.viewWidth-defaultReservedOutputWidth)
+	boxHeight := max(1, m.viewHeight-defaultReservedOutputRows)
 
 	total := 0
 	for i := len(m.outputLines) - 1; i >= 0; i-- {

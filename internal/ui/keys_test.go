@@ -361,7 +361,7 @@ func TestOutputKeys_EscBlockedWhileOutputing(t *testing.T) {
 func TestOutputKeys_Navigation(t *testing.T) {
 	m := newTestModel()
 	m.viewState = viewOutput
-	m.viewHeight = 6 + 2 // 2 visible rows
+	m.viewHeight = defaultReservedOutputRows + 2 // 2 visible rows
 	m.outputLines = []string{"line 0", "line 1", "line 2", "line 3"}
 
 	// j scrolls down

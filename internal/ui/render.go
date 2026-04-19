@@ -231,9 +231,9 @@ func (m Model) renderOutputView() string {
 	action := actionChoices[m.actionCursor]
 	title := fmt.Sprintf("terraform %s", action)
 
-	boxHeight := max(1, m.viewHeight-6)
-	contentWidth := max(1, m.viewWidth-6) // box Width(viewWidth-2) minus border(2) and padding(2)
-	innerHeight := boxHeight - 2          // subtract top and bottom border rows
+	boxHeight := max(1, m.viewHeight-defaultReservedOutputRows)
+	contentWidth := max(1, m.viewWidth-defaultReservedOutputWidth)
+	innerHeight := boxHeight - 2 // subtract top and bottom border rows
 
 	var content strings.Builder
 	visualRows := 0

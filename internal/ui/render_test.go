@@ -78,7 +78,7 @@ func TestRenderListView_OnlyRendersVisibleSlice(t *testing.T) {
 		})
 	}
 	m := newTestModelWithResources(resources)
-	m.viewHeight = 3 + defaultReservedRows
+	m.viewHeight = 3 + defaultReservedRows + 1 // Since the width is small
 
 	view := m.View()
 
