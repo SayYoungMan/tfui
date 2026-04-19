@@ -1,7 +1,7 @@
 # tfui
 Interactive TUI for performing Terraform workflows
 
-<!-- ![demo](./demo.gif) -->
+![demo](./demo.gif)
 
 ## Install
 
