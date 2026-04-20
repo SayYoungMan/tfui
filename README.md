@@ -1,4 +1,7 @@
 # tfui
+[![Build & Test](https://github.com/SayYoungMan/tfui/actions/workflows/build_test.yml/badge.svg?branch=main)](https://github.com/SayYoungMan/tfui/actions/workflows/build_test.yml)
+![GitHub Release](https://img.shields.io/github/v/release/SayYoungMan/tfui)
+
 Interactive TUI for performing Terraform workflows
 
 ![demo](./demo.gif)
