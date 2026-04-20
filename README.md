@@ -5,6 +5,18 @@ Interactive TUI for performing Terraform workflows
 
 ## Install
 
+### HomeBrew (Mac, Linux)
+```bash
+brew tap SayYoungMan/tap
+brew install tfui
+```
+
+### Scoop (Windows)
+```powershell
+scoop bucket add SayYoungMan https://github.com/SayYoungMan/scoop-bucket
+scoop install tfui
+```
+
 ### Go Install
 ```bash
 go install github.com/SayYoungMan/tfui/cmd/tfui@latest
