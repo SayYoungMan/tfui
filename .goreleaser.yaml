@@ -1,3 +1,5 @@
+version: 2
+
 project_name: tfui
 
 builds:
@@ -14,22 +16,22 @@ builds:
       - arm64
 
 archives:
-  - format: tar.gz
+  - formats:
+      - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
 
-brews:
+homebrew_casks:
   - repository:
       owner: SayYoungMan
       name: homebrew-tap
       token: "{{ .Env.GORELEASER_TOKEN }}"
     homepage: https://github.com/SayYoungMan/tfui
-    description: Interactive TUI for performing Terraform workflows
+    description: Interactive terminal UI for Terraform plan/apply workflows
     license: MIT
-    install: |
-      bin.install "tfui"
 
 scoops:
   - repository:
@@ -37,7 +39,7 @@ scoops:
       name: scoop-bucket
       token: "{{ .Env.GORELEASER_TOKEN }}"
     homepage: https://github.com/SayYoungMan/tfui
-    description: Interactive TUI for performing Terraform workflows
+    description: Interactive terminal UI for Terraform plan/apply workflows
     license: MIT
 
 changelog:
