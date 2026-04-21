@@ -411,3 +411,55 @@ func TestGracefulQuit_ForceQuitReadyMsg(t *testing.T) {
 
 	assert.True(t, m.forceQuitReady)
 }
+
+func TestParentModule(t *testing.T) {
+	tests := []struct {
+		name     string
+		address  string
+		expected string
+	}{
+		{name: "normal resource", address: "module.a.aws_s3.x", expected: "module.a"},
+		{name: "normal module", address: "module.a.module.b", expected: "module.a"},
+		{name: "resource no parent", address: "aws_s3.x", expected: ""},
+		{name: "module no parent", address: "module.a", expected: ""},
+		{name: "resource with module bracket and dot", address: "module.vpc[\"a.b\"].aws_s3.x", expected: "module.vpc[\"a.b\"]"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, parentModule(tt.address))
+		})
+	}
+}
+
+func TestEnsureModule(t *testing.T) {
+	tests := []struct {
+		name               string
+		addresses          []string
+		expectedModules    []Module
+		moduleWithChildren []string
+	}{
+		{name: "empty", addresses: []string{}, expectedModules: []Module{}, moduleWithChildren: []string{}},
+		{name: "top level module", addresses: []string{"module.vpc"}, expectedModules: []Module{{Address: "module.vpc", Parent: ""}}, moduleWithChildren: []string{}},
+		{name: "nested module", addresses: []string{"module.a.module.b.module.c"}, expectedModules: []Module{{Address: "module.a", Parent: ""}, {Address: "module.a.module.b", Parent: "module.a"}, {Address: "module.a.module.b.module.c", Parent: "module.a.module.b"}}, moduleWithChildren: []string{"module.a", "module.a.module.b"}},
+		{name: "idempotent", addresses: []string{"module.a.module.b", "module.a.module.b", "module.a"}, expectedModules: []Module{{Address: "module.a", Parent: ""}, {Address: "module.a.module.b", Parent: "module.a"}}, moduleWithChildren: []string{"module.a"}},
+		{name: "sibling module", addresses: []string{"module.vpc.module.public", "module.vpc.module.private"}, expectedModules: []Module{{Address: "module.vpc", Parent: ""}, {Address: "module.vpc.module.public", Parent: "module.vpc"}, {Address: "module.vpc.module.private", Parent: "module.vpc"}}, moduleWithChildren: []string{"module.vpc"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newTestModelEmpty()
+			for _, addr := range tt.addresses {
+				m.ensureModule(addr)
+			}
+			require.Len(t, m.modules, len(tt.expectedModules))
+			for i, module := range tt.expectedModules {
+				assert.Equal(t, module.Address, m.modules[i].Address)
+				assert.Equal(t, module.Parent, m.modules[i].Parent)
+			}
+			for _, module := range tt.moduleWithChildren {
+				assert.Contains(t, m.moduleChildren, module)
+			}
+		})
+	}
+}

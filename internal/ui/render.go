@@ -178,7 +178,7 @@ func (m Model) renderConfirmView() string {
 
 	var resourceLines []string
 	for _, addr := range addrs {
-		r := m.resources[m.indexMap[addr]]
+		r := m.resources[m.resourceIndexMap[addr]]
 		line := fmt.Sprintf("  %s %s", r.Action.Symbol(), addr)
 		if style, ok := actionStyles[r.Action]; ok {
 			line = style.Render(line)

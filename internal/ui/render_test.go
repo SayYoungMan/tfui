@@ -195,7 +195,7 @@ func TestRenderConfirmView_TruncatesLongSelections(t *testing.T) {
 		m.resources = append(m.resources, terraform.Resource{
 			Address: addr, Action: terraform.ActionDelete,
 		})
-		m.indexMap[addr] = i
+		m.resourceIndexMap[addr] = i
 		m.selected[addr] = true
 	}
 

@@ -28,9 +28,9 @@ func newTestModelWithResources(resources []terraform.Resource) Model {
 	m.resources = resources
 	m.filteredIdx = make([]int, len(m.resources))
 	m.selected = make(map[string]bool)
-	m.indexMap = make(map[string]int)
+	m.resourceIndexMap = make(map[string]int)
 	for i, r := range m.resources {
-		m.indexMap[r.Address] = i
+		m.resourceIndexMap[r.Address] = i
 		m.filteredIdx[i] = i
 	}
 	m.viewHeight = 48
