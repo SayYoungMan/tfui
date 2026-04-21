@@ -117,10 +117,16 @@ func parentModule(address string) string {
 		segments = append(segments, seg)
 	}
 
-	if len(segments) < 2 {
+	// We need to take 3 trailing segments for data and ephemeral resource otherwise 2
+	trailing := 2
+	if len(segments) >= 3 && (segments[len(segments)-3] == "data" || segments[len(segments)-3] == "ephemeral") {
+		trailing = 3
+	}
+
+	if len(segments) < trailing {
 		return ""
 	}
-	return strings.Join(segments[:len(segments)-2], ".")
+	return strings.Join(segments[:len(segments)-trailing], ".")
 }
 
 func isAncestor(ancestor string, child string) bool {

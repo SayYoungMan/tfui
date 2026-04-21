@@ -71,6 +71,7 @@ func TestParentModule(t *testing.T) {
 		{name: "resource no parent", address: "aws_s3.x", expected: ""},
 		{name: "module no parent", address: "module.a", expected: ""},
 		{name: "resource with module bracket and dot", address: "module.vpc[\"a.b\"].aws_s3.x", expected: "module.vpc[\"a.b\"]"},
+		{name: "data under module", address: "module.api.data.aws_region.current", expected: "module.api"},
 	}
 
 	for _, tt := range tests {
