@@ -69,18 +69,7 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.rebuildRows()
 		}
 	case "space":
-		if len(m.rows) > 0 {
-			row := m.rows[m.cursor]
-			// TODO: Make modules also selectable
-			if row.Kind == rowResource {
-				addr := row.Address
-				if m.selected[addr] {
-					delete(m.selected, addr)
-				} else {
-					m.selected[addr] = true
-				}
-			}
-		}
+		m.toggleSelected()
 	case "tab":
 		if !m.isRunning && len(m.selected) > 0 {
 			m.actionCursor = 0
@@ -102,6 +91,29 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *Model) toggleSelected() {
+	if len(m.rows) <= 0 {
+		return
+	}
+	row := m.rows[m.cursor]
+	addr := row.Address
+	if m.selected[addr] {
+		delete(m.selected, addr)
+	} else {
+		// This is case where parent module is selected but this resource was not so skip
+		if m.isSelected(addr) {
+			return
+		}
+		// Remove from selected map if there is a child row that was selected
+		for selectedAddr := range m.selected {
+			if isAncestor(addr, selectedAddr) {
+				delete(m.selected, selectedAddr)
+			}
+		}
+		m.selected[addr] = true
+	}
 }
 
 func (m Model) filterModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {

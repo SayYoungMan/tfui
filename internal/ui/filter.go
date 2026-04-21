@@ -123,6 +123,15 @@ func parentModule(address string) string {
 	return strings.Join(segments[:len(segments)-2], ".")
 }
 
+func isAncestor(ancestor string, child string) bool {
+	for parent := parentModule(child); parent != ""; parent = parentModule(parent) {
+		if parent == ancestor {
+			return true
+		}
+	}
+	return false
+}
+
 func isUnchanged(r terraform.Resource) bool {
 	return r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead
 }

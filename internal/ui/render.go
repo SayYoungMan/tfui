@@ -81,7 +81,7 @@ func (m Model) renderResourceLine(idx int) string {
 	switch {
 	case idx == m.cursor:
 		line = cursorStyle.Render(line)
-	case m.selected[row.Address]:
+	case m.isSelected(row.Address):
 		line = selectedStyle.Render(line)
 	}
 	if style, ok := actionStyles[r.Action]; ok {
@@ -100,10 +100,27 @@ func (m Model) renderModuleLine(idx int) string {
 	}
 	line := fmt.Sprintf("%s%s %s", indent, symbol, row.Address)
 
-	if idx == m.cursor {
+	switch {
+	case idx == m.cursor:
 		return cursorStyle.Render(line)
+	case m.isSelected(row.Address):
+		return selectedStyle.Render(line)
 	}
 	return dimStyle.Render(line)
+}
+
+// returns if it or ancestor module is selected
+func (m Model) isSelected(addr string) bool {
+	if m.selected[addr] {
+		return true
+	}
+
+	for path := parentModule(addr); path != ""; path = parentModule(path) {
+		if m.selected[path] {
+			return true
+		}
+	}
+	return false
 }
 
 func (m Model) renderInfoBar() string {
@@ -212,10 +229,16 @@ func (m Model) renderConfirmView() string {
 
 	var resourceLines []string
 	for _, addr := range addrs {
-		r := m.resources[m.resourceIndexMap[addr]]
-		line := fmt.Sprintf("  %s %s", r.Action.Symbol(), addr)
-		if style, ok := actionStyles[r.Action]; ok {
-			line = style.Render(line)
+		var line string
+		if idx, isResource := m.resourceIndexMap[addr]; isResource {
+			r := m.resources[idx]
+			line = fmt.Sprintf("  %s %s", r.Action.Symbol(), addr)
+			if style, ok := actionStyles[r.Action]; ok {
+				line = style.Render(line)
+			}
+		} else {
+			line = fmt.Sprintf("  ▾ %s", addr)
+			line = dimStyle.Render(line)
 		}
 		resourceLines = append(resourceLines, line)
 	}
