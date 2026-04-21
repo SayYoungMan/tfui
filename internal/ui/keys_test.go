@@ -145,7 +145,7 @@ func TestNormalModeKeys_ActionBlockedWhileScanning(t *testing.T) {
 	m.isRunning = true
 	m.selected = map[string]bool{m.resources[0].Address: true}
 
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = newModel.(Model)
 
 	assert.Equal(t, viewList, m.viewState)
@@ -364,7 +364,7 @@ func TestConfirmKeys_Navigation(t *testing.T) {
 	assert.Equal(t, 0, m.confirmCursor)
 }
 
-func TestConformKeys_TabAlternate(t *testing.T) {
+func TestConfirmKeys_TabAlternate(t *testing.T) {
 	m := newTestModel()
 	m.viewState = viewConfirm
 

@@ -62,8 +62,8 @@ func (m *Model) rebuildRows() {
 
 	if m.cursor >= len(m.rows) {
 		m.cursor = max(0, len(m.rows)-1)
-		m.adjustOffset()
 	}
+	m.adjustOffset()
 }
 
 func (m *Model) visibleResources() terraform.Resources {
