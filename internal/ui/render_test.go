@@ -149,7 +149,7 @@ func TestRenderListView_ShowsHideUnchangedInfo(t *testing.T) {
 
 	require.Contains(t, m.View().Content, "hide unchanged")
 
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'h'})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'H'})
 	m = newModel.(Model)
 
 	assert.Contains(t, m.View().Content, "show unchanged")

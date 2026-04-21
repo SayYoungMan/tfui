@@ -32,7 +32,7 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-	case "enter":
+	case "tab":
 		if !m.isRunning && len(m.selected) > 0 {
 			m.actionCursor = 0
 			m.viewState = viewActionPicker
@@ -41,7 +41,7 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.viewState = viewFilter
 		m.filterInput.Focus()
 		return m, textinput.Blink
-	case "h":
+	case "H":
 		m.hideUnchanged = !m.hideUnchanged
 		m.rebuildRows()
 		m.cursor = 0
@@ -76,6 +76,9 @@ func (m Model) actionPickerKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.actionCursor > 0 {
 			m.actionCursor--
 		}
+	case "tab":
+		m.actionCursor++
+		m.actionCursor %= len(actionChoices)
 	case "enter":
 		m.viewState = viewConfirm
 		m.confirmCursor = 0
@@ -91,6 +94,8 @@ func (m Model) confirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.confirmCursor = 0
 	case "l", "right":
 		m.confirmCursor = 1
+	case "tab":
+		m.confirmCursor = 1 - m.confirmCursor
 	case "enter":
 		if m.confirmCursor == 0 {
 			m.viewState = viewActionPicker

@@ -129,18 +129,18 @@ func renderKeyHint(key, desc string) string {
 }
 
 func (m Model) renderHelpBar() string {
-	var hKeyInfo string
+	var HKeyInfo string
 	if m.hideUnchanged {
-		hKeyInfo = "show unchanged"
+		HKeyInfo = "show unchanged"
 	} else {
-		hKeyInfo = "hide unchanged"
+		HKeyInfo = "hide unchanged"
 	}
 
 	hints := []string{
 		renderKeyHint("/", "filter"),
 		renderKeyHint("Space", "select"),
-		renderKeyHint("Enter", "action"),
-		renderKeyHint("h", hKeyInfo),
+		renderKeyHint("Tab", "action"),
+		renderKeyHint("H", HKeyInfo),
 		renderKeyHint("Ctrl+r", "refresh"),
 		renderKeyHint("q", "quit"),
 	}
