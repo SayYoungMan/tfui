@@ -10,7 +10,7 @@ import (
 func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "j", "down":
-		if m.cursor < len(m.filteredIdx)-1 {
+		if m.cursor < len(m.rows)-1 {
 			m.cursor++
 			m.adjustOffset()
 		}
@@ -20,13 +20,16 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.adjustOffset()
 		}
 	case "space":
-		if len(m.filteredIdx) > 0 {
-			idx := m.filteredIdx[m.cursor]
-			addr := m.resources[idx].Address
-			if m.selected[addr] {
-				delete(m.selected, addr)
-			} else {
-				m.selected[addr] = true
+		if len(m.rows) > 0 {
+			row := m.rows[m.cursor]
+			// TODO: Make modules also selectable
+			if row.Kind == rowResource {
+				addr := row.Address
+				if m.selected[addr] {
+					delete(m.selected, addr)
+				} else {
+					m.selected[addr] = true
+				}
 			}
 		}
 	case "enter":
@@ -40,7 +43,9 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, textinput.Blink
 	case "h":
 		m.hideUnchanged = !m.hideUnchanged
-		m.rebuildFilter()
+		m.rebuildRows()
+		m.cursor = 0
+		m.offset = 0
 	case "ctrl+r":
 		if !m.isRunning {
 			return m.startRescan()

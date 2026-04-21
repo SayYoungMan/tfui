@@ -213,18 +213,6 @@ func TestFilterModeKeys_FilterFocusAndUnfocus(t *testing.T) {
 	assert.Equal(t, "s3", m.filterInput.Value())
 }
 
-func TestFilterModeKeys_SelectOnFilteredList(t *testing.T) {
-	m := newTestModel()
-	m.filteredIdx = []int{0, 2}
-	m.cursor = 1
-
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
-	m = newModel.(Model)
-
-	assert.False(t, m.selected[m.resources[0].Address])
-	assert.True(t, m.selected[m.resources[2].Address])
-}
-
 func TestActionPickerKeys_Navigation(t *testing.T) {
 	m := newTestModel()
 	m.viewState = viewActionPicker

@@ -34,30 +34,22 @@ func (m Model) renderFilterBox() string {
 
 func (m Model) renderResourcesBox() string {
 	var resources strings.Builder
-	end := min(m.offset+m.visibleRows(), len(m.filteredIdx))
+	end := min(m.offset+m.visibleRows(), len(m.rows))
 	for i := m.offset; i < end; i++ {
-		r := m.resources[m.filteredIdx[i]]
-		symbol := r.Action.Symbol()
-		reason := ""
-		if r.Reason != "" {
-			reason = fmt.Sprintf(" (%s)", r.Reason)
+		row := m.rows[i]
+
+		var line string
+		switch row.Kind {
+		case rowModule:
+			line = m.renderModuleLine(i)
+		case rowResource:
+			line = m.renderResourceLine(i)
 		}
-		line := fmt.Sprintf("%s %s%s", symbol, r.Address, reason)
 
 		// Truncate the end to fit to screen
 		maxLineWidth := m.viewWidth - 4
-		if len(line) > maxLineWidth {
+		if lipgloss.Width(line) > maxLineWidth {
 			line = line[:maxLineWidth-1] + "…"
-		}
-
-		switch {
-		case i == m.cursor:
-			line = cursorStyle.Render(line)
-		case m.selected[r.Address]:
-			line = selectedStyle.Render(line)
-		}
-		if style, ok := actionStyles[r.Action]; ok {
-			line = style.Render(line)
 		}
 
 		fmt.Fprintln(&resources, line)
@@ -72,6 +64,44 @@ func (m Model) renderResourcesBox() string {
 	return resourceBorderStyle.Width(m.viewWidth).Render(renderString)
 }
 
+func (m Model) renderResourceLine(idx int) string {
+	row := m.rows[idx]
+
+	indent := strings.Repeat("  ", row.Depth)
+
+	address := row.Address
+	r := m.resources[m.resourceIndexMap[address]]
+	if r.Reason != "" {
+		address += fmt.Sprintf(" (%s)", r.Reason)
+	}
+	adornment := r.Action.Symbol()
+
+	line := fmt.Sprintf("%s%s %s", indent, adornment, address)
+
+	switch {
+	case idx == m.cursor:
+		line = cursorStyle.Render(line)
+	case m.selected[row.Address]:
+		line = selectedStyle.Render(line)
+	}
+	if style, ok := actionStyles[r.Action]; ok {
+		line = style.Render(line)
+	}
+
+	return line
+}
+
+func (m Model) renderModuleLine(idx int) string {
+	row := m.rows[idx]
+	indent := strings.Repeat("  ", row.Depth)
+	line := fmt.Sprintf("%s▾ %s", indent, row.Address)
+
+	if idx == m.cursor {
+		return cursorStyle.Render(line)
+	}
+	return dimStyle.Render(line)
+}
+
 func (m Model) renderInfoBar() string {
 	var adornment, info string
 	if m.isRunning {
@@ -82,7 +112,7 @@ func (m Model) renderInfoBar() string {
 		info = fmt.Sprintf("  Scan Complete (%d resources found)", len(m.resources))
 	}
 	if m.filterInput.Value() != "" {
-		info += fmt.Sprintf(" | showing %d", len(m.filteredIdx))
+		info += fmt.Sprintf(" | showing %d", len(m.rows))
 	}
 	if len(m.selected) > 0 {
 		info += fmt.Sprintf(" | %d selected", len(m.selected))

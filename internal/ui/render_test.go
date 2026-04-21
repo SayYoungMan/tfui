@@ -122,8 +122,8 @@ func TestRenderListView_ViewShowsSelectedCount(t *testing.T) {
 
 func TestRenderListView_ViewShowsFilterCount(t *testing.T) {
 	m := newTestModel()
-	m.filteredIdx = []int{2}
 	m.filterInput.SetValue("iam")
+	m.rebuildRows()
 
 	view := m.View()
 

@@ -2,7 +2,6 @@ package ui
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/spinner"
@@ -31,16 +30,11 @@ type Model struct {
 	resources        terraform.Resources
 	resourceIndexMap map[string]int
 
-	modules        []Module
-	moduleIndexMap map[string]int
-	moduleChildren map[string][]child
-
 	rows     []Row
 	selected map[string]bool
 	cursor   int // indicates which resource idx we are pointing at
 	offset   int // indicates which resource is shown at the top
 
-	filteredIdx   []int
 	filterInput   textinput.Model
 	hideUnchanged bool
 
@@ -87,12 +81,6 @@ type Row struct {
 	Address string
 }
 
-// child type is used in union mapping of module -> children resource/module
-type child struct {
-	Kind    rowKind
-	Address string
-}
-
 func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent, cancel func()) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -104,8 +92,6 @@ func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent
 		resources:        []terraform.Resource{},
 		selected:         make(map[string]bool),
 		resourceIndexMap: make(map[string]int),
-		moduleIndexMap:   make(map[string]int),
-		moduleChildren:   make(map[string][]child),
 		filterInput:      newFilterInput(),
 		isRunning:        true,
 		spinner:          s,
@@ -213,7 +199,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.Button == tea.MouseWheelUp && m.cursor > 0 {
 				m.cursor--
 				m.adjustOffset()
-			} else if msg.Button == tea.MouseWheelDown && m.cursor < len(m.filteredIdx)-1 {
+			} else if msg.Button == tea.MouseWheelDown && m.cursor < len(m.rows)-1 {
 				m.cursor++
 				m.adjustOffset()
 			}
@@ -270,48 +256,6 @@ func (m Model) hasError() bool {
 	return m.err != nil
 }
 
-func parentModule(address string) string {
-	if !strings.HasPrefix(address, "module.") {
-		return ""
-	}
-
-	raw := strings.Split(address, ".")
-	segments := make([]string, 0, len(raw))
-	// Go through all segments with splitted by . to find if it contains any unmatched " and match it
-	// which means that there is a case like module.vpc["a.b"] that is edge case
-	for i := 0; i < len(raw); i++ {
-		seg := raw[i]
-		for strings.Count(seg, "\"")%2 == 1 && i+1 < len(raw) {
-			i++
-			seg += "." + raw[i]
-		}
-		segments = append(segments, seg)
-	}
-
-	if len(segments) < 2 {
-		return ""
-	}
-	return strings.Join(segments[:len(segments)-2], ".")
-}
-
-func (m *Model) ensureModule(module string) {
-	if module == "" {
-		return
-	}
-	if _, exists := m.moduleIndexMap[module]; exists {
-		return
-	}
-
-	parent := parentModule(module)
-	m.ensureModule(parent)
-
-	m.moduleIndexMap[module] = len(m.modules)
-	m.modules = append(m.modules, Module{Address: module, Parent: parent})
-	if parent != "" {
-		m.moduleChildren[parent] = append(m.moduleChildren[parent], child{Kind: rowModule, Address: module})
-	}
-}
-
 func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cmd) {
 	if event.Error != nil {
 		m.err = event.Error
@@ -326,23 +270,13 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 	if event.Resource != nil {
 		addr := event.Resource.Address
 		if idx, exists := m.resourceIndexMap[addr]; exists {
-			wasUnchanged := isUnchanged(m.resources[idx])
 			m.resources[idx] = *event.Resource
-
-			// handle the case where it was matching but hidden due to hideUnchanged but now showing because it's changed now
-			if m.hideUnchanged && wasUnchanged && !isUnchanged(*event.Resource) && m.matchesFilter(*event.Resource) {
-				m.filteredIdx = append(m.filteredIdx, idx)
-			}
 		} else {
 			newIdx := len(m.resources)
 			m.resourceIndexMap[addr] = newIdx
 			m.resources = append(m.resources, *event.Resource)
-			m.ensureModule(event.Resource.Module)
-
-			if m.matchesFilter(*event.Resource) {
-				m.filteredIdx = append(m.filteredIdx, m.resourceIndexMap[addr])
-			}
 		}
+		m.rebuildRows()
 	}
 
 	m.adjustOffset()
@@ -429,7 +363,7 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	// initialize
 	m.resources = m.resources[:0]
 	m.resourceIndexMap = make(map[string]int)
-	m.filteredIdx = m.filteredIdx[:0]
+	m.rows = m.rows[:0]
 	m.selected = make(map[string]bool)
 	m.cursor = 0
 	m.offset = 0
