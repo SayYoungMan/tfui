@@ -59,6 +59,11 @@ func (m *Model) rebuildRows() {
 
 	m.rows = m.rows[:0]
 	m.addRowsDFS(rowMap, children, "", 0)
+
+	if m.cursor >= len(m.rows) {
+		m.cursor = max(0, len(m.rows)-1)
+		m.adjustOffset()
+	}
 }
 
 func (m *Model) visibleResources() terraform.Resources {
@@ -88,7 +93,7 @@ func (m *Model) addRowsDFS(rowMap map[string]Row, children map[string][]string, 
 		row := rowMap[addr]
 		row.Depth = depth
 		m.rows = append(m.rows, row)
-		if row.Kind == rowModule {
+		if row.Kind == rowModule && !m.collapsed[addr] {
 			m.addRowsDFS(rowMap, children, addr, depth+1)
 		}
 	}

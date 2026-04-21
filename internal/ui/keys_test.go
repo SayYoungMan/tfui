@@ -197,6 +197,39 @@ func TestNormalModeKeys_TabOpensActionPicker(t *testing.T) {
 	assert.Equal(t, 0, m.actionCursor)
 }
 
+func TestNormalModeKeys_ModuleExpandCollapse(t *testing.T) {
+	resources := []terraform.Resource{
+		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
+	}
+	m := newTestModelWithResources(resources)
+
+	require.Empty(t, m.collapsed)
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'h'})
+	m = newModel.(Model)
+	require.Len(t, m.collapsed, 1)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'l'})
+	m = newModel.(Model)
+	require.Len(t, m.collapsed, 0)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
+	m = newModel.(Model)
+	require.Len(t, m.collapsed, 1)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
+	m = newModel.(Model)
+	require.Len(t, m.collapsed, 0)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+	require.Len(t, m.collapsed, 1)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+	require.Len(t, m.collapsed, 0)
+}
+
 func TestFilterModeKeys_FilterFocusAndUnfocus(t *testing.T) {
 	m := newTestModel()
 

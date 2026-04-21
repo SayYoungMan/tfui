@@ -94,7 +94,11 @@ func (m Model) renderResourceLine(idx int) string {
 func (m Model) renderModuleLine(idx int) string {
 	row := m.rows[idx]
 	indent := strings.Repeat("  ", row.Depth)
-	line := fmt.Sprintf("%s▾ %s", indent, row.Address)
+	symbol := "▾"
+	if m.collapsed[row.Address] {
+		symbol = "▸"
+	}
+	line := fmt.Sprintf("%s%s %s", indent, symbol, row.Address)
 
 	if idx == m.cursor {
 		return cursorStyle.Render(line)

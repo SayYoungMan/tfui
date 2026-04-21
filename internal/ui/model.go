@@ -30,10 +30,11 @@ type Model struct {
 	resources        terraform.Resources
 	resourceIndexMap map[string]int
 
-	rows     []Row
-	selected map[string]bool
-	cursor   int // indicates which resource idx we are pointing at
-	offset   int // indicates which resource is shown at the top
+	rows      []Row
+	collapsed map[string]bool
+	selected  map[string]bool
+	cursor    int // indicates which resource idx we are pointing at
+	offset    int // indicates which resource is shown at the top
 
 	filterInput   textinput.Model
 	hideUnchanged bool
@@ -90,6 +91,7 @@ func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent
 		eventCh:          ch,
 		cancel:           cancel,
 		resources:        []terraform.Resource{},
+		collapsed:        make(map[string]bool),
 		selected:         make(map[string]bool),
 		resourceIndexMap: make(map[string]int),
 		filterInput:      newFilterInput(),
@@ -364,6 +366,7 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	m.resources = m.resources[:0]
 	m.resourceIndexMap = make(map[string]int)
 	m.rows = m.rows[:0]
+	m.collapsed = make(map[string]bool)
 	m.selected = make(map[string]bool)
 	m.cursor = 0
 	m.offset = 0

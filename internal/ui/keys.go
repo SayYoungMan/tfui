@@ -19,6 +19,55 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.cursor--
 			m.adjustOffset()
 		}
+	case "h", "left":
+		if len(m.rows) == 0 {
+			break
+		}
+		row := m.rows[m.cursor]
+		if row.Kind == rowModule && !m.collapsed[row.Address] {
+			m.collapsed[row.Address] = true
+			m.rebuildRows()
+		} else if row.Kind == rowResource {
+			parent := parentModule(row.Address)
+			if parent == "" {
+				break
+			}
+
+			m.collapsed[parent] = true
+			m.rebuildRows()
+
+			// Set cursor on its parent after collapse
+			for i, r := range m.rows {
+				if r.Address != parent {
+					continue
+				}
+				m.cursor = i
+				m.adjustOffset()
+				break
+			}
+		}
+	case "l", "right":
+		if len(m.rows) == 0 {
+			break
+		}
+		row := m.rows[m.cursor]
+		if row.Kind == rowModule && m.collapsed[row.Address] {
+			delete(m.collapsed, row.Address)
+			m.rebuildRows()
+		}
+	case "enter":
+		if len(m.rows) == 0 {
+			break
+		}
+		row := m.rows[m.cursor]
+		if row.Kind == rowModule {
+			if m.collapsed[row.Address] {
+				delete(m.collapsed, row.Address)
+			} else {
+				m.collapsed[row.Address] = true
+			}
+			m.rebuildRows()
+		}
 	case "space":
 		if len(m.rows) > 0 {
 			row := m.rows[m.cursor]
