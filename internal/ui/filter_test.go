@@ -5,6 +5,7 @@ import (
 
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRebuildRows_EmptyShowsAll(t *testing.T) {
@@ -61,6 +62,45 @@ func TestRebuildRows_HideUnchangedFiltered(t *testing.T) {
 	assert.Empty(t, m.rows)
 }
 
+func TestRebuildRows_CursorLastWhenRowsShrink(t *testing.T) {
+	m := newTestModel()
+	m.cursor = len(m.rows) - 1
+
+	m.filterInput.SetValue("s3")
+	m.rebuildRows()
+
+	assert.Equal(t, len(m.rows)-1, m.cursor)
+}
+
+func TestRebuildRows_Collapse(t *testing.T) {
+	resources := []terraform.Resource{
+		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
+		{Address: "module.a.aws_s3.y", Module: "module.a", Action: terraform.ActionCreate},
+	}
+	m := newTestModelWithResources(resources)
+	require.Len(t, m.rows, 3)
+
+	m.collapsed["module.a"] = true
+	m.rebuildRows()
+
+	assert.Len(t, m.rows, 1)
+	assert.Equal(t, "module.a", m.rows[0].Address)
+}
+
+func TestRebuildRows_FilterIncludesParent(t *testing.T) {
+	resources := []terraform.Resource{
+		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
+	}
+	m := newTestModelWithResources(resources)
+
+	m.filterInput.SetValue("s3")
+	m.rebuildRows()
+
+	assert.Len(t, m.rows, 2)
+	assert.Equal(t, "module.a", m.rows[0].Address)
+	assert.Equal(t, "module.a.aws_s3.x", m.rows[1].Address)
+}
+
 func TestTreePrefix(t *testing.T) {
 	resources := []terraform.Resource{
 		{Address: "module.a.module.b.aws_s3.x", Module: "module.a.module.b", Action: terraform.ActionCreate},
@@ -98,4 +138,10 @@ func TestParentModule(t *testing.T) {
 			assert.Equal(t, tt.expected, parentModule(tt.address))
 		})
 	}
+}
+
+func TestIsAncestor(t *testing.T) {
+	assert.True(t, isAncestor("module.a", "module.a.module.b.aws_s3.x"))
+	assert.False(t, isAncestor("module.b", "module.a.module.b.aws_s3.x"))
+	assert.False(t, isAncestor("module.a", "aws_s3.x"))
 }

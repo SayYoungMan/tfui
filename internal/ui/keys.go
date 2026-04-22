@@ -103,7 +103,7 @@ func (m *Model) toggleSelected() {
 		delete(m.selected, addr)
 	} else {
 		// This is case where parent module is selected but this resource was not so skip
-		if m.isSelected(addr) {
+		if m.isSelectedOrAncestor(addr) {
 			return
 		}
 		// Remove from selected map if there is a child row that was selected

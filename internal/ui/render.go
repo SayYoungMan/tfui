@@ -86,7 +86,7 @@ func (m Model) renderResourceLine(idx int) string {
 	switch {
 	case idx == m.cursor:
 		line = cursorStyle.Render(line)
-	case m.isSelected(row.Address):
+	case m.isSelectedOrAncestor(row.Address):
 		line = selectedStyle.Render(line)
 	}
 	if style, ok := actionStyles[r.Action]; ok {
@@ -116,7 +116,7 @@ func (m Model) renderModuleLine(idx int) string {
 	switch {
 	case idx == m.cursor:
 		line = cursorStyle.Render(line)
-	case m.isSelected(row.Address):
+	case m.isSelectedOrAncestor(row.Address):
 		line = selectedStyle.Render(line)
 	}
 
@@ -142,7 +142,7 @@ func (m *Model) currentCursorModule() string {
 }
 
 // returns if it or ancestor module is selected
-func (m Model) isSelected(addr string) bool {
+func (m Model) isSelectedOrAncestor(addr string) bool {
 	if m.selected[addr] {
 		return true
 	}

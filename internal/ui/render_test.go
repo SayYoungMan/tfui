@@ -13,7 +13,6 @@ import (
 
 func TestRenderListView_ShowsResources(t *testing.T) {
 	m := newTestModel()
-	m.cursor = -1 // Remove cursor so that it doesn't color any of the lines
 
 	view := m.View()
 

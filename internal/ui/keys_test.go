@@ -140,6 +140,29 @@ func TestNormalModeKeys_SelectEmptyList(t *testing.T) {
 	assert.Empty(t, m.selected)
 }
 
+func TestNormalModeKeys_RemoveSelectionIfParentSelected(t *testing.T) {
+	resources := []terraform.Resource{
+		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
+	}
+	m := newTestModelWithResources(resources)
+	m.selected["module.a.aws_s3.x"] = true
+
+	// Cursor is already on module m.cursor = 0
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
+	m = newModel.(Model)
+
+	assert.Contains(t, m.selected, "module.a")
+	assert.NotContains(t, m.selected, "module.a.aws_s3.x")
+
+	m.cursor = 1
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
+	m = newModel.(Model)
+
+	// Ignore child selection if parent selected
+	assert.Contains(t, m.selected, "module.a")
+	assert.NotContains(t, m.selected, "module.a.aws_s3.x")
+}
+
 func TestNormalModeKeys_ActionBlockedWhileScanning(t *testing.T) {
 	m := newTestModel()
 	m.isRunning = true
@@ -205,9 +228,12 @@ func TestNormalModeKeys_ModuleExpandCollapse(t *testing.T) {
 
 	require.Empty(t, m.collapsed)
 
+	// The cursor on resource not module
+	m.cursor = 1
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'h'})
 	m = newModel.(Model)
 	require.Len(t, m.collapsed, 1)
+	require.Equal(t, 0, m.cursor)
 
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'l'})
 	m = newModel.(Model)
