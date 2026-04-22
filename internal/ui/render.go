@@ -119,7 +119,12 @@ func (m Model) renderModuleLine(idx int) string {
 	case m.isSelected(row.Address):
 		line = selectedStyle.Render(line)
 	}
-	line = dimStyle.Render(line)
+
+	if currentModule == row.Address {
+		line = treePrefixCurrentStyle.Render(line)
+	} else {
+		line = moduleStyle.Render(line)
+	}
 
 	return prefix + line
 }
