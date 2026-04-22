@@ -74,8 +74,15 @@ func (m Model) renderResourceLine(idx int) string {
 	}
 	adornment := r.Action.Symbol()
 
-	line := fmt.Sprintf("%s%s %s", row.TreePrefix, adornment, address)
+	currentModule := m.currentCursorModule()
+	prefix := row.TreePrefix
+	if currentModule == row.Parent {
+		prefix = treePrefixCurrentStyle.Render(prefix)
+	} else {
+		prefix = treePrefixDefaultStyle.Render(prefix)
+	}
 
+	line := fmt.Sprintf("%s %s", adornment, address)
 	switch {
 	case idx == m.cursor:
 		line = cursorStyle.Render(line)
@@ -86,24 +93,47 @@ func (m Model) renderResourceLine(idx int) string {
 		line = style.Render(line)
 	}
 
-	return line
+	return prefix + line
 }
 
 func (m Model) renderModuleLine(idx int) string {
 	row := m.rows[idx]
+
+	currentModule := m.currentCursorModule()
+	prefix := row.TreePrefix
+	if currentModule == row.Address {
+		prefix = treePrefixCurrentStyle.Render(prefix)
+	} else {
+		prefix = treePrefixDefaultStyle.Render(prefix)
+	}
+
 	symbol := "▾"
 	if m.collapsed[row.Address] {
 		symbol = "▸"
 	}
-	line := fmt.Sprintf("%s%s %s", row.TreePrefix, symbol, row.Address)
+	line := fmt.Sprintf("%s %s", symbol, row.Address)
 
 	switch {
 	case idx == m.cursor:
-		return cursorStyle.Render(line)
+		line = cursorStyle.Render(line)
 	case m.isSelected(row.Address):
-		return selectedStyle.Render(line)
+		line = selectedStyle.Render(line)
 	}
-	return dimStyle.Render(line)
+	line = dimStyle.Render(line)
+
+	return prefix + line
+}
+
+// return the most direct module from current cursor position
+func (m *Model) currentCursorModule() string {
+	cursorRow := m.rows[m.cursor]
+
+	currentModule := cursorRow.Address
+	if cursorRow.Kind == rowResource {
+		currentModule = cursorRow.Parent
+	}
+
+	return currentModule
 }
 
 // returns if it or ancestor module is selected

@@ -64,11 +64,6 @@ const (
 	viewError
 )
 
-type Module struct {
-	Address string
-	Parent  string // Parent is always a module and "" if it doesn't have any
-}
-
 type rowKind int
 
 const (
@@ -80,6 +75,7 @@ type Row struct {
 	Kind       rowKind
 	TreePrefix string
 	Address    string
+	Parent     string
 }
 
 func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent, cancel func()) Model {

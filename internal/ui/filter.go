@@ -43,12 +43,12 @@ func (m *Model) rebuildRows() {
 			if _, exists := rowMap[addr]; exists {
 				break
 			}
-			rowMap[addr] = Row{Kind: rowModule, Address: addr}
 			parent := parentModule(addr)
+			rowMap[addr] = Row{Kind: rowModule, Address: addr, Parent: parent}
 			children[parent] = append(children[parent], addr)
 		}
 
-		rowMap[r.Address] = Row{Kind: rowResource, Address: r.Address}
+		rowMap[r.Address] = Row{Kind: rowResource, Address: r.Address, Parent: r.Module}
 		children[r.Module] = append(children[r.Module], r.Address)
 	}
 

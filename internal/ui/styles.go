@@ -37,6 +37,9 @@ var (
 	resourceBorderStyle = lipgloss.NewStyle().
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(colorDimGrey).Padding(0, 1)
+
+	treePrefixDefaultStyle = lipgloss.NewStyle().Foreground(colorDimGrey)
+	treePrefixCurrentStyle = lipgloss.NewStyle().Foreground(colorCreamWhite)
 )
 
 var actionStyles = map[terraform.Action]lipgloss.Style{
