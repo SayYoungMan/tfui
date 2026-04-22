@@ -3,6 +3,7 @@ package ui
 import (
 	"testing"
 
+	"github.com/SayYoungMan/tfui/pkg/terraform"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -58,6 +59,24 @@ func TestRebuildRows_HideUnchangedFiltered(t *testing.T) {
 	m.rebuildRows()
 
 	assert.Empty(t, m.rows)
+}
+
+func TestTreePrefix(t *testing.T) {
+	resources := []terraform.Resource{
+		{Address: "module.a.module.b.aws_s3.x", Module: "module.a.module.b", Action: terraform.ActionCreate},
+		{Address: "module.a.module.c.aws_s3.y", Module: "module.a.module.c", Action: terraform.ActionCreate},
+	}
+	m := newTestModelWithResources(resources)
+
+	//   module.a              prefix: ""
+	//   ├─ module.b           prefix: "├─ "
+	//   │  └─ aws_s3.x        prefix: "│  └─ "
+	//   └─ module.c           prefix: "└─ "
+	//      └─ aws_s3.y        prefix: "   └─ "
+	expected := []string{"", "├─ ", "│  └─ ", "└─ ", "   └─ "}
+	for i, exp := range expected {
+		assert.Equal(t, exp, m.rows[i].TreePrefix)
+	}
 }
 
 func TestParentModule(t *testing.T) {

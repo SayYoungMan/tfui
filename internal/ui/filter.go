@@ -58,7 +58,7 @@ func (m *Model) rebuildRows() {
 	}
 
 	m.rows = m.rows[:0]
-	m.addRowsDFS(rowMap, children, "", 0)
+	m.addRowsDFS(rowMap, children, "", []bool{})
 
 	if m.cursor >= len(m.rows) {
 		m.cursor = max(0, len(m.rows)-1)
@@ -88,15 +88,45 @@ func (m *Model) visibleResources() terraform.Resources {
 	return resources
 }
 
-func (m *Model) addRowsDFS(rowMap map[string]Row, children map[string][]string, parent string, depth int) {
-	for _, addr := range children[parent] {
+func (m *Model) addRowsDFS(rowMap map[string]Row, children map[string][]string, parent string, isLast []bool) {
+	if parent != "" {
+		isLast = append(isLast, false)
+	}
+	for i, addr := range children[parent] {
+		if i == len(children[parent])-1 && len(isLast) > 0 {
+			isLast[len(isLast)-1] = true
+		}
+
 		row := rowMap[addr]
-		row.Depth = depth
+		row.TreePrefix = treePrefix(isLast)
 		m.rows = append(m.rows, row)
 		if row.Kind == rowModule && !m.collapsed[addr] {
-			m.addRowsDFS(rowMap, children, addr, depth+1)
+			m.addRowsDFS(rowMap, children, addr, isLast)
 		}
 	}
+}
+
+func treePrefix(isLast []bool) string {
+	if len(isLast) == 0 {
+		return ""
+	}
+
+	var s strings.Builder
+	for i := range len(isLast) - 1 {
+		if isLast[i] {
+			s.WriteString("   ")
+		} else {
+			s.WriteString("│  ")
+		}
+	}
+
+	if isLast[len(isLast)-1] {
+		s.WriteString("└─ ")
+	} else {
+		s.WriteString("├─ ")
+	}
+
+	return s.String()
 }
 
 func parentModule(address string) string {

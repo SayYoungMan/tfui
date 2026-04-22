@@ -67,8 +67,6 @@ func (m Model) renderResourcesBox() string {
 func (m Model) renderResourceLine(idx int) string {
 	row := m.rows[idx]
 
-	indent := strings.Repeat("  ", row.Depth)
-
 	address := row.Address
 	r := m.resources[m.resourceIndexMap[address]]
 	if r.Reason != "" {
@@ -76,7 +74,7 @@ func (m Model) renderResourceLine(idx int) string {
 	}
 	adornment := r.Action.Symbol()
 
-	line := fmt.Sprintf("%s%s %s", indent, adornment, address)
+	line := fmt.Sprintf("%s%s %s", row.TreePrefix, adornment, address)
 
 	switch {
 	case idx == m.cursor:
@@ -93,12 +91,11 @@ func (m Model) renderResourceLine(idx int) string {
 
 func (m Model) renderModuleLine(idx int) string {
 	row := m.rows[idx]
-	indent := strings.Repeat("  ", row.Depth)
 	symbol := "▾"
 	if m.collapsed[row.Address] {
 		symbol = "▸"
 	}
-	line := fmt.Sprintf("%s%s %s", indent, symbol, row.Address)
+	line := fmt.Sprintf("%s%s %s", row.TreePrefix, symbol, row.Address)
 
 	switch {
 	case idx == m.cursor:

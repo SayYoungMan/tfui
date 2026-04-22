@@ -77,9 +77,9 @@ const (
 )
 
 type Row struct {
-	Kind    rowKind
-	Depth   int
-	Address string
+	Kind       rowKind
+	TreePrefix string
+	Address    string
 }
 
 func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent, cancel func()) Model {
