@@ -61,5 +61,6 @@ tfui --binary tofu
 | Workspace switcher | 🔲 Planned |
 | Resource Detail Viewer | 🔲 Planned |
 | Per resource action tracker | 🔲 Planned |
+| Stress test for large input | 🔲 Planned |
 
 Those are some features in mind but not in order of importance
