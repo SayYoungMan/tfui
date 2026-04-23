@@ -27,20 +27,22 @@ type Model struct {
 	isQuitting     bool
 	forceQuitReady bool
 
-	resources terraform.Resources
+	resources        terraform.Resources
+	resourceIndexMap map[string]int
+
+	rows      []Row
+	collapsed map[string]bool
 	selected  map[string]bool
-	indexMap  map[string]int
 	cursor    int // indicates which resource idx we are pointing at
 	offset    int // indicates which resource is shown at the top
-	isRunning bool
 
-	filteredIdx []int
-	filterInput textinput.Model
-
+	filterInput   textinput.Model
 	hideUnchanged bool
-	spinner       spinner.Model
-	err           error
-	diagnostics   []terraform.Diagnostic
+
+	isRunning   bool
+	spinner     spinner.Model
+	err         error
+	diagnostics []terraform.Diagnostic
 
 	actionCursor  int
 	confirmCursor int
@@ -62,20 +64,35 @@ const (
 	viewError
 )
 
+type rowKind int
+
+const (
+	rowResource rowKind = iota
+	rowModule
+)
+
+type Row struct {
+	Kind       rowKind
+	TreePrefix string
+	Address    string
+	Parent     string
+}
+
 func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent, cancel func()) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 
 	return Model{
-		runner:      runner,
-		eventCh:     ch,
-		cancel:      cancel,
-		resources:   []terraform.Resource{},
-		selected:    make(map[string]bool),
-		indexMap:    make(map[string]int),
-		filterInput: newFilterInput(),
-		isRunning:   true,
-		spinner:     s,
+		runner:           runner,
+		eventCh:          ch,
+		cancel:           cancel,
+		resources:        []terraform.Resource{},
+		collapsed:        make(map[string]bool),
+		selected:         make(map[string]bool),
+		resourceIndexMap: make(map[string]int),
+		filterInput:      newFilterInput(),
+		isRunning:        true,
+		spinner:          s,
 	}
 }
 
@@ -180,7 +197,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.Button == tea.MouseWheelUp && m.cursor > 0 {
 				m.cursor--
 				m.adjustOffset()
-			} else if msg.Button == tea.MouseWheelDown && m.cursor < len(m.filteredIdx)-1 {
+			} else if msg.Button == tea.MouseWheelDown && m.cursor < len(m.rows)-1 {
 				m.cursor++
 				m.adjustOffset()
 			}
@@ -250,23 +267,14 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 
 	if event.Resource != nil {
 		addr := event.Resource.Address
-		if idx, exists := m.indexMap[addr]; exists {
-			wasUnchanged := isUnchanged(m.resources[idx])
+		if idx, exists := m.resourceIndexMap[addr]; exists {
 			m.resources[idx] = *event.Resource
-
-			// handle the case where it was matching but hidden due to hideUnchanged but now showing because it's changed now
-			if m.hideUnchanged && wasUnchanged && !isUnchanged(*event.Resource) && m.matchesFilter(*event.Resource) {
-				m.filteredIdx = append(m.filteredIdx, idx)
-			}
 		} else {
 			newIdx := len(m.resources)
-			m.indexMap[addr] = newIdx
+			m.resourceIndexMap[addr] = newIdx
 			m.resources = append(m.resources, *event.Resource)
-
-			if m.matchesFilter(*event.Resource) {
-				m.filteredIdx = append(m.filteredIdx, m.indexMap[addr])
-			}
 		}
+		m.rebuildRows()
 	}
 
 	m.adjustOffset()
@@ -352,8 +360,9 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 
 	// initialize
 	m.resources = m.resources[:0]
-	m.indexMap = make(map[string]int)
-	m.filteredIdx = m.filteredIdx[:0]
+	m.resourceIndexMap = make(map[string]int)
+	m.rows = m.rows[:0]
+	m.collapsed = make(map[string]bool)
 	m.selected = make(map[string]bool)
 	m.cursor = 0
 	m.offset = 0

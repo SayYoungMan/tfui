@@ -10,7 +10,7 @@ import (
 func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "j", "down":
-		if m.cursor < len(m.filteredIdx)-1 {
+		if m.cursor < len(m.rows)-1 {
 			m.cursor++
 			m.adjustOffset()
 		}
@@ -19,17 +19,58 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.cursor--
 			m.adjustOffset()
 		}
-	case "space":
-		if len(m.filteredIdx) > 0 {
-			idx := m.filteredIdx[m.cursor]
-			addr := m.resources[idx].Address
-			if m.selected[addr] {
-				delete(m.selected, addr)
-			} else {
-				m.selected[addr] = true
+	case "h", "left":
+		if len(m.rows) == 0 {
+			break
+		}
+		row := m.rows[m.cursor]
+		if row.Kind == rowModule && !m.collapsed[row.Address] {
+			m.collapsed[row.Address] = true
+			m.rebuildRows()
+		} else if row.Kind == rowResource {
+			parent := parentModule(row.Address)
+			if parent == "" {
+				break
+			}
+
+			m.collapsed[parent] = true
+			m.rebuildRows()
+
+			// Set cursor on its parent after collapse
+			for i, r := range m.rows {
+				if r.Address != parent {
+					continue
+				}
+				m.cursor = i
+				m.adjustOffset()
+				break
 			}
 		}
+	case "l", "right":
+		if len(m.rows) == 0 {
+			break
+		}
+		row := m.rows[m.cursor]
+		if row.Kind == rowModule && m.collapsed[row.Address] {
+			delete(m.collapsed, row.Address)
+			m.rebuildRows()
+		}
 	case "enter":
+		if len(m.rows) == 0 {
+			break
+		}
+		row := m.rows[m.cursor]
+		if row.Kind == rowModule {
+			if m.collapsed[row.Address] {
+				delete(m.collapsed, row.Address)
+			} else {
+				m.collapsed[row.Address] = true
+			}
+			m.rebuildRows()
+		}
+	case "space":
+		m.toggleSelected()
+	case "tab":
 		if !m.isRunning && len(m.selected) > 0 {
 			m.actionCursor = 0
 			m.viewState = viewActionPicker
@@ -38,9 +79,11 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.viewState = viewFilter
 		m.filterInput.Focus()
 		return m, textinput.Blink
-	case "h":
+	case "H":
 		m.hideUnchanged = !m.hideUnchanged
-		m.rebuildFilter()
+		m.rebuildRows()
+		m.cursor = 0
+		m.offset = 0
 	case "ctrl+r":
 		if !m.isRunning {
 			return m.startRescan()
@@ -48,6 +91,29 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *Model) toggleSelected() {
+	if len(m.rows) <= 0 {
+		return
+	}
+	row := m.rows[m.cursor]
+	addr := row.Address
+	if m.selected[addr] {
+		delete(m.selected, addr)
+	} else {
+		// This is case where parent module is selected but this resource was not so skip
+		if m.isSelectedOrAncestor(addr) {
+			return
+		}
+		// Remove from selected map if there is a child row that was selected
+		for selectedAddr := range m.selected {
+			if isAncestor(addr, selectedAddr) {
+				delete(m.selected, selectedAddr)
+			}
+		}
+		m.selected[addr] = true
+	}
 }
 
 func (m Model) filterModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -71,6 +137,9 @@ func (m Model) actionPickerKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.actionCursor > 0 {
 			m.actionCursor--
 		}
+	case "tab":
+		m.actionCursor++
+		m.actionCursor %= len(actionChoices)
 	case "enter":
 		m.viewState = viewConfirm
 		m.confirmCursor = 0
@@ -86,6 +155,8 @@ func (m Model) confirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.confirmCursor = 0
 	case "l", "right":
 		m.confirmCursor = 1
+	case "tab":
+		m.confirmCursor = 1 - m.confirmCursor
 	case "enter":
 		if m.confirmCursor == 0 {
 			m.viewState = viewActionPicker

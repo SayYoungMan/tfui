@@ -36,3 +36,9 @@ tfui-debug.log
 
 # MAC Stuff
 .DS_Store
+
+# For making demo gif
+demo
+
+# Personal Note
+WIPnote.md

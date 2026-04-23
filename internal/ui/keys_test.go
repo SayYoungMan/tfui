@@ -105,6 +105,18 @@ func TestNormalModeKeys_ScrollsUpWithCursor(t *testing.T) {
 	assert.Equal(t, 2, m.offset) // offset changes -> it scrolled up
 }
 
+func TestNormalModeKeys_ToggleHideUnchanged(t *testing.T) {
+	m := newTestModel()
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'H'})
+	m = newModel.(Model)
+	assert.True(t, m.hideUnchanged)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'H'})
+	m = newModel.(Model)
+	assert.False(t, m.hideUnchanged)
+}
+
 func TestNormalModeKeys_ToggleSelect(t *testing.T) {
 	m := newTestModel()
 
@@ -128,22 +140,45 @@ func TestNormalModeKeys_SelectEmptyList(t *testing.T) {
 	assert.Empty(t, m.selected)
 }
 
-func TestNormalModeKeys_EnterBlockedWhileScanning(t *testing.T) {
+func TestNormalModeKeys_RemoveSelectionIfParentSelected(t *testing.T) {
+	resources := []terraform.Resource{
+		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
+	}
+	m := newTestModelWithResources(resources)
+	m.selected["module.a.aws_s3.x"] = true
+
+	// Cursor is already on module m.cursor = 0
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
+	m = newModel.(Model)
+
+	assert.Contains(t, m.selected, "module.a")
+	assert.NotContains(t, m.selected, "module.a.aws_s3.x")
+
+	m.cursor = 1
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
+	m = newModel.(Model)
+
+	// Ignore child selection if parent selected
+	assert.Contains(t, m.selected, "module.a")
+	assert.NotContains(t, m.selected, "module.a.aws_s3.x")
+}
+
+func TestNormalModeKeys_ActionBlockedWhileScanning(t *testing.T) {
 	m := newTestModel()
 	m.isRunning = true
 	m.selected = map[string]bool{m.resources[0].Address: true}
 
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = newModel.(Model)
 
 	assert.Equal(t, viewList, m.viewState)
 }
 
-func TestNormalModeKeys_EnterBlockedWithNoSelection(t *testing.T) {
+func TestNormalModeKeys_ActionBlockedWithNoSelection(t *testing.T) {
 	m := newTestModel()
 	m.isRunning = false
 
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = newModel.(Model)
 
 	assert.Equal(t, viewList, m.viewState)
@@ -173,16 +208,52 @@ func TestNormalModeKeys_RefreshBlockedWhileScanning(t *testing.T) {
 	assert.Nil(t, cmd)
 }
 
-func TestNormalModeKeys_EnterOpensActionPicker(t *testing.T) {
+func TestNormalModeKeys_TabOpensActionPicker(t *testing.T) {
 	m := newTestModel()
 	m.isRunning = false
 	m.selected = map[string]bool{m.resources[0].Address: true}
 
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = newModel.(Model)
 
 	assert.Equal(t, viewActionPicker, m.viewState)
 	assert.Equal(t, 0, m.actionCursor)
+}
+
+func TestNormalModeKeys_ModuleExpandCollapse(t *testing.T) {
+	resources := []terraform.Resource{
+		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
+	}
+	m := newTestModelWithResources(resources)
+
+	require.Empty(t, m.collapsed)
+
+	// The cursor on resource not module
+	m.cursor = 1
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'h'})
+	m = newModel.(Model)
+	require.Len(t, m.collapsed, 1)
+	require.Equal(t, 0, m.cursor)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'l'})
+	m = newModel.(Model)
+	require.Len(t, m.collapsed, 0)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
+	m = newModel.(Model)
+	require.Len(t, m.collapsed, 1)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
+	m = newModel.(Model)
+	require.Len(t, m.collapsed, 0)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+	require.Len(t, m.collapsed, 1)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+	require.Len(t, m.collapsed, 0)
 }
 
 func TestFilterModeKeys_FilterFocusAndUnfocus(t *testing.T) {
@@ -213,18 +284,6 @@ func TestFilterModeKeys_FilterFocusAndUnfocus(t *testing.T) {
 	assert.Equal(t, "s3", m.filterInput.Value())
 }
 
-func TestFilterModeKeys_SelectOnFilteredList(t *testing.T) {
-	m := newTestModel()
-	m.filteredIdx = []int{0, 2}
-	m.cursor = 1
-
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
-	m = newModel.(Model)
-
-	assert.False(t, m.selected[m.resources[0].Address])
-	assert.True(t, m.selected[m.resources[2].Address])
-}
-
 func TestActionPickerKeys_Navigation(t *testing.T) {
 	m := newTestModel()
 	m.viewState = viewActionPicker
@@ -250,6 +309,20 @@ func TestActionPickerKeys_Navigation(t *testing.T) {
 	assert.Equal(t, len(actionChoices)-1, m.actionCursor)
 }
 
+func TestActionPickerKeys_TabNext(t *testing.T) {
+	m := newTestModel()
+	m.viewState = viewActionPicker
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	m = newModel.(Model)
+	require.Equal(t, 1, m.actionCursor)
+
+	m.actionCursor = 4
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.actionCursor)
+}
+
 func TestActionPickerKeys_EscReturnsToList(t *testing.T) {
 	m := newTestModel()
 	m.viewState = viewActionPicker
@@ -266,7 +339,7 @@ func TestActionPickerKeys_CursorResetsOnEntry(t *testing.T) {
 	m.selected = map[string]bool{m.resources[0].Address: true}
 	m.actionCursor = 3
 
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = newModel.(Model)
 
 	assert.Equal(t, 0, m.actionCursor)
@@ -315,6 +388,19 @@ func TestConfirmKeys_Navigation(t *testing.T) {
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
 	m = newModel.(Model)
 	assert.Equal(t, 0, m.confirmCursor)
+}
+
+func TestConfirmKeys_TabAlternate(t *testing.T) {
+	m := newTestModel()
+	m.viewState = viewConfirm
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	m = newModel.(Model)
+	require.Equal(t, 1, m.confirmCursor)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	m = newModel.(Model)
+	require.Equal(t, 0, m.confirmCursor)
 }
 
 func TestConfirmKeys_CancelToPicker(t *testing.T) {

@@ -24,8 +24,6 @@ scoop install tfui
 ```bash
 go install github.com/SayYoungMan/tfui/cmd/tfui@latest
 ```
-requires *Go 1.22+*
-
 
 ## Usage
 
@@ -57,11 +55,12 @@ tfui --binary tofu
 
 | Feature | Status |
 |---|---|
+| Module tree view | ✅ Done (v0.1.0) |
 | Persistent resource state | 🔲 Planned |
 | Diff viewer | 🔲 Planned |
 | Workspace switcher | 🔲 Planned |
 | Resource Detail Viewer | 🔲 Planned |
-| Module tree view | 🔲 Planned |
 | Per resource action tracker | 🔲 Planned |
+| Stress test for large input | 🔲 Planned |
 
 Those are some features in mind but not in order of importance

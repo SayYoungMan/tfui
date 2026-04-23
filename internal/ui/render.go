@@ -34,30 +34,22 @@ func (m Model) renderFilterBox() string {
 
 func (m Model) renderResourcesBox() string {
 	var resources strings.Builder
-	end := min(m.offset+m.visibleRows(), len(m.filteredIdx))
+	end := min(m.offset+m.visibleRows(), len(m.rows))
 	for i := m.offset; i < end; i++ {
-		r := m.resources[m.filteredIdx[i]]
-		symbol := r.Action.Symbol()
-		reason := ""
-		if r.Reason != "" {
-			reason = fmt.Sprintf(" (%s)", r.Reason)
+		row := m.rows[i]
+
+		var line string
+		switch row.Kind {
+		case rowModule:
+			line = m.renderModuleLine(i)
+		case rowResource:
+			line = m.renderResourceLine(i)
 		}
-		line := fmt.Sprintf("%s %s%s", symbol, r.Address, reason)
 
 		// Truncate the end to fit to screen
 		maxLineWidth := m.viewWidth - 4
-		if len(line) > maxLineWidth {
+		if lipgloss.Width(line) > maxLineWidth {
 			line = line[:maxLineWidth-1] + "…"
-		}
-
-		switch {
-		case i == m.cursor:
-			line = cursorStyle.Render(line)
-		case m.selected[r.Address]:
-			line = selectedStyle.Render(line)
-		}
-		if style, ok := actionStyles[r.Action]; ok {
-			line = style.Render(line)
 		}
 
 		fmt.Fprintln(&resources, line)
@@ -72,6 +64,97 @@ func (m Model) renderResourcesBox() string {
 	return resourceBorderStyle.Width(m.viewWidth).Render(renderString)
 }
 
+func (m Model) renderResourceLine(idx int) string {
+	row := m.rows[idx]
+
+	address := row.Address
+	r := m.resources[m.resourceIndexMap[address]]
+	if r.Reason != "" {
+		address += fmt.Sprintf(" (%s)", r.Reason)
+	}
+	adornment := r.Action.Symbol()
+
+	currentModule := m.currentCursorModule()
+	prefix := row.TreePrefix
+	if currentModule == row.Parent {
+		prefix = treePrefixCurrentStyle.Render(prefix)
+	} else {
+		prefix = treePrefixDefaultStyle.Render(prefix)
+	}
+
+	line := fmt.Sprintf("%s %s", adornment, address)
+	switch {
+	case idx == m.cursor:
+		line = cursorStyle.Render(line)
+	case m.isSelectedOrAncestor(row.Address):
+		line = selectedStyle.Render(line)
+	}
+	if style, ok := actionStyles[r.Action]; ok {
+		line = style.Render(line)
+	}
+
+	return prefix + line
+}
+
+func (m Model) renderModuleLine(idx int) string {
+	row := m.rows[idx]
+
+	currentModule := m.currentCursorModule()
+	prefix := row.TreePrefix
+	if currentModule == row.Address {
+		prefix = treePrefixCurrentStyle.Render(prefix)
+	} else {
+		prefix = treePrefixDefaultStyle.Render(prefix)
+	}
+
+	symbol := "▾"
+	if m.collapsed[row.Address] {
+		symbol = "▸"
+	}
+	line := fmt.Sprintf("%s %s", symbol, row.Address)
+
+	switch {
+	case idx == m.cursor:
+		line = cursorStyle.Render(line)
+	case m.isSelectedOrAncestor(row.Address):
+		line = selectedStyle.Render(line)
+	}
+
+	if currentModule == row.Address {
+		line = treePrefixCurrentStyle.Render(line)
+	} else {
+		line = moduleStyle.Render(line)
+	}
+
+	return prefix + line
+}
+
+// return the most direct module from current cursor position
+func (m *Model) currentCursorModule() string {
+	cursorRow := m.rows[m.cursor]
+
+	currentModule := cursorRow.Address
+	if cursorRow.Kind == rowResource {
+		currentModule = cursorRow.Parent
+	}
+
+	return currentModule
+}
+
+// returns if it or ancestor module is selected
+func (m Model) isSelectedOrAncestor(addr string) bool {
+	if m.selected[addr] {
+		return true
+	}
+
+	for path := parentModule(addr); path != ""; path = parentModule(path) {
+		if m.selected[path] {
+			return true
+		}
+	}
+	return false
+}
+
 func (m Model) renderInfoBar() string {
 	var adornment, info string
 	if m.isRunning {
@@ -82,7 +165,7 @@ func (m Model) renderInfoBar() string {
 		info = fmt.Sprintf("  Scan Complete (%d resources found)", len(m.resources))
 	}
 	if m.filterInput.Value() != "" {
-		info += fmt.Sprintf(" | showing %d", len(m.filteredIdx))
+		info += fmt.Sprintf(" | showing %d", len(m.rows))
 	}
 	if len(m.selected) > 0 {
 		info += fmt.Sprintf(" | %d selected", len(m.selected))
@@ -99,18 +182,18 @@ func renderKeyHint(key, desc string) string {
 }
 
 func (m Model) renderHelpBar() string {
-	var hKeyInfo string
+	var HKeyInfo string
 	if m.hideUnchanged {
-		hKeyInfo = "show unchanged"
+		HKeyInfo = "show unchanged"
 	} else {
-		hKeyInfo = "hide unchanged"
+		HKeyInfo = "hide unchanged"
 	}
 
 	hints := []string{
 		renderKeyHint("/", "filter"),
 		renderKeyHint("Space", "select"),
-		renderKeyHint("Enter", "action"),
-		renderKeyHint("h", hKeyInfo),
+		renderKeyHint("Tab", "action"),
+		renderKeyHint("H", HKeyInfo),
 		renderKeyHint("Ctrl+r", "refresh"),
 		renderKeyHint("q", "quit"),
 	}
@@ -178,10 +261,16 @@ func (m Model) renderConfirmView() string {
 
 	var resourceLines []string
 	for _, addr := range addrs {
-		r := m.resources[m.indexMap[addr]]
-		line := fmt.Sprintf("  %s %s", r.Action.Symbol(), addr)
-		if style, ok := actionStyles[r.Action]; ok {
-			line = style.Render(line)
+		var line string
+		if idx, isResource := m.resourceIndexMap[addr]; isResource {
+			r := m.resources[idx]
+			line = fmt.Sprintf("  %s %s", r.Action.Symbol(), addr)
+			if style, ok := actionStyles[r.Action]; ok {
+				line = style.Render(line)
+			}
+		} else {
+			line = fmt.Sprintf("  ▾ %s", addr)
+			line = dimStyle.Render(line)
 		}
 		resourceLines = append(resourceLines, line)
 	}

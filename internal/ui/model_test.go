@@ -118,7 +118,7 @@ func TestModel_HideUnchanged_ResourceBecomesChanged(t *testing.T) {
 	m = newModel.(Model)
 
 	require.Len(t, m.resources, 1)
-	assert.Empty(t, m.filteredIdx)
+	assert.Empty(t, m.rows)
 
 	newModel, _ = m.Update(streamEventMsg(terraform.StreamEvent{
 		Resource: &terraform.Resource{
@@ -129,7 +129,7 @@ func TestModel_HideUnchanged_ResourceBecomesChanged(t *testing.T) {
 	m = newModel.(Model)
 
 	assert.Equal(t, terraform.ActionUpdate, m.resources[0].Action)
-	require.Len(t, m.filteredIdx, 1)
+	require.Len(t, m.rows, 1)
 }
 
 func TestModel_HandleErrorDiagnostic(t *testing.T) {
@@ -187,7 +187,8 @@ func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
 		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
 	}
 	m := newTestModelWithResources(resources)
-	m.filteredIdx = []int{0, 2}
+	m.filterInput.SetValue("s3")
+	m.rebuildRows()
 	m.cursor = 0
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
@@ -200,7 +201,7 @@ func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 1, m.cursor)
-	assert.Contains(t, theLine, ansiString)
+	assert.Contains(t, theLine, cursorAnsiString)
 }
 
 func TestModel_NewResourcesFilterMatch(t *testing.T) {
@@ -217,7 +218,7 @@ func TestModel_NewResourcesFilterMatch(t *testing.T) {
 	}))
 	m = newModel.(Model)
 
-	assert.Len(t, m.filteredIdx, 2)
+	assert.Len(t, m.rows, 2)
 
 	newModel, _ = m.Update(streamEventMsg(terraform.StreamEvent{
 		Resource: &terraform.Resource{
@@ -227,7 +228,7 @@ func TestModel_NewResourcesFilterMatch(t *testing.T) {
 	}))
 	m = newModel.(Model)
 
-	assert.Len(t, m.filteredIdx, 2)
+	assert.Len(t, m.rows, 2)
 	assert.Len(t, m.resources, 3)
 }
 

@@ -13,7 +13,6 @@ import (
 
 func TestRenderListView_ShowsResources(t *testing.T) {
 	m := newTestModel()
-	m.cursor = -1 // Remove cursor so that it doesn't color any of the lines
 
 	view := m.View()
 
@@ -122,8 +121,8 @@ func TestRenderListView_ViewShowsSelectedCount(t *testing.T) {
 
 func TestRenderListView_ViewShowsFilterCount(t *testing.T) {
 	m := newTestModel()
-	m.filteredIdx = []int{2}
 	m.filterInput.SetValue("iam")
+	m.rebuildRows()
 
 	view := m.View()
 
@@ -149,7 +148,7 @@ func TestRenderListView_ShowsHideUnchangedInfo(t *testing.T) {
 
 	require.Contains(t, m.View().Content, "hide unchanged")
 
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'h'})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'H'})
 	m = newModel.(Model)
 
 	assert.Contains(t, m.View().Content, "show unchanged")
@@ -195,7 +194,7 @@ func TestRenderConfirmView_TruncatesLongSelections(t *testing.T) {
 		m.resources = append(m.resources, terraform.Resource{
 			Address: addr, Action: terraform.ActionDelete,
 		})
-		m.indexMap[addr] = i
+		m.resourceIndexMap[addr] = i
 		m.selected[addr] = true
 	}
 

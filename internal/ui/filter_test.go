@@ -5,93 +5,143 @@ import (
 
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestRebuildFilter_EmptyShowsAll(t *testing.T) {
+func TestRebuildRows_EmptyShowsAll(t *testing.T) {
 	m := newTestModel()
 
 	m.filterInput.SetValue("")
-	m.rebuildFilter()
+	m.rebuildRows()
 
-	assert.Len(t, m.filteredIdx, len(testResources))
+	assert.Len(t, m.rows, len(testResources))
 }
 
-func TestRebuildFilter_MatchesSubset(t *testing.T) {
+func TestRebuildRows_MatchesSubset(t *testing.T) {
 	m := newTestModel()
 
 	m.filterInput.SetValue("s3")
-	m.rebuildFilter()
+	m.rebuildRows()
 
-	addrs := make([]string, len(m.filteredIdx))
-	for i, idx := range m.filteredIdx {
-		addrs[i] = m.resources[idx].Address
+	addrs := make([]string, len(m.rows))
+	for i, row := range m.rows {
+		addrs[i] = row.Address
 	}
 
-	assert.Len(t, m.filteredIdx, 3)
-	assert.Contains(t, addrs, testResources[0].Address)
-	assert.Contains(t, addrs, testResources[1].Address)
+	assert.Len(t, m.rows, 3)
+	assert.Contains(t, addrs, testResources[2].Address)
+	assert.Contains(t, addrs, testResources[3].Address)
 	assert.Contains(t, addrs, testResources[4].Address)
 }
 
-func TestRebuildFilter_NoMatch(t *testing.T) {
+func TestRebuildRows_NoMatch(t *testing.T) {
 	m := newTestModel()
 
 	m.filterInput.SetValue("zzzzz")
-	m.rebuildFilter()
+	m.rebuildRows()
 
-	assert.Empty(t, m.filteredIdx)
+	assert.Empty(t, m.rows)
 }
 
-func TestRebuildFilter_ResetsCursorAndOffset(t *testing.T) {
-	m := newTestModel()
-	m.cursor = 2
-	m.offset = 1
-
-	m.filterInput.SetValue("s3")
-	m.rebuildFilter()
-
-	assert.Equal(t, 0, m.cursor)
-	assert.Equal(t, 0, m.offset)
-}
-
-func TestRebuildFilter_HideUnchanged(t *testing.T) {
+func TestRebuildRows_HideUnchanged(t *testing.T) {
 	m := newTestModel()
 
 	m.hideUnchanged = true
-	m.rebuildFilter()
+	m.rebuildRows()
 
-	assert.Len(t, m.filteredIdx, 5)
+	assert.Len(t, m.rows, 5)
 }
 
-func TestRebuildFilter_HideUnchangedFiltered(t *testing.T) {
+func TestRebuildRows_HideUnchangedFiltered(t *testing.T) {
 	m := newTestModel()
 
 	m.filterInput.SetValue("aws_vpc")
 	m.hideUnchanged = true
-	m.rebuildFilter()
+	m.rebuildRows()
 
-	assert.Empty(t, m.filteredIdx)
+	assert.Empty(t, m.rows)
 }
 
-func TestMatchesFilter_EmptyAlwaysTrue(t *testing.T) {
-	m := newTestModelEmpty()
+func TestRebuildRows_CursorLastWhenRowsShrink(t *testing.T) {
+	m := newTestModel()
+	m.cursor = len(m.rows) - 1
 
-	r := terraform.Resource{Address: "anything"}
-	assert.True(t, m.matchesFilter(r))
-}
-
-func TestMatchesFilter_MatchAndMiss(t *testing.T) {
-	m := newTestModelEmpty()
 	m.filterInput.SetValue("s3")
+	m.rebuildRows()
 
-	assert.True(t, m.matchesFilter(terraform.Resource{Address: "aws_s3_bucket.a"}))
-	assert.False(t, m.matchesFilter(terraform.Resource{Address: "aws_lambda_function.b"}))
+	assert.Equal(t, len(m.rows)-1, m.cursor)
 }
 
-func TestMatchesFilter_NoopIgnored(t *testing.T) {
-	m := newTestModelEmpty()
-	m.hideUnchanged = true
+func TestRebuildRows_Collapse(t *testing.T) {
+	resources := []terraform.Resource{
+		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
+		{Address: "module.a.aws_s3.y", Module: "module.a", Action: terraform.ActionCreate},
+	}
+	m := newTestModelWithResources(resources)
+	require.Len(t, m.rows, 3)
 
-	assert.False(t, m.matchesFilter(terraform.Resource{Address: "resource", Action: terraform.ActionNoop}))
-	assert.False(t, m.matchesFilter(terraform.Resource{Address: "resource", Action: terraform.ActionRead}))
+	m.collapsed["module.a"] = true
+	m.rebuildRows()
+
+	assert.Len(t, m.rows, 1)
+	assert.Equal(t, "module.a", m.rows[0].Address)
+}
+
+func TestRebuildRows_FilterIncludesParent(t *testing.T) {
+	resources := []terraform.Resource{
+		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
+	}
+	m := newTestModelWithResources(resources)
+
+	m.filterInput.SetValue("s3")
+	m.rebuildRows()
+
+	assert.Len(t, m.rows, 2)
+	assert.Equal(t, "module.a", m.rows[0].Address)
+	assert.Equal(t, "module.a.aws_s3.x", m.rows[1].Address)
+}
+
+func TestTreePrefix(t *testing.T) {
+	resources := []terraform.Resource{
+		{Address: "module.a.module.b.aws_s3.x", Module: "module.a.module.b", Action: terraform.ActionCreate},
+		{Address: "module.a.module.c.aws_s3.y", Module: "module.a.module.c", Action: terraform.ActionCreate},
+	}
+	m := newTestModelWithResources(resources)
+
+	//   module.a              prefix: ""
+	//   ├─ module.b           prefix: "├─ "
+	//   │  └─ aws_s3.x        prefix: "│  └─ "
+	//   └─ module.c           prefix: "└─ "
+	//      └─ aws_s3.y        prefix: "   └─ "
+	expected := []string{"", "├─ ", "│  └─ ", "└─ ", "   └─ "}
+	for i, exp := range expected {
+		assert.Equal(t, exp, m.rows[i].TreePrefix)
+	}
+}
+
+func TestParentModule(t *testing.T) {
+	tests := []struct {
+		name     string
+		address  string
+		expected string
+	}{
+		{name: "normal resource", address: "module.a.aws_s3.x", expected: "module.a"},
+		{name: "normal module", address: "module.a.module.b", expected: "module.a"},
+		{name: "resource no parent", address: "aws_s3.x", expected: ""},
+		{name: "module no parent", address: "module.a", expected: ""},
+		{name: "resource with module bracket and dot", address: "module.vpc[\"a.b\"].aws_s3.x", expected: "module.vpc[\"a.b\"]"},
+		{name: "data under module", address: "module.api.data.aws_region.current", expected: "module.api"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, parentModule(tt.address))
+		})
+	}
+}
+
+func TestIsAncestor(t *testing.T) {
+	assert.True(t, isAncestor("module.a", "module.a.module.b.aws_s3.x"))
+	assert.False(t, isAncestor("module.b", "module.a.module.b.aws_s3.x"))
+	assert.False(t, isAncestor("module.a", "aws_s3.x"))
 }
