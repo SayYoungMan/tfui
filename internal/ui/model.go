@@ -23,9 +23,8 @@ type Model struct {
 	viewWidth  int
 	eventCh    <-chan terraform.StreamEvent
 
-	cancel         func()
-	isQuitting     bool
-	forceQuitReady bool
+	cancel    func()
+	quitState quitState
 
 	resources        terraform.Resources
 	resourceIndexMap map[string]int
@@ -62,6 +61,15 @@ const (
 	viewConfirm
 	viewOutput
 	viewError
+)
+
+type quitState int
+
+const (
+	noneQuitState quitState = iota
+	confirmQuitState
+	quittingState
+	forceQuitReadyState
 )
 
 type rowKind int
@@ -137,7 +145,7 @@ func waitForForceQuit() tea.Cmd {
 }
 
 func (m Model) gracefulQuit() (tea.Model, tea.Cmd) {
-	m.isQuitting = true
+	m.quitState = quittingState
 	m.cancel()
 	if !m.isRunning {
 		return m, tea.Quit
@@ -155,16 +163,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyPressMsg:
 		if msg.String() == "ctrl+c" || msg.String() == "q" {
-			if m.isQuitting && m.forceQuitReady {
+			if m.quitState == forceQuitReadyState {
 				return m, tea.Quit
 			}
-			if !m.isQuitting {
-				return m.gracefulQuit()
+			if m.quitState == noneQuitState {
+				m.quitState = confirmQuitState
 			}
 			return m, nil
 		}
+		if m.quitState == confirmQuitState {
+			return m.quitViewConfirmKeys(msg)
+		}
 		// ignore input if it's quitting
-		if m.isQuitting {
+		if m.quitState == quittingState {
 			return m, nil
 		}
 
@@ -209,7 +220,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case scanCompleteMsg:
 		m.isRunning = false
-		if m.isQuitting {
+		if m.quitState == quittingState {
 			return m, tea.Quit
 		}
 		if m.hasError() {
@@ -227,13 +238,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case outputCompleteMsg:
 		m.isRunning = false
-		if m.isQuitting {
+		if m.quitState == quittingState {
 			return m, tea.Quit
 		}
 		return m, nil
 
 	case forceQuitReadyMsg:
-		m.forceQuitReady = true
+		m.quitState = forceQuitReadyState
 		return m, nil
 
 	case spinner.TickMsg:
@@ -296,7 +307,10 @@ func (m Model) View() tea.View {
 		viewString = m.renderListView()
 	}
 
-	if m.isQuitting {
+	switch m.quitState {
+	case confirmQuitState:
+		viewString = lipgloss.NewCompositor(lipgloss.NewLayer(dimStyle.Render(viewString)), m.renderQuitConfirmLayer()).Render()
+	case quittingState, forceQuitReadyState:
 		viewString = lipgloss.NewCompositor(lipgloss.NewLayer(dimStyle.Render(viewString)), m.renderShutdownLayer()).Render()
 	}
 

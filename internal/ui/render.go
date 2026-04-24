@@ -357,9 +357,41 @@ func (m Model) renderOutputView() string {
 	return s.String()
 }
 
+const quitConfirmTitle = "Do you want to quit?"
+
+func (m Model) renderQuitConfirmLayer() *lipgloss.Layer {
+	cancelButton := buttonStyle.Render("Cancel")
+	confirmButton := buttonStyle.Render("Confirm")
+	if m.confirmCursor == 0 {
+		cancelButton = focusedButtonStyle.Render("Cancel")
+	} else {
+		confirmButton = focusedButtonStyle.Render("Confirm")
+	}
+	buttons := lipgloss.JoinHorizontal(lipgloss.Top, cancelButton, "  ", confirmButton)
+
+	help := "Enter to select | Esc to cancel"
+
+	var s strings.Builder
+	fmt.Fprintln(&s, quitConfirmTitle)
+	fmt.Fprintln(&s)
+	fmt.Fprintln(&s)
+	fmt.Fprintln(&s, buttons)
+	fmt.Fprintln(&s)
+	fmt.Fprint(&s, help)
+	fmt.Fprintln(&s)
+
+	modal := focusedBorderStyle.Render(s.String())
+	modalWidth := lipgloss.Width(modal)
+	modalHeight := lipgloss.Height(modal)
+	x := max(0, (m.viewWidth-modalWidth)/2)
+	y := max(0, (m.viewHeight-modalHeight)/2)
+
+	return lipgloss.NewLayer(modal).X(x).Y(y).Z(1)
+}
+
 func (m Model) renderShutdownLayer() *lipgloss.Layer {
 	msg := "Exiting the program...\n\nWaiting for terraform to finish..."
-	if m.forceQuitReady {
+	if m.quitState == forceQuitReadyState {
 		msg += "\n\nPress q or ctrl+c again to force quit"
 	}
 
