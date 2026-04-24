@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func (m Model) renderListView() string {
@@ -47,9 +48,8 @@ func (m Model) renderResourcesBox() string {
 		}
 
 		// Truncate the end to fit to screen
-		maxLineWidth := m.viewWidth - 4
-		if lipgloss.Width(line) > maxLineWidth {
-			line = line[:maxLineWidth-1] + "…"
+		if maxLineWidth := m.viewWidth - 4; lipgloss.Width(line) > maxLineWidth {
+			line = ansi.Truncate(line, maxLineWidth, "…")
 		}
 
 		fmt.Fprintln(&resources, line)
