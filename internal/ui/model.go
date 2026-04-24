@@ -220,7 +220,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case scanCompleteMsg:
 		m.isRunning = false
-		if m.quitState == quittingState {
+		if m.quitState == quittingState || m.quitState == forceQuitReadyState {
 			return m, tea.Quit
 		}
 		if m.hasError() {
@@ -238,7 +238,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case outputCompleteMsg:
 		m.isRunning = false
-		if m.quitState == quittingState {
+		if m.quitState == quittingState || m.quitState == forceQuitReadyState {
 			return m, tea.Quit
 		}
 		return m, nil

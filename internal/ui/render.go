@@ -374,7 +374,6 @@ func (m Model) renderQuitConfirmLayer() *lipgloss.Layer {
 	var s strings.Builder
 	fmt.Fprintln(&s, quitConfirmTitle)
 	fmt.Fprintln(&s)
-	fmt.Fprintln(&s)
 	fmt.Fprintln(&s, buttons)
 	fmt.Fprintln(&s)
 	fmt.Fprint(&s, help)
