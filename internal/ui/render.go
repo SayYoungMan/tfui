@@ -292,16 +292,23 @@ func (m Model) renderConfirmView() string {
 
 	help := "Enter to select | Esc to cancel"
 
+	var maxWidth int = 0
+	for _, line := range resourceLines {
+		maxWidth = max(maxWidth, lipgloss.Width(line))
+	}
+	maxWidth = max(maxWidth, lipgloss.Width(help)) + 2
+	centered := lipgloss.NewStyle().Width(maxWidth).Align(lipgloss.Center)
+
 	var s strings.Builder
-	fmt.Fprintln(&s, title)
+	fmt.Fprintln(&s, centered.Render(title))
 	fmt.Fprintln(&s)
 	for _, line := range resourceLines {
 		fmt.Fprintln(&s, line)
 	}
 	fmt.Fprintln(&s)
-	fmt.Fprintln(&s, buttons)
+	fmt.Fprintln(&s, centered.Render(buttons))
 	fmt.Fprintln(&s)
-	fmt.Fprint(&s, help)
+	fmt.Fprint(&s, centered.Render(help))
 	fmt.Fprintln(&s)
 
 	modal := focusedBorderStyle.Render(s.String())
@@ -371,12 +378,15 @@ func (m Model) renderQuitConfirmLayer() *lipgloss.Layer {
 
 	help := "Enter to select | Esc to cancel"
 
+	width := lipgloss.Width(help) + 4
+	centered := lipgloss.NewStyle().Width(width).Align(lipgloss.Center)
+
 	var s strings.Builder
-	fmt.Fprintln(&s, quitConfirmTitle)
+	fmt.Fprintln(&s, centered.Render(quitConfirmTitle))
 	fmt.Fprintln(&s)
-	fmt.Fprintln(&s, buttons)
+	fmt.Fprintln(&s, centered.Render(buttons))
 	fmt.Fprintln(&s)
-	fmt.Fprint(&s, help)
+	fmt.Fprint(&s, centered.Render(help))
 	fmt.Fprintln(&s)
 
 	modal := focusedBorderStyle.Render(s.String())
