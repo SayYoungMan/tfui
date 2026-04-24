@@ -21,15 +21,11 @@ func TestNormalModeKeys_Quit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cancelled := false
-			cancel := func() { cancelled = true }
 			m := newTestModelEmpty()
-			m.cancel = cancel
 
-			_, cmd := m.Update(tt.msg)
-
-			assert.True(t, cancelled)
-			assert.NotNil(t, cmd)
+			newModel, _ := m.Update(tt.msg)
+			m = newModel.(Model)
+			assert.Equal(t, confirmQuitState, m.quitState)
 		})
 	}
 }
@@ -431,6 +427,68 @@ func TestConfirmKeys_EscToPicker(t *testing.T) {
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	m = newModel.(Model)
 	assert.Equal(t, viewActionPicker, m.viewState)
+}
+
+func TestQuitConfirmKeys_Navigation(t *testing.T) {
+	m := newTestModel()
+	m.quitState = confirmQuitState
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'l'})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.confirmCursor)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.confirmCursor)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'h'})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.confirmCursor)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.confirmCursor)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	m = newModel.(Model)
+	require.Equal(t, 1, m.confirmCursor)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	m = newModel.(Model)
+	require.Equal(t, 0, m.confirmCursor)
+}
+
+func TestQuitConfirmKeys_Cancel(t *testing.T) {
+	tests := []struct {
+		name string
+		key  tea.KeyPressMsg
+	}{
+		{name: "cancel enter", key: tea.KeyPressMsg{Code: tea.KeyEnter}},
+		{name: "esc", key: tea.KeyPressMsg{Code: tea.KeyEsc}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newTestModel()
+			m.quitState = confirmQuitState
+			m.confirmCursor = 0
+
+			require.Contains(t, m.View().Content, quitConfirmTitle)
+
+			newModel, _ := m.Update(tt.key)
+			m = newModel.(Model)
+			assert.NotContains(t, m.View().Content, quitConfirmTitle)
+		})
+	}
+}
+
+func TestQuitConfirmKeys_Confirm(t *testing.T) {
+	m := newTestModel()
+	m.quitState = confirmQuitState
+	m.confirmCursor = 1
+
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	assert.NotNil(t, cmd)
 }
 
 func TestOutputKeys_EscBlockedWhileOutputing(t *testing.T) {

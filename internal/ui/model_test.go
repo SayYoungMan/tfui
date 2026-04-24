@@ -338,9 +338,11 @@ func TestGracefulQuit_QuitsImmediatelyWhenIdle(t *testing.T) {
 	m.isRunning = false
 
 	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
+	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
-	assert.True(t, m.isQuitting)
+	assert.Equal(t, quittingState, m.quitState)
 	assert.NotNil(t, cmd)
 }
 
@@ -351,9 +353,11 @@ func TestGracefulQuit_WaitsWhenRunning(t *testing.T) {
 	m.cancel = func() { cancelled = true }
 
 	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
+	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
-	assert.True(t, m.isQuitting)
+	assert.Equal(t, quittingState, m.quitState)
 	assert.True(t, cancelled)
 	assert.NotNil(t, cmd)
 
@@ -364,8 +368,7 @@ func TestGracefulQuit_WaitsWhenRunning(t *testing.T) {
 
 func TestGracefulQuit_ForceQuitsAfterTimeout(t *testing.T) {
 	m := newTestModel()
-	m.isQuitting = true
-	m.forceQuitReady = true
+	m.quitState = forceQuitReadyState
 
 	_, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
 
@@ -374,7 +377,7 @@ func TestGracefulQuit_ForceQuitsAfterTimeout(t *testing.T) {
 
 func TestGracefulQuit_QuitsOnScanComplete(t *testing.T) {
 	m := newTestModel()
-	m.isQuitting = true
+	m.quitState = quittingState
 	m.isRunning = true
 
 	_, cmd := m.Update(scanCompleteMsg{})
@@ -384,7 +387,7 @@ func TestGracefulQuit_QuitsOnScanComplete(t *testing.T) {
 
 func TestGracefulQuit_QuitsOnOutputComplete(t *testing.T) {
 	m := newTestModel()
-	m.isQuitting = true
+	m.quitState = quittingState
 	m.isRunning = true
 
 	_, cmd := m.Update(outputCompleteMsg{})
@@ -394,7 +397,7 @@ func TestGracefulQuit_QuitsOnOutputComplete(t *testing.T) {
 
 func TestGracefulQuit_BlocksKeysWhileQuitting(t *testing.T) {
 	m := newTestModel()
-	m.isQuitting = true
+	m.quitState = quittingState
 	m.viewState = viewList
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
@@ -405,10 +408,10 @@ func TestGracefulQuit_BlocksKeysWhileQuitting(t *testing.T) {
 
 func TestGracefulQuit_ForceQuitReadyMsg(t *testing.T) {
 	m := newTestModel()
-	m.isQuitting = true
+	m.quitState = quittingState
 
 	newModel, _ := m.Update(forceQuitReadyMsg{})
 	m = newModel.(Model)
 
-	assert.True(t, m.forceQuitReady)
+	assert.Equal(t, forceQuitReadyState, m.quitState)
 }

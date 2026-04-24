@@ -170,6 +170,27 @@ func (m Model) confirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) quitViewConfirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "h", "left":
+		m.confirmCursor = 0
+	case "l", "right":
+		m.confirmCursor = 1
+	case "tab":
+		m.confirmCursor = 1 - m.confirmCursor
+	case "enter":
+		if m.confirmCursor == 0 {
+			m.quitState = noneQuitState
+		} else {
+			return m.gracefulQuit()
+		}
+	case "esc":
+		m.quitState = noneQuitState
+	}
+
+	return m, nil
+}
+
 func (m Model) selectedAddresses() []string {
 	addrs := make([]string, 0, len(m.selected))
 	for addr := range m.selected {

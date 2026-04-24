@@ -241,8 +241,7 @@ func TestRenderOutputView_HelpTextChangesWhenDone(t *testing.T) {
 
 func TestRenderShutdownLayer_ShowsWaitingMessage(t *testing.T) {
 	m := newTestModel()
-	m.isQuitting = true
-	m.forceQuitReady = false
+	m.quitState = quittingState
 
 	view := m.View()
 
@@ -252,8 +251,7 @@ func TestRenderShutdownLayer_ShowsWaitingMessage(t *testing.T) {
 
 func TestRenderShutdownLayer_ShowsForceQuitAfterTimeout(t *testing.T) {
 	m := newTestModel()
-	m.isQuitting = true
-	m.forceQuitReady = true
+	m.quitState = forceQuitReadyState
 
 	view := m.View()
 
