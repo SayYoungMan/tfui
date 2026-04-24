@@ -415,3 +415,28 @@ func TestGracefulQuit_ForceQuitReadyMsg(t *testing.T) {
 
 	assert.Equal(t, forceQuitReadyState, m.quitState)
 }
+
+func TestAdjustOffset(t *testing.T) {
+	visible := 48 - defaultReservedRows - 1
+	tests := []struct {
+		name     string
+		cursor   int
+		offset   int
+		expected int
+	}{
+		{name: "cursor went below visible", cursor: visible, offset: 0, expected: 1},
+		{name: "cursor went above visible", cursor: 0, offset: 1, expected: 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newTestModelEmpty()
+
+			m.cursor = tt.cursor
+			m.offset = tt.offset
+			m.adjustOffset()
+
+			assert.Equal(t, tt.expected, m.offset)
+		})
+	}
+}
