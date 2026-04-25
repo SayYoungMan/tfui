@@ -1,5 +1,7 @@
 package terraform
 
+import "encoding/json"
+
 // StreamEvent is sent over the channel to be consumed.
 // Exactly one field will be non-nil per event.
 type StreamEvent struct {
@@ -57,7 +59,8 @@ type Resource struct {
 	ResourceKey     any    // Address key such as, count index (float64) or for_each key (string), or nil
 	ImpliedProvider string // e.g. "aws"
 	Action          Action
-	Reason          string // Why this change is happening, e.g. "tainted", "cannot_update"
+	Reason          string          // Why this change is happening, e.g. "tainted", "cannot_update"
+	Attributes      json.RawMessage // JSON detail about this resource populated by state pull
 }
 
 // Implement these methods to satisfy interface of fuzzy matching
