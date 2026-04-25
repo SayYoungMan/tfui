@@ -85,18 +85,14 @@ func ParseState(data []byte) ([]Resource, error) {
 	var resources []Resource
 	for _, sr := range sf.Resources {
 		for _, si := range sr.Instances {
-			r, err := instanceToResource(sr, si)
-			if err != nil {
-				return nil, err
-			}
-			resources = append(resources, r)
+			resources = append(resources, instanceToResource(sr, si))
 		}
 	}
 
 	return resources, nil
 }
 
-func instanceToResource(sr StateResource, si StateInstance) (Resource, error) {
+func instanceToResource(sr StateResource, si StateInstance) Resource {
 	resourceAddr := sr.Type + "." + sr.Name
 	if sr.Mode == "data" {
 		resourceAddr = "data." + resourceAddr
@@ -131,7 +127,7 @@ func instanceToResource(sr StateResource, si StateInstance) (Resource, error) {
 		Action:          action,
 		Reason:          reason,
 		Attributes:      si.Attributes,
-	}, nil
+	}
 }
 
 // Taking same approach as Terraform official
