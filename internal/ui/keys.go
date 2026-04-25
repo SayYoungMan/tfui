@@ -215,7 +215,7 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m.startRescan()
 		}
 	case "q", "ctrl+c":
-		m.cancel()
+		m.cancel.fn()
 		return m, tea.Quit
 	}
 	return m, nil
@@ -224,7 +224,7 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) errorKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc", "enter":
-		m.cancel()
+		m.cancel.fn()
 		return m, tea.Quit
 	}
 	return m, nil

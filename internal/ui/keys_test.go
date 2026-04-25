@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -411,7 +410,7 @@ func TestConfirmKeys_CancelToPicker(t *testing.T) {
 }
 
 func TestConfirmKeys_ConfirmToOutput(t *testing.T) {
-	m := NewModel(terraform.NewTerraformRunner(t.TempDir(), "true"), context.Background(), func() {})
+	m := NewModel(terraform.NewTerraformRunner(t.TempDir(), "true"))
 	m.viewState = viewConfirm
 	m.confirmCursor = 1
 
@@ -544,7 +543,7 @@ func TestErrorViewKeys_Quit(t *testing.T) {
 			m := newTestModel()
 			m.viewState = viewError
 			cancelled := false
-			m.cancel = func() { cancelled = true }
+			m.cancel.fn = func() { cancelled = true }
 
 			_, cmd := m.Update(tt.msg)
 

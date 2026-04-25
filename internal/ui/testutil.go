@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"context"
-
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 )
 
@@ -26,7 +24,7 @@ func newTestModel() Model {
 }
 
 func newTestModelWithResources(resources []terraform.Resource) Model {
-	m := NewModel(&terraform.TerraformRunner{}, context.Background(), func() {})
+	m := NewModel(&terraform.TerraformRunner{})
 	m.resources = resources
 	m.selected = make(map[string]bool)
 	m.resourceIndexMap = make(map[string]int)
@@ -38,6 +36,7 @@ func newTestModelWithResources(resources []terraform.Resource) Model {
 	m.viewWidth = 80
 	m.cursor = 0
 	m.workState = workIdle
+	m.cancel = &cancelWrapper{}
 
 	return m
 }

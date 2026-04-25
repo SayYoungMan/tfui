@@ -14,17 +14,19 @@ import (
 type (
 	streamEventMsg  terraform.StreamEvent
 	scanCompleteMsg struct{}
+	// We wrap cancel function by struct so that we can move around the pointer to this wrapper around copies
+	// This is needed because we don't want to have context as a field but Bubble tea uses methods with value receiver
+	cancelWrapper struct{ fn func() }
 )
 
 type Model struct {
-	context    context.Context
 	runner     *terraform.TerraformRunner
 	viewState  viewState
 	viewHeight int
 	viewWidth  int
 	eventCh    <-chan terraform.StreamEvent
 
-	cancel    func()
+	cancel    *cancelWrapper
 	quitState quitState
 
 	resources        terraform.Resources
@@ -96,20 +98,19 @@ type Row struct {
 	Parent     string
 }
 
-func NewModel(runner *terraform.TerraformRunner, ctx context.Context, cancel func()) Model {
+func NewModel(runner *terraform.TerraformRunner) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 
 	return Model{
-		context:          ctx,
 		runner:           runner,
-		cancel:           cancel,
 		resources:        []terraform.Resource{},
 		collapsed:        make(map[string]bool),
 		selected:         make(map[string]bool),
 		resourceIndexMap: make(map[string]int),
 		filterInput:      newFilterInput(),
 		workState:        workStatePull,
+		cancel:           &cancelWrapper{},
 		spinner:          s,
 	}
 }
@@ -127,10 +128,36 @@ type statePulledMsg struct {
 }
 
 func (m *Model) waitForState() tea.Cmd {
+	ctx, cancel := context.WithCancel(context.Background())
+	m.cancel.fn = cancel
+
 	return func() tea.Msg {
-		resources, err := m.runner.StatePull(m.context)
+		resources, err := m.runner.StatePull(ctx)
 		return statePulledMsg{resources: resources, err: err}
 	}
+}
+
+func (m Model) handleStatePulled(msg statePulledMsg) (Model, tea.Cmd) {
+	if msg.err != nil {
+		m.err = msg.err
+		m.workState = workIdle
+		m.viewState = viewError
+		return m, nil
+	}
+
+	for _, r := range msg.resources {
+		m.resourceIndexMap[r.Address] = len(m.resources)
+		m.resources = append(m.resources, r)
+	}
+	m.rebuildRows()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	m.cancel.fn = cancel
+	m.workState = workPlan
+
+	ch := m.runner.StreamPlan(ctx)
+	m.eventCh = ch
+	return m, waitForEvent(ch)
 }
 
 func waitForEvent(ch <-chan terraform.StreamEvent) tea.Cmd {
@@ -168,7 +195,9 @@ func waitForForceQuit() tea.Cmd {
 
 func (m Model) gracefulQuit() (tea.Model, tea.Cmd) {
 	m.quitState = quittingState
-	m.cancel()
+	if m.cancel.fn != nil {
+		m.cancel.fn()
+	}
 	if !m.isRunning() {
 		return m, tea.Quit
 	}
@@ -238,21 +267,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case statePulledMsg:
-		if msg.err != nil {
-			m.err = msg.err
-			m.workState = workIdle
-			m.viewState = viewError
-			return m, nil
-		}
-		for _, r := range msg.resources {
-			m.resourceIndexMap[r.Address] = len(m.resources)
-			m.resources = append(m.resources, r)
-		}
-		m.rebuildRows()
-		m.workState = workPlan
-		ch := m.runner.StreamPlan(m.context)
-		m.eventCh = ch
-		return m, waitForEvent(ch)
+		return m.handleStatePulled(msg)
 
 	case streamEventMsg:
 		return m.handleStreamEvent(terraform.StreamEvent(msg))
@@ -415,11 +430,7 @@ func (m Model) maxOutputOffset() int {
 }
 
 func (m Model) startRescan() (tea.Model, tea.Cmd) {
-	ctx, cancel := context.WithCancel(context.Background())
-	m.cancel = cancel
-
 	// initialize
-	m.context = ctx
 	m.resources = m.resources[:0]
 	m.resourceIndexMap = make(map[string]int)
 	m.rows = m.rows[:0]
@@ -442,7 +453,7 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 
 func (m Model) startAction() (tea.Model, tea.Cmd) {
 	ctx, cancel := context.WithCancel(context.Background())
-	m.cancel = cancel
+	m.cancel.fn = cancel
 
 	addrs := m.selectedAddresses()
 	action := actionChoices[m.actionCursor]

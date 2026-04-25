@@ -349,9 +349,9 @@ func TestGracefulQuit_QuitsImmediatelyWhenIdle(t *testing.T) {
 
 func TestGracefulQuit_WaitsWhenRunning(t *testing.T) {
 	m := newTestModel()
-	m.workState = workIdle
+	m.workState = workAction
 	cancelled := false
-	m.cancel = func() { cancelled = true }
+	m.cancel.fn = func() { cancelled = true }
 
 	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
 	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyTab})
@@ -415,6 +415,16 @@ func TestGracefulQuit_ForceQuitReadyMsg(t *testing.T) {
 	m = newModel.(Model)
 
 	assert.Equal(t, forceQuitReadyState, m.quitState)
+}
+
+func TestGracefulQuit_CanCancelInitPull(t *testing.T) {
+	runner := terraform.NewTerraformRunner(t.TempDir(), "sleep")
+	m := NewModel(runner)
+
+	cmd := m.Init()
+	require.NotNil(t, cmd)
+
+	assert.NotNil(t, m.cancel.fn)
 }
 
 func TestAdjustOffset(t *testing.T) {
