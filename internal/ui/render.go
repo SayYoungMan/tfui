@@ -381,6 +381,32 @@ func (m Model) renderOutputView() string {
 	return s.String()
 }
 
+func (m Model) renderDetailView() string {
+	addr := m.rows[m.cursor].Address
+	title := fmt.Sprintf("Detail (%s)", addr)
+
+	boxHeight := max(1, m.viewHeight-6)
+
+	var content strings.Builder
+	end := min(m.offset+boxHeight, len(m.outputLines))
+	for i := m.offset; i < end; i++ {
+		fmt.Fprintln(&content, m.outputLines[i])
+	}
+
+	box := resourceBorderStyle.Width(m.viewWidth - 2).Height(boxHeight).Render(strings.TrimSuffix(content.String(), "\n"))
+
+	help := "↑/↓ scroll | Esc to close"
+
+	var s strings.Builder
+	fmt.Fprintln(&s, title)
+	fmt.Fprintln(&s)
+	fmt.Fprintln(&s, box)
+	fmt.Fprintln(&s)
+	fmt.Fprint(&s, help)
+
+	return s.String()
+}
+
 const quitConfirmTitle = "Do you want to quit?"
 
 func (m Model) renderQuitConfirmLayer() *lipgloss.Layer {

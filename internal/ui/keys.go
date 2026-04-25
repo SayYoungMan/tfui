@@ -68,6 +68,9 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			}
 			m.rebuildRows()
 		}
+		if row.Kind == rowResource {
+			m.openDetail()
+		}
 	case "space":
 		m.toggleSelected()
 	case "tab":
@@ -226,6 +229,24 @@ func (m Model) errorKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "esc", "enter":
 		m.cancel.fn()
 		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m Model) detailKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "enter":
+		m.viewState = viewList
+		m.outputLines = nil
+		m.offset = 0
+	case "k", "up":
+		if m.offset > 0 {
+			m.offset--
+		}
+	case "j", "down":
+		if m.offset < m.maxOutputOffset() {
+			m.offset++
+		}
 	}
 	return m, nil
 }
