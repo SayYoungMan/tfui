@@ -17,14 +17,15 @@ type StreamEvent struct {
 type Action string
 
 const (
-	ActionCreate  Action = "create"
-	ActionRead    Action = "read"
-	ActionUpdate  Action = "update"
-	ActionDelete  Action = "delete"
-	ActionReplace Action = "replace"
-	ActionMove    Action = "move"
-	ActionImport  Action = "import"
-	ActionNoop    Action = "no-op"
+	ActionCreate    Action = "create"
+	ActionRead      Action = "read"
+	ActionUpdate    Action = "update"
+	ActionDelete    Action = "delete"
+	ActionReplace   Action = "replace"
+	ActionMove      Action = "move"
+	ActionImport    Action = "import"
+	ActionNoop      Action = "no-op"
+	ActionUncertain Action = "uncertain" // Not an actual terraform action but set when we do state pull so we don't know its actual state
 )
 
 // Returns what symbol to be shown as pre-adornment
@@ -42,7 +43,7 @@ func (a Action) Symbol() string {
 		return "→"
 	case ActionImport:
 		return "↓"
-	case ActionRead, ActionNoop:
+	case ActionRead, ActionNoop, ActionUncertain:
 		return " "
 	default:
 		return "?"

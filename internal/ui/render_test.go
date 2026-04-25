@@ -89,24 +89,22 @@ func TestRenderListView_OnlyRendersVisibleSlice(t *testing.T) {
 	assert.NotContains(t, view.Content, "aws_s3_bucket.bucket_4")
 }
 
-func TestRenderListView_ViewShowsSpinner(t *testing.T) {
-	m := newTestModelEmpty()
-	m.isRunning = true
+func TestRenderListView_ViewShowsScanning(t *testing.T) {
+	m := newTestModel()
 
+	m.workState = workStatePull
 	view := m.View()
+	require.Contains(t, view.Content, "Scanning...")
 
-	assert.Contains(t, view.Content, "Scanning...")
-	assert.Contains(t, view.Content, "0 resources")
-}
+	m.workState = workPlan
+	view = m.View()
+	require.Contains(t, view.Content, "Scanning...")
+	require.Contains(t, view.Content, fmt.Sprintf("(%d/%d resources scanned)", len(m.resources), len(m.resources)))
 
-func TestRenderListView_ViewShowsCompleteWhenDone(t *testing.T) {
-	m := newTestModelWithResources(make([]terraform.Resource, 5))
-	m.isRunning = false
-
-	view := m.View()
-
+	m.workState = workIdle
+	view = m.View()
 	assert.Contains(t, view.Content, "Scan Complete")
-	assert.Contains(t, view.Content, "5 resources")
+	assert.Contains(t, view.Content, fmt.Sprintf("%d resources scanned", len(m.resources)))
 	assert.NotContains(t, view.Content, "Scanning...")
 }
 
@@ -127,12 +125,12 @@ func TestRenderListView_ViewShowsFilterCount(t *testing.T) {
 	view := m.View()
 
 	assert.Contains(t, view.Content, "showing 1")
-	assert.Contains(t, view.Content, fmt.Sprintf("%d resources found", len(testResources)))
+	assert.Contains(t, view.Content, fmt.Sprintf("%d resources scanned", len(testResources)))
 }
 
 func TestRenderListView_ShowsWarningCount(t *testing.T) {
 	m := newTestModel()
-	m.isRunning = false
+	m.workState = workIdle
 	m.diagnostics = []terraform.Diagnostic{
 		{Severity: "warning", Summary: "Deprecated"},
 		{Severity: "warning", Summary: "Also deprecated"},
@@ -210,7 +208,7 @@ func TestRenderOutputView_ShowsContent(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
 	m.actionCursor = 1
-	m.isRunning = true
+	m.workState = workAction
 	m.outputLines = []string{
 		"aws_s3_bucket.uploads: Modifying...",
 		"aws_s3_bucket.uploads: Modifications complete after 2s",
@@ -227,13 +225,13 @@ func TestRenderOutputView_ShowsContent(t *testing.T) {
 func TestRenderOutputView_HelpTextChangesWhenDone(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
-	m.isRunning = true
+	m.workState = workAction
 
 	view := m.View()
-	assert.Contains(t, view.Content, "Running...")
 	assert.NotContains(t, view.Content, "Esc to close")
+	assert.Contains(t, view.Content, "Running...")
 
-	m.isRunning = false
+	m.workState = workIdle
 	view = m.View()
 	assert.Contains(t, view.Content, "Esc to close")
 	assert.NotContains(t, view.Content, "Running...")

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/SayYoungMan/tfui/pkg/terraform"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -157,13 +158,19 @@ func (m Model) isSelectedOrAncestor(addr string) bool {
 
 func (m Model) renderInfoBar() string {
 	var adornment, info string
-	if m.isRunning {
+
+	switch m.workState {
+	case workStatePull:
 		adornment = infoBarStyle.Render(m.spinner.View())
-		info = fmt.Sprintf(" Scanning... (%d resources found)", len(m.resources))
-	} else {
+		info = " Scanning..."
+	case workPlan:
+		adornment = infoBarStyle.Render(m.spinner.View())
+		info = fmt.Sprintf(" Scanning... (%d/%d resources scanned)", m.scannedResourcesCount(), len(m.resources))
+	default:
 		adornment = lipgloss.NewStyle().Foreground(colorGreen).Render("✓")
-		info = fmt.Sprintf("  Scan Complete (%d resources found)", len(m.resources))
+		info = fmt.Sprintf("  Scan Complete (%d resources scanned)", len(m.resources))
 	}
+
 	if m.filterInput.Value() != "" {
 		info += fmt.Sprintf(" | showing %d", len(m.rows))
 	}
@@ -174,6 +181,16 @@ func (m Model) renderInfoBar() string {
 		info += fmt.Sprintf(" | %d warnings", len(m.diagnostics))
 	}
 	return " " + adornment + infoBarStyle.Render(info)
+}
+
+func (m *Model) scannedResourcesCount() int {
+	var count int
+	for _, r := range m.resources {
+		if r.Action != terraform.ActionUncertain {
+			count++
+		}
+	}
+	return count
 }
 
 func renderKeyHint(key, desc string) string {
@@ -348,7 +365,7 @@ func (m Model) renderOutputView() string {
 		Render(strings.TrimSuffix(content.String(), "\n"))
 
 	var help string
-	if m.isRunning {
+	if m.isRunning() {
 		help = "↑/↓ scroll | Running..."
 	} else {
 		help = "↑/↓ scroll | Esc to close and re-plan"

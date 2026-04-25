@@ -219,7 +219,7 @@ func TestParseState_AllResources(t *testing.T) {
 			assert.Equal(t, tt.key, r.ResourceKey)
 			assert.Equal(t, tt.reason, r.Reason)
 
-			assert.Equal(t, ActionNoop, r.Action)
+			assert.Equal(t, ActionUncertain, r.Action)
 			assert.Equal(t, "provider[\"registry.terraform.io/hashicorp/aws\"]", r.ImpliedProvider)
 			assert.NotEmpty(t, r.Attributes)
 		})
@@ -240,7 +240,7 @@ func TestPullState_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, resources, 1)
 	assert.Equal(t, "aws_s3_bucket.uploads", resources[0].Address)
-	assert.Equal(t, ActionNoop, resources[0].Action)
+	assert.Equal(t, ActionUncertain, resources[0].Action)
 	assert.NotEmpty(t, resources[0].Attributes)
 }
 

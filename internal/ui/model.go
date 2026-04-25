@@ -17,6 +17,7 @@ type (
 )
 
 type Model struct {
+	context    context.Context
 	runner     *terraform.TerraformRunner
 	viewState  viewState
 	viewHeight int
@@ -38,7 +39,7 @@ type Model struct {
 	filterInput   textinput.Model
 	hideUnchanged bool
 
-	isRunning   bool
+	workState   workState
 	spinner     spinner.Model
 	err         error
 	diagnostics []terraform.Diagnostic
@@ -61,6 +62,15 @@ const (
 	viewConfirm
 	viewOutput
 	viewError
+)
+
+type workState int
+
+const (
+	workIdle      workState = iota // Not doing any terraform work
+	workStatePull                  // doing `terraform state pull` for inital population of resources
+	workPlan                       // doing `terraform plan` to scan resource states
+	workAction                     // doing action chosen by user
 )
 
 type quitState int
@@ -86,20 +96,20 @@ type Row struct {
 	Parent     string
 }
 
-func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent, cancel func()) Model {
+func NewModel(runner *terraform.TerraformRunner, ctx context.Context, cancel func()) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 
 	return Model{
+		context:          ctx,
 		runner:           runner,
-		eventCh:          ch,
 		cancel:           cancel,
 		resources:        []terraform.Resource{},
 		collapsed:        make(map[string]bool),
 		selected:         make(map[string]bool),
 		resourceIndexMap: make(map[string]int),
 		filterInput:      newFilterInput(),
-		isRunning:        true,
+		workState:        workStatePull,
 		spinner:          s,
 	}
 }
@@ -107,8 +117,20 @@ func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
-		waitForEvent(m.eventCh),
+		m.waitForState(),
 	)
+}
+
+type statePulledMsg struct {
+	resources []terraform.Resource
+	err       error
+}
+
+func (m *Model) waitForState() tea.Cmd {
+	return func() tea.Msg {
+		resources, err := m.runner.StatePull(m.context)
+		return statePulledMsg{resources: resources, err: err}
+	}
 }
 
 func waitForEvent(ch <-chan terraform.StreamEvent) tea.Cmd {
@@ -147,7 +169,7 @@ func waitForForceQuit() tea.Cmd {
 func (m Model) gracefulQuit() (tea.Model, tea.Cmd) {
 	m.quitState = quittingState
 	m.cancel()
-	if !m.isRunning {
+	if !m.isRunning() {
 		return m, tea.Quit
 	}
 	return m, waitForForceQuit()
@@ -215,11 +237,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case statePulledMsg:
+		if msg.err != nil {
+			m.err = msg.err
+			m.workState = workIdle
+			m.viewState = viewError
+			return m, nil
+		}
+		for _, r := range msg.resources {
+			m.resourceIndexMap[r.Address] = len(m.resources)
+			m.resources = append(m.resources, r)
+		}
+		m.rebuildRows()
+		m.workState = workPlan
+		ch := m.runner.StreamPlan(m.context)
+		m.eventCh = ch
+		return m, waitForEvent(ch)
+
 	case streamEventMsg:
 		return m.handleStreamEvent(terraform.StreamEvent(msg))
 
 	case scanCompleteMsg:
-		m.isRunning = false
+		m.workState = workIdle
 		if m.quitState == quittingState || m.quitState == forceQuitReadyState {
 			return m, tea.Quit
 		}
@@ -237,7 +276,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, waitForOutput(m.outputCh)
 
 	case outputCompleteMsg:
-		m.isRunning = false
+		m.workState = workIdle
 		if m.quitState == quittingState || m.quitState == forceQuitReadyState {
 			return m, tea.Quit
 		}
@@ -254,6 +293,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *Model) isRunning() bool {
+	return m.workState != workIdle
 }
 
 func (m Model) hasError() bool {
@@ -279,7 +322,10 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 	if event.Resource != nil {
 		addr := event.Resource.Address
 		if idx, exists := m.resourceIndexMap[addr]; exists {
-			m.resources[idx] = *event.Resource
+			existing := m.resources[idx]
+			updated := *event.Resource
+			updated.Attributes = existing.Attributes
+			m.resources[idx] = updated
 		} else {
 			newIdx := len(m.resources)
 			m.resourceIndexMap[addr] = newIdx
@@ -373,6 +419,7 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	m.cancel = cancel
 
 	// initialize
+	m.context = ctx
 	m.resources = m.resources[:0]
 	m.resourceIndexMap = make(map[string]int)
 	m.rows = m.rows[:0]
@@ -382,17 +429,14 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	m.offset = 0
 	m.err = nil
 	m.diagnostics = nil
-	m.isRunning = true
+	m.workState = workStatePull
 	m.outputLines = nil
 	m.outputCh = nil
 	m.viewState = viewList
 
-	ch := m.runner.StreamPlan(ctx)
-	m.eventCh = ch
-
 	return m, tea.Batch(
 		m.spinner.Tick,
-		waitForEvent(ch),
+		m.waitForState(),
 	)
 }
 
@@ -412,7 +456,7 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 	}
 	m.outputCh = actionFuncs[action](ctx, addrs)
 	m.outputLines = nil
-	m.isRunning = true
+	m.workState = workAction
 	m.offset = 0
 	m.viewState = viewOutput
 

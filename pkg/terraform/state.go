@@ -114,7 +114,7 @@ func instanceToResource(sr StateResource, si StateInstance) (Resource, error) {
 		addr = sr.Module + "." + addr
 	}
 
-	action := ActionNoop
+	action := ActionUncertain
 	reason := ""
 	if si.Status == "tainted" {
 		reason = "tainted"

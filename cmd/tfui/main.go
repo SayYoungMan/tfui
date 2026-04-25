@@ -40,9 +40,8 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	runner := terraform.NewTerraformRunner(*workdir, *binary)
-	ch := runner.StreamPlan(ctx)
 
-	m := ui.NewModel(runner, ch, cancel)
+	m := ui.NewModel(runner, ctx, cancel)
 	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error occurred while running program: %v\n", err)
