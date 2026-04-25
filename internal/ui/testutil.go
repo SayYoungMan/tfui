@@ -24,8 +24,7 @@ func newTestModel() Model {
 }
 
 func newTestModelWithResources(resources []terraform.Resource) Model {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(&terraform.TerraformRunner{}, ch, func() {})
+	m := NewModel(&terraform.TerraformRunner{})
 	m.resources = resources
 	m.selected = make(map[string]bool)
 	m.resourceIndexMap = make(map[string]int)
@@ -36,6 +35,8 @@ func newTestModelWithResources(resources []terraform.Resource) Model {
 	m.viewHeight = 48
 	m.viewWidth = 80
 	m.cursor = 0
+	m.workState = workIdle
+	m.cancel = &cancelWrapper{}
 
 	return m
 }

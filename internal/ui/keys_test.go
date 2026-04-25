@@ -161,7 +161,7 @@ func TestNormalModeKeys_RemoveSelectionIfParentSelected(t *testing.T) {
 
 func TestNormalModeKeys_ActionBlockedWhileScanning(t *testing.T) {
 	m := newTestModel()
-	m.isRunning = true
+	m.workState = workPlan
 	m.selected = map[string]bool{m.resources[0].Address: true}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
@@ -172,7 +172,7 @@ func TestNormalModeKeys_ActionBlockedWhileScanning(t *testing.T) {
 
 func TestNormalModeKeys_ActionBlockedWithNoSelection(t *testing.T) {
 	m := newTestModel()
-	m.isRunning = false
+	m.workState = workIdle
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = newModel.(Model)
@@ -182,13 +182,13 @@ func TestNormalModeKeys_ActionBlockedWithNoSelection(t *testing.T) {
 
 func TestNormalModeKeys_RefreshRescan(t *testing.T) {
 	m := newTestModel()
-	m.isRunning = false
+	m.workState = workIdle
 	m.runner = terraform.NewTerraformRunner(t.TempDir(), "true")
 
 	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'r', Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
-	assert.True(t, m.isRunning)
+	assert.True(t, m.isRunning())
 	assert.Equal(t, viewList, m.viewState)
 	assert.Empty(t, m.selected)
 	assert.NotNil(t, cmd)
@@ -196,7 +196,7 @@ func TestNormalModeKeys_RefreshRescan(t *testing.T) {
 
 func TestNormalModeKeys_RefreshBlockedWhileScanning(t *testing.T) {
 	m := newTestModel()
-	m.isRunning = true
+	m.workState = workPlan
 
 	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'r', Mod: tea.ModCtrl})
 	m = newModel.(Model)
@@ -206,7 +206,7 @@ func TestNormalModeKeys_RefreshBlockedWhileScanning(t *testing.T) {
 
 func TestNormalModeKeys_TabOpensActionPicker(t *testing.T) {
 	m := newTestModel()
-	m.isRunning = false
+	m.workState = workIdle
 	m.selected = map[string]bool{m.resources[0].Address: true}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
@@ -331,7 +331,7 @@ func TestActionPickerKeys_EscReturnsToList(t *testing.T) {
 
 func TestActionPickerKeys_CursorResetsOnEntry(t *testing.T) {
 	m := newTestModel()
-	m.isRunning = false
+	m.workState = workIdle
 	m.selected = map[string]bool{m.resources[0].Address: true}
 	m.actionCursor = 3
 
@@ -410,8 +410,7 @@ func TestConfirmKeys_CancelToPicker(t *testing.T) {
 }
 
 func TestConfirmKeys_ConfirmToOutput(t *testing.T) {
-	ch := make(chan terraform.StreamEvent, 1)
-	m := NewModel(terraform.NewTerraformRunner(t.TempDir(), "true"), ch, func() {})
+	m := NewModel(terraform.NewTerraformRunner(t.TempDir(), "true"))
 	m.viewState = viewConfirm
 	m.confirmCursor = 1
 
@@ -494,7 +493,7 @@ func TestQuitConfirmKeys_Confirm(t *testing.T) {
 func TestOutputKeys_EscBlockedWhileOutputing(t *testing.T) {
 	m := newTestModel()
 	m.viewState = viewOutput
-	m.isRunning = true
+	m.workState = workAction
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	m = newModel.(Model)
@@ -544,7 +543,7 @@ func TestErrorViewKeys_Quit(t *testing.T) {
 			m := newTestModel()
 			m.viewState = viewError
 			cancelled := false
-			m.cancel = func() { cancelled = true }
+			m.cancel.fn = func() { cancelled = true }
 
 			_, cmd := m.Update(tt.msg)
 

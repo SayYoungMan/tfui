@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -38,11 +37,9 @@ func main() {
 
 	log.Info("starting tfui", "binary", *binary, "workdir", *workdir)
 
-	ctx, cancel := context.WithCancel(context.Background())
 	runner := terraform.NewTerraformRunner(*workdir, *binary)
-	ch := runner.StreamPlan(ctx)
 
-	m := ui.NewModel(runner, ch, cancel)
+	m := ui.NewModel(runner)
 	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error occurred while running program: %v\n", err)

@@ -44,10 +44,11 @@ var (
 )
 
 var actionStyles = map[terraform.Action]lipgloss.Style{
-	terraform.ActionCreate:  lipgloss.NewStyle().Foreground(colorGreen),
-	terraform.ActionDelete:  lipgloss.NewStyle().Foreground(colorCoral),
-	terraform.ActionUpdate:  lipgloss.NewStyle().Foreground(colorAmber),
-	terraform.ActionReplace: lipgloss.NewStyle().Foreground(colorAmber),
-	terraform.ActionMove:    lipgloss.NewStyle().Foreground(colorBlue),
-	terraform.ActionImport:  lipgloss.NewStyle().Foreground(colorBlue),
+	terraform.ActionCreate:    lipgloss.NewStyle().Foreground(colorGreen),
+	terraform.ActionDelete:    lipgloss.NewStyle().Foreground(colorCoral),
+	terraform.ActionUpdate:    lipgloss.NewStyle().Foreground(colorAmber),
+	terraform.ActionReplace:   lipgloss.NewStyle().Foreground(colorAmber),
+	terraform.ActionMove:      lipgloss.NewStyle().Foreground(colorBlue),
+	terraform.ActionImport:    lipgloss.NewStyle().Foreground(colorBlue),
+	terraform.ActionUncertain: dimStyle,
 }

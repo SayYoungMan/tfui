@@ -153,7 +153,7 @@ func TestModel_HandleErrorDiagnostic(t *testing.T) {
 	m = newModel.(Model)
 
 	assert.Equal(t, viewError, m.viewState)
-	assert.False(t, m.isRunning)
+	assert.False(t, m.isRunning())
 }
 
 func TestModel_ScanComplete_WarningsOnly(t *testing.T) {
@@ -170,13 +170,14 @@ func TestModel_ScanComplete_WarningsOnly(t *testing.T) {
 
 func TestModel_ScanComplete(t *testing.T) {
 	m := newTestModelEmpty()
+	m.workState = workPlan
 
-	assert.True(t, m.isRunning)
+	assert.True(t, m.isRunning())
 
 	newModel, cmd := m.Update(scanCompleteMsg{})
 	m = newModel.(Model)
 
-	assert.False(t, m.isRunning)
+	assert.False(t, m.isRunning())
 	assert.Nil(t, cmd)
 }
 
@@ -236,7 +237,7 @@ func TestModel_OutputLineMsg(t *testing.T) {
 	outputCh := make(chan string, 1)
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
-	m.isRunning = true
+	m.workState = workAction
 	m.outputCh = outputCh
 
 	newModel, cmd := m.Update(outputLineMsg("first line"))
@@ -250,12 +251,12 @@ func TestModel_OutputLineMsg(t *testing.T) {
 func TestModel_OutputCompleteMsg(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
-	m.isRunning = true
+	m.workState = workAction
 
 	newModel, cmd := m.Update(outputCompleteMsg{})
 	m = newModel.(Model)
 
-	assert.False(t, m.isRunning)
+	assert.False(t, m.isRunning())
 	assert.Nil(t, cmd)
 }
 
@@ -335,7 +336,7 @@ func TestModel_MouseWheelScrollsOutput(t *testing.T) {
 
 func TestGracefulQuit_QuitsImmediatelyWhenIdle(t *testing.T) {
 	m := newTestModel()
-	m.isRunning = false
+	m.workState = workIdle
 
 	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
 	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyTab})
@@ -348,9 +349,9 @@ func TestGracefulQuit_QuitsImmediatelyWhenIdle(t *testing.T) {
 
 func TestGracefulQuit_WaitsWhenRunning(t *testing.T) {
 	m := newTestModel()
-	m.isRunning = true
+	m.workState = workAction
 	cancelled := false
-	m.cancel = func() { cancelled = true }
+	m.cancel.fn = func() { cancelled = true }
 
 	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
 	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyTab})
@@ -378,7 +379,7 @@ func TestGracefulQuit_ForceQuitsAfterTimeout(t *testing.T) {
 func TestGracefulQuit_QuitsOnScanComplete(t *testing.T) {
 	m := newTestModel()
 	m.quitState = quittingState
-	m.isRunning = true
+	m.workState = workPlan
 
 	_, cmd := m.Update(scanCompleteMsg{})
 
@@ -388,7 +389,7 @@ func TestGracefulQuit_QuitsOnScanComplete(t *testing.T) {
 func TestGracefulQuit_QuitsOnOutputComplete(t *testing.T) {
 	m := newTestModel()
 	m.quitState = quittingState
-	m.isRunning = true
+	m.workState = workAction
 
 	_, cmd := m.Update(outputCompleteMsg{})
 
@@ -414,6 +415,16 @@ func TestGracefulQuit_ForceQuitReadyMsg(t *testing.T) {
 	m = newModel.(Model)
 
 	assert.Equal(t, forceQuitReadyState, m.quitState)
+}
+
+func TestGracefulQuit_CanCancelInitPull(t *testing.T) {
+	runner := terraform.NewTerraformRunner(t.TempDir(), "sleep")
+	m := NewModel(runner)
+
+	cmd := m.Init()
+	require.NotNil(t, cmd)
+
+	assert.NotNil(t, m.cancel.fn)
 }
 
 func TestAdjustOffset(t *testing.T) {

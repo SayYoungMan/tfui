@@ -14,6 +14,9 @@ import (
 type (
 	streamEventMsg  terraform.StreamEvent
 	scanCompleteMsg struct{}
+	// We wrap cancel function by struct so that we can move around the pointer to this wrapper around copies
+	// This is needed because we don't want to have context as a field but Bubble tea uses methods with value receiver
+	cancelWrapper struct{ fn func() }
 )
 
 type Model struct {
@@ -23,7 +26,7 @@ type Model struct {
 	viewWidth  int
 	eventCh    <-chan terraform.StreamEvent
 
-	cancel    func()
+	cancel    *cancelWrapper
 	quitState quitState
 
 	resources        terraform.Resources
@@ -38,7 +41,7 @@ type Model struct {
 	filterInput   textinput.Model
 	hideUnchanged bool
 
-	isRunning   bool
+	workState   workState
 	spinner     spinner.Model
 	err         error
 	diagnostics []terraform.Diagnostic
@@ -61,6 +64,15 @@ const (
 	viewConfirm
 	viewOutput
 	viewError
+)
+
+type workState int
+
+const (
+	workIdle      workState = iota // Not doing any terraform work
+	workStatePull                  // doing `terraform state pull` for inital population of resources
+	workPlan                       // doing `terraform plan` to scan resource states
+	workAction                     // doing action chosen by user
 )
 
 type quitState int
@@ -86,20 +98,19 @@ type Row struct {
 	Parent     string
 }
 
-func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent, cancel func()) Model {
+func NewModel(runner *terraform.TerraformRunner) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 
 	return Model{
 		runner:           runner,
-		eventCh:          ch,
-		cancel:           cancel,
 		resources:        []terraform.Resource{},
 		collapsed:        make(map[string]bool),
 		selected:         make(map[string]bool),
 		resourceIndexMap: make(map[string]int),
 		filterInput:      newFilterInput(),
-		isRunning:        true,
+		workState:        workStatePull,
+		cancel:           &cancelWrapper{},
 		spinner:          s,
 	}
 }
@@ -107,8 +118,46 @@ func NewModel(runner *terraform.TerraformRunner, ch <-chan terraform.StreamEvent
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
-		waitForEvent(m.eventCh),
+		m.waitForState(),
 	)
+}
+
+type statePulledMsg struct {
+	resources []terraform.Resource
+	err       error
+}
+
+func (m *Model) waitForState() tea.Cmd {
+	ctx, cancel := context.WithCancel(context.Background())
+	m.cancel.fn = cancel
+
+	return func() tea.Msg {
+		resources, err := m.runner.StatePull(ctx)
+		return statePulledMsg{resources: resources, err: err}
+	}
+}
+
+func (m Model) handleStatePulled(msg statePulledMsg) (Model, tea.Cmd) {
+	if msg.err != nil {
+		m.err = msg.err
+		m.workState = workIdle
+		m.viewState = viewError
+		return m, nil
+	}
+
+	for _, r := range msg.resources {
+		m.resourceIndexMap[r.Address] = len(m.resources)
+		m.resources = append(m.resources, r)
+	}
+	m.rebuildRows()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	m.cancel.fn = cancel
+	m.workState = workPlan
+
+	ch := m.runner.StreamPlan(ctx)
+	m.eventCh = ch
+	return m, waitForEvent(ch)
 }
 
 func waitForEvent(ch <-chan terraform.StreamEvent) tea.Cmd {
@@ -146,8 +195,10 @@ func waitForForceQuit() tea.Cmd {
 
 func (m Model) gracefulQuit() (tea.Model, tea.Cmd) {
 	m.quitState = quittingState
-	m.cancel()
-	if !m.isRunning {
+	if m.cancel.fn != nil {
+		m.cancel.fn()
+	}
+	if !m.isRunning() {
 		return m, tea.Quit
 	}
 	return m, waitForForceQuit()
@@ -215,11 +266,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case statePulledMsg:
+		return m.handleStatePulled(msg)
+
 	case streamEventMsg:
 		return m.handleStreamEvent(terraform.StreamEvent(msg))
 
 	case scanCompleteMsg:
-		m.isRunning = false
+		m.workState = workIdle
 		if m.quitState == quittingState || m.quitState == forceQuitReadyState {
 			return m, tea.Quit
 		}
@@ -237,7 +291,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, waitForOutput(m.outputCh)
 
 	case outputCompleteMsg:
-		m.isRunning = false
+		m.workState = workIdle
 		if m.quitState == quittingState || m.quitState == forceQuitReadyState {
 			return m, tea.Quit
 		}
@@ -254,6 +308,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *Model) isRunning() bool {
+	return m.workState != workIdle
 }
 
 func (m Model) hasError() bool {
@@ -279,7 +337,10 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 	if event.Resource != nil {
 		addr := event.Resource.Address
 		if idx, exists := m.resourceIndexMap[addr]; exists {
-			m.resources[idx] = *event.Resource
+			existing := m.resources[idx]
+			updated := *event.Resource
+			updated.Attributes = existing.Attributes
+			m.resources[idx] = updated
 		} else {
 			newIdx := len(m.resources)
 			m.resourceIndexMap[addr] = newIdx
@@ -369,9 +430,6 @@ func (m Model) maxOutputOffset() int {
 }
 
 func (m Model) startRescan() (tea.Model, tea.Cmd) {
-	ctx, cancel := context.WithCancel(context.Background())
-	m.cancel = cancel
-
 	// initialize
 	m.resources = m.resources[:0]
 	m.resourceIndexMap = make(map[string]int)
@@ -382,23 +440,20 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	m.offset = 0
 	m.err = nil
 	m.diagnostics = nil
-	m.isRunning = true
+	m.workState = workStatePull
 	m.outputLines = nil
 	m.outputCh = nil
 	m.viewState = viewList
 
-	ch := m.runner.StreamPlan(ctx)
-	m.eventCh = ch
-
 	return m, tea.Batch(
 		m.spinner.Tick,
-		waitForEvent(ch),
+		m.waitForState(),
 	)
 }
 
 func (m Model) startAction() (tea.Model, tea.Cmd) {
 	ctx, cancel := context.WithCancel(context.Background())
-	m.cancel = cancel
+	m.cancel.fn = cancel
 
 	addrs := m.selectedAddresses()
 	action := actionChoices[m.actionCursor]
@@ -412,7 +467,7 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 	}
 	m.outputCh = actionFuncs[action](ctx, addrs)
 	m.outputLines = nil
-	m.isRunning = true
+	m.workState = workAction
 	m.offset = 0
 	m.viewState = viewOutput
 

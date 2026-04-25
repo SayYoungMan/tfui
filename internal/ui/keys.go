@@ -71,7 +71,7 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "space":
 		m.toggleSelected()
 	case "tab":
-		if !m.isRunning && len(m.selected) > 0 {
+		if !m.isRunning() && len(m.selected) > 0 {
 			m.actionCursor = 0
 			m.viewState = viewActionPicker
 		}
@@ -85,7 +85,7 @@ func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.cursor = 0
 		m.offset = 0
 	case "ctrl+r":
-		if !m.isRunning {
+		if !m.isRunning() {
 			return m.startRescan()
 		}
 	}
@@ -211,11 +211,11 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.offset++
 		}
 	case "esc":
-		if !m.isRunning {
+		if !m.isRunning() {
 			return m.startRescan()
 		}
 	case "q", "ctrl+c":
-		m.cancel()
+		m.cancel.fn()
 		return m, tea.Quit
 	}
 	return m, nil
@@ -224,7 +224,7 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) errorKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc", "enter":
-		m.cancel()
+		m.cancel.fn()
 		return m, tea.Quit
 	}
 	return m, nil
