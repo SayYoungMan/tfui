@@ -127,9 +127,20 @@ func instanceToResource(sr StateResource, si StateInstance) (Resource, error) {
 		ResourceType:    sr.Type,
 		ResourceName:    sr.Name,
 		ResourceKey:     si.IndexKey,
-		ImpliedProvider: sr.Provider,
+		ImpliedProvider: sr.impliedProvider(),
 		Action:          action,
 		Reason:          reason,
 		Attributes:      si.Attributes,
 	}, nil
+}
+
+// Taking same approach as Terraform official
+// https://github.com/hashicorp/terraform/blob/844f216569901c0f8142136e9e47fe62e336b9ca/internal/addrs/resource.go#L94-L103
+func (sr *StateResource) impliedProvider() string {
+	typeName := sr.Type
+	if under := strings.Index(typeName, "_"); under != -1 {
+		typeName = typeName[:under]
+	}
+
+	return typeName
 }

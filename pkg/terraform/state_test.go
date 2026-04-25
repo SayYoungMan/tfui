@@ -220,7 +220,7 @@ func TestParseState_AllResources(t *testing.T) {
 			assert.Equal(t, tt.reason, r.Reason)
 
 			assert.Equal(t, ActionUncertain, r.Action)
-			assert.Equal(t, "provider[\"registry.terraform.io/hashicorp/aws\"]", r.ImpliedProvider)
+			assert.Equal(t, "aws", r.ImpliedProvider)
 			assert.NotEmpty(t, r.Attributes)
 		})
 	}
