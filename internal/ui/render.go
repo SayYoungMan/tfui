@@ -340,6 +340,11 @@ func (m Model) renderConfirmView() string {
 	return lipgloss.NewCompositor(background, foreground).Render()
 }
 
+const (
+	defaultReservedOutputWidth = 6
+	defaultReservedOutputRows  = 6
+)
+
 func (m Model) renderOutputView() string {
 	action := actionChoices[m.actionCursor]
 	title := fmt.Sprintf("terraform %s", action)
@@ -385,12 +390,19 @@ func (m Model) renderDetailView() string {
 	addr := m.rows[m.cursor].Address
 	title := fmt.Sprintf("Detail (%s)", addr)
 
-	boxHeight := max(1, m.viewHeight-6)
+	boxHeight := max(1, m.viewHeight-defaultReservedOutputRows)
+	contentWidth := max(1, m.viewWidth-defaultReservedOutputWidth)
+	innerHeight := boxHeight - 2 // subtract top and bottom border rows
 
 	var content strings.Builder
-	end := min(m.offset+boxHeight, len(m.outputLines))
-	for i := m.offset; i < end; i++ {
+	visualRows := 0
+	for i := m.offset; i < len(m.outputLines); i++ {
+		lineRows := max(1, (lipgloss.Width(m.outputLines[i])+contentWidth-1)/contentWidth)
+		if visualRows+lineRows > innerHeight {
+			break
+		}
 		fmt.Fprintln(&content, m.outputLines[i])
+		visualRows += lineRows
 	}
 
 	box := resourceBorderStyle.Width(m.viewWidth - 2).Height(boxHeight).Render(strings.TrimSuffix(content.String(), "\n"))

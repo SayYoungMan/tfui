@@ -417,11 +417,6 @@ func (m *Model) adjustOffset() {
 	}
 }
 
-const (
-	defaultReservedOutputWidth = 6
-	defaultReservedOutputRows  = 6
-)
-
 func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	// initialize
 	m.resources = m.resources[:0]
