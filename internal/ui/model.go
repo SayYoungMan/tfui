@@ -1,7 +1,10 @@
 package ui
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/spinner"
@@ -9,6 +12,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
+	"github.com/alecthomas/chroma/v2/quick"
 )
 
 type (
@@ -64,6 +68,7 @@ const (
 	viewConfirm
 	viewOutput
 	viewError
+	viewDetail
 )
 
 type workState int
@@ -241,17 +246,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.outputKeys(msg)
 		case viewError:
 			return m.errorKeys(msg)
+		case viewDetail:
+			return m.detailKeys(msg)
 		default:
 			return m.normalModeKeys(msg)
 		}
 
 	case tea.MouseWheelMsg:
 		switch m.viewState {
-		case viewOutput:
+		case viewOutput, viewDetail:
 			if msg.Button == tea.MouseWheelUp && m.offset > 0 {
 				m.offset--
 			} else if msg.Button == tea.MouseWheelDown {
-				if m.offset < m.maxOutputOffset() {
+				if m.offset < len(m.outputLines)-1 {
 					m.offset++
 				}
 			}
@@ -284,9 +291,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case outputLineMsg:
 		m.outputLines = append(m.outputLines, string(msg))
-		maxOff := m.maxOutputOffset()
-		if m.offset >= maxOff {
-			m.offset = maxOff
+		visible := m.viewHeight - defaultReservedOutputRows
+		if len(m.outputLines)-m.offset > visible {
+			m.offset = len(m.outputLines) - visible
 		}
 		return m, waitForOutput(m.outputCh)
 
@@ -364,6 +371,8 @@ func (m Model) View() tea.View {
 		viewString = m.renderOutputView()
 	case viewError:
 		viewString = m.renderErrorView()
+	case viewDetail:
+		viewString = m.renderDetailView()
 	default:
 		viewString = m.renderListView()
 	}
@@ -406,27 +415,6 @@ func (m *Model) adjustOffset() {
 	if m.cursor < m.offset {
 		m.offset = m.cursor
 	}
-}
-
-const (
-	defaultReservedOutputWidth = 6
-	defaultReservedOutputRows  = 6
-)
-
-func (m Model) maxOutputOffset() int {
-	contentWidth := max(1, m.viewWidth-defaultReservedOutputWidth)
-	boxHeight := max(1, m.viewHeight-defaultReservedOutputRows)
-
-	total := 0
-	for i := len(m.outputLines) - 1; i >= 0; i-- {
-		lineWidth := lipgloss.Width(m.outputLines[i])
-		rows := max(1, (lineWidth+contentWidth-1)/contentWidth)
-		total += rows
-		if total >= boxHeight {
-			return i
-		}
-	}
-	return 0
 }
 
 func (m Model) startRescan() (tea.Model, tea.Cmd) {
@@ -472,4 +460,31 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 	m.viewState = viewOutput
 
 	return m, waitForOutput(m.outputCh)
+}
+
+func (m *Model) openDetail() {
+	addr := m.rows[m.cursor].Address
+	r := m.resources[m.resourceIndexMap[addr]]
+
+	m.offset = 0
+	m.viewState = viewDetail
+
+	if len(r.Attributes) == 0 {
+		m.outputLines = []string{"No details available."}
+		return
+	}
+
+	var indented bytes.Buffer
+	if err := json.Indent(&indented, r.Attributes, "", "  "); err != nil {
+		m.outputLines = strings.Split(string(r.Attributes), "\n")
+		return
+	}
+
+	var highlighted bytes.Buffer
+	if err := quick.Highlight(&highlighted, indented.String(), "json", "terminal256", "catppuccin-mocha"); err != nil {
+		m.outputLines = strings.Split(indented.String(), "\n")
+		return
+	}
+
+	m.outputLines = strings.Split(strings.TrimRight(highlighted.String(), "\n"), "\n")
 }

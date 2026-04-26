@@ -303,31 +303,26 @@ func TestModel_MouseWheelScrollsOutput(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
 	m.viewHeight = defaultReservedOutputRows + 2 // 2 visible rows
-	m.outputLines = []string{"line 0", "line 1", "line 2", "line 3", "line 4"}
+	m.outputLines = []string{"line 0", "line 1", "line 2"}
 
 	// Scroll down
 	newModel, _ := m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
 	m = newModel.(Model)
 	assert.Equal(t, 1, m.offset)
 
-	// Scroll to max
-	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
-	m = newModel.(Model)
-	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
-	m = newModel.(Model)
-	assert.Equal(t, 3, m.offset) // 5 lines - 2 visible = 3
-
 	// Clamp at bottom
 	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
 	m = newModel.(Model)
-	assert.Equal(t, 3, m.offset)
+	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.offset)
 
 	// Scroll back up
 	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelUp})
 	m = newModel.(Model)
-	assert.Equal(t, 2, m.offset)
+	assert.Equal(t, 1, m.offset)
 
-	// Back to top
+	// Back to top and check clamp top
 	m.offset = 0
 	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelUp})
 	m = newModel.(Model)

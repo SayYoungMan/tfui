@@ -209,6 +209,7 @@ func (m Model) renderHelpBar() string {
 	hints := []string{
 		renderKeyHint("/", "filter"),
 		renderKeyHint("Space", "select"),
+		renderKeyHint("Enter", "detail"),
 		renderKeyHint("Tab", "action"),
 		renderKeyHint("H", HKeyInfo),
 		renderKeyHint("Ctrl+r", "refresh"),
@@ -340,6 +341,11 @@ func (m Model) renderConfirmView() string {
 	return lipgloss.NewCompositor(background, foreground).Render()
 }
 
+const (
+	defaultReservedOutputWidth = 6
+	defaultReservedOutputRows  = 6
+)
+
 func (m Model) renderOutputView() string {
 	action := actionChoices[m.actionCursor]
 	title := fmt.Sprintf("terraform %s", action)
@@ -370,6 +376,39 @@ func (m Model) renderOutputView() string {
 	} else {
 		help = "↑/↓ scroll | Esc to close and re-plan"
 	}
+
+	var s strings.Builder
+	fmt.Fprintln(&s, title)
+	fmt.Fprintln(&s)
+	fmt.Fprintln(&s, box)
+	fmt.Fprintln(&s)
+	fmt.Fprint(&s, help)
+
+	return s.String()
+}
+
+func (m Model) renderDetailView() string {
+	addr := m.rows[m.cursor].Address
+	title := fmt.Sprintf("Detail (%s)", addr)
+
+	boxHeight := max(1, m.viewHeight-defaultReservedOutputRows)
+	contentWidth := max(1, m.viewWidth-defaultReservedOutputWidth)
+	innerHeight := boxHeight - 2 // subtract top and bottom border rows
+
+	var content strings.Builder
+	visualRows := 0
+	for i := m.offset; i < len(m.outputLines); i++ {
+		lineRows := max(1, (lipgloss.Width(m.outputLines[i])+contentWidth-1)/contentWidth)
+		if visualRows+lineRows > innerHeight {
+			break
+		}
+		fmt.Fprintln(&content, m.outputLines[i])
+		visualRows += lineRows
+	}
+
+	box := resourceBorderStyle.Width(m.viewWidth - 2).Height(boxHeight).Render(strings.TrimSuffix(content.String(), "\n"))
+
+	help := "↑/↓ scroll | Esc to close"
 
 	var s strings.Builder
 	fmt.Fprintln(&s, title)
