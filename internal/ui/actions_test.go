@@ -13,10 +13,7 @@ func TestGracefulQuit_QuitsImmediatelyWhenIdle(t *testing.T) {
 	m := newTestModel()
 	m.workState = workIdle
 
-	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
-	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyTab})
-	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	m = newModel.(Model)
+	m, cmd := m.keyPresses([]rune{'q', tea.KeyTab, tea.KeyEnter})
 
 	assert.Equal(t, quittingState, m.quitState)
 	assert.NotNil(t, cmd)
@@ -28,10 +25,7 @@ func TestGracefulQuit_WaitsWhenRunning(t *testing.T) {
 	cancelled := false
 	m.cancel.fn = func() { cancelled = true }
 
-	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
-	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyTab})
-	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	m = newModel.(Model)
+	m, cmd := m.keyPresses([]rune{'q', tea.KeyTab, tea.KeyEnter})
 
 	assert.Equal(t, quittingState, m.quitState)
 	assert.True(t, cancelled)

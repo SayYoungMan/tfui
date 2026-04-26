@@ -1,6 +1,7 @@
 package ui
 
 import (
+	tea "charm.land/bubbletea/v2"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 )
 
@@ -57,4 +58,14 @@ var actionAnsiStrings = map[terraform.Action]string{
 
 func actionAnsiString(a terraform.Action) string {
 	return actionAnsiStrings[a]
+}
+
+func (m Model) keyPresses(keys []rune) (Model, tea.Cmd) {
+	var newModel tea.Model = m
+	var cmd tea.Cmd
+	for _, k := range keys {
+		newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: k})
+	}
+
+	return newModel.(Model), cmd
 }
