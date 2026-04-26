@@ -118,30 +118,3 @@ func TestTreePrefix(t *testing.T) {
 		assert.Equal(t, exp, m.rows[i].TreePrefix)
 	}
 }
-
-func TestParentModule(t *testing.T) {
-	tests := []struct {
-		name     string
-		address  string
-		expected string
-	}{
-		{name: "normal resource", address: "module.a.aws_s3.x", expected: "module.a"},
-		{name: "normal module", address: "module.a.module.b", expected: "module.a"},
-		{name: "resource no parent", address: "aws_s3.x", expected: ""},
-		{name: "module no parent", address: "module.a", expected: ""},
-		{name: "resource with module bracket and dot", address: "module.vpc[\"a.b\"].aws_s3.x", expected: "module.vpc[\"a.b\"]"},
-		{name: "data under module", address: "module.api.data.aws_region.current", expected: "module.api"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, parentModule(tt.address))
-		})
-	}
-}
-
-func TestIsAncestor(t *testing.T) {
-	assert.True(t, isAncestor("module.a", "module.a.module.b.aws_s3.x"))
-	assert.False(t, isAncestor("module.b", "module.a.module.b.aws_s3.x"))
-	assert.False(t, isAncestor("module.a", "aws_s3.x"))
-}

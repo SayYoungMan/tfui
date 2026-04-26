@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-func (m Model) normalModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "j", "down":
 		if m.cursor < len(m.rows)-1 {
@@ -119,7 +119,7 @@ func (m *Model) toggleSelected() {
 	}
 }
 
-func (m Model) filterModeKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+func (m Model) filterKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc", "enter":
 		m.viewState = viewList
@@ -173,7 +173,7 @@ func (m Model) confirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) quitViewConfirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+func (m Model) quitConfirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "h", "left":
 		m.confirmCursor = 0

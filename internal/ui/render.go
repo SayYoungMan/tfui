@@ -130,32 +130,6 @@ func (m Model) renderModuleLine(idx int) string {
 	return prefix + line
 }
 
-// return the most direct module from current cursor position
-func (m *Model) currentCursorModule() string {
-	cursorRow := m.rows[m.cursor]
-
-	currentModule := cursorRow.Address
-	if cursorRow.Kind == rowResource {
-		currentModule = cursorRow.Parent
-	}
-
-	return currentModule
-}
-
-// returns if it or ancestor module is selected
-func (m Model) isSelectedOrAncestor(addr string) bool {
-	if m.selected[addr] {
-		return true
-	}
-
-	for path := parentModule(addr); path != ""; path = parentModule(path) {
-		if m.selected[path] {
-			return true
-		}
-	}
-	return false
-}
-
 func (m Model) renderInfoBar() string {
 	var adornment, info string
 

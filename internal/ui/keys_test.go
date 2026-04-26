@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNormalModeKeys_Quit(t *testing.T) {
+func TestListKeys_Quit(t *testing.T) {
 	tests := []struct {
 		name string
 		msg  tea.KeyPressMsg
@@ -30,7 +30,7 @@ func TestNormalModeKeys_Quit(t *testing.T) {
 	}
 }
 
-func TestNormalModeKeys_CursorNavigation(t *testing.T) {
+func TestListKeys_CursorNavigation(t *testing.T) {
 	resources := []terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionNoop},
@@ -71,7 +71,7 @@ func TestNormalModeKeys_CursorNavigation(t *testing.T) {
 	assert.Equal(t, 0, m.cursor)
 }
 
-func TestNormalModeKeys_ScrollsUpWithCursor(t *testing.T) {
+func TestListKeys_ScrollsUpWithCursor(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewHeight = 3 + defaultReservedRows
 
@@ -101,7 +101,7 @@ func TestNormalModeKeys_ScrollsUpWithCursor(t *testing.T) {
 	assert.Equal(t, 2, m.offset) // offset changes -> it scrolled up
 }
 
-func TestNormalModeKeys_ToggleHideUnchanged(t *testing.T) {
+func TestListKeys_ToggleHideUnchanged(t *testing.T) {
 	m := newTestModel()
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'H'})
@@ -113,7 +113,7 @@ func TestNormalModeKeys_ToggleHideUnchanged(t *testing.T) {
 	assert.False(t, m.hideUnchanged)
 }
 
-func TestNormalModeKeys_ToggleSelect(t *testing.T) {
+func TestListKeys_ToggleSelect(t *testing.T) {
 	m := newTestModel()
 
 	// Select first resource
@@ -127,7 +127,7 @@ func TestNormalModeKeys_ToggleSelect(t *testing.T) {
 	assert.False(t, m.selected[m.resources[0].Address])
 }
 
-func TestNormalModeKeys_SelectEmptyList(t *testing.T) {
+func TestListKeys_SelectEmptyList(t *testing.T) {
 	m := newTestModelEmpty()
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
@@ -136,7 +136,7 @@ func TestNormalModeKeys_SelectEmptyList(t *testing.T) {
 	assert.Empty(t, m.selected)
 }
 
-func TestNormalModeKeys_RemoveSelectionIfParentSelected(t *testing.T) {
+func TestListKeys_RemoveSelectionIfParentSelected(t *testing.T) {
 	resources := []terraform.Resource{
 		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
 	}
@@ -159,7 +159,7 @@ func TestNormalModeKeys_RemoveSelectionIfParentSelected(t *testing.T) {
 	assert.NotContains(t, m.selected, "module.a.aws_s3.x")
 }
 
-func TestNormalModeKeys_ActionBlockedWhileScanning(t *testing.T) {
+func TestListKeys_ActionBlockedWhileScanning(t *testing.T) {
 	m := newTestModel()
 	m.workState = workPlan
 	m.selected = map[string]bool{m.resources[0].Address: true}
@@ -170,7 +170,7 @@ func TestNormalModeKeys_ActionBlockedWhileScanning(t *testing.T) {
 	assert.Equal(t, viewList, m.viewState)
 }
 
-func TestNormalModeKeys_ActionBlockedWithNoSelection(t *testing.T) {
+func TestListKeys_ActionBlockedWithNoSelection(t *testing.T) {
 	m := newTestModel()
 	m.workState = workIdle
 
@@ -180,7 +180,7 @@ func TestNormalModeKeys_ActionBlockedWithNoSelection(t *testing.T) {
 	assert.Equal(t, viewList, m.viewState)
 }
 
-func TestNormalModeKeys_RefreshRescan(t *testing.T) {
+func TestListKeys_RefreshRescan(t *testing.T) {
 	m := newTestModel()
 	m.workState = workIdle
 	m.runner = terraform.NewTerraformRunner(t.TempDir(), "true")
@@ -194,7 +194,7 @@ func TestNormalModeKeys_RefreshRescan(t *testing.T) {
 	assert.NotNil(t, cmd)
 }
 
-func TestNormalModeKeys_RefreshBlockedWhileScanning(t *testing.T) {
+func TestListKeys_RefreshBlockedWhileScanning(t *testing.T) {
 	m := newTestModel()
 	m.workState = workPlan
 
@@ -204,7 +204,7 @@ func TestNormalModeKeys_RefreshBlockedWhileScanning(t *testing.T) {
 	assert.Nil(t, cmd)
 }
 
-func TestNormalModeKeys_TabOpensActionPicker(t *testing.T) {
+func TestListKeys_TabOpensActionPicker(t *testing.T) {
 	m := newTestModel()
 	m.workState = workIdle
 	m.selected = map[string]bool{m.resources[0].Address: true}
@@ -216,7 +216,7 @@ func TestNormalModeKeys_TabOpensActionPicker(t *testing.T) {
 	assert.Equal(t, 0, m.actionCursor)
 }
 
-func TestNormalModeKeys_ModuleExpandCollapse(t *testing.T) {
+func TestListKeys_ModuleExpandCollapse(t *testing.T) {
 	resources := []terraform.Resource{
 		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
 	}
@@ -252,7 +252,7 @@ func TestNormalModeKeys_ModuleExpandCollapse(t *testing.T) {
 	require.Len(t, m.collapsed, 0)
 }
 
-func TestNormalModeKeys_EnterResourceDetail(t *testing.T) {
+func TestListKeys_EnterResourceDetail(t *testing.T) {
 	m := newTestModel()
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -533,7 +533,7 @@ func TestOutputKeys_Navigation(t *testing.T) {
 	assert.Equal(t, 0, m.offset)
 }
 
-func TestErrorViewKeys_Quit(t *testing.T) {
+func TestErrorKeys_Quit(t *testing.T) {
 	tests := []struct {
 		name string
 		msg  tea.KeyPressMsg

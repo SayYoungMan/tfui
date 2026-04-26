@@ -15,7 +15,7 @@ const (
 	testDataSourceAddr = "data.aws_caller_identity.current"
 )
 
-func TestModel_Handle_RefreshComplete(t *testing.T) {
+func TestModel_HandleRefreshComplete(t *testing.T) {
 	m := newTestModelEmpty()
 
 	event := terraform.StreamEvent{
@@ -34,7 +34,7 @@ func TestModel_Handle_RefreshComplete(t *testing.T) {
 	assert.NotNil(t, cmd)
 }
 
-func TestModel_Handle_DataSourceRead(t *testing.T) {
+func TestModel_HandleDataSourceRead(t *testing.T) {
 	m := newTestModelEmpty()
 
 	event := terraform.StreamEvent{
@@ -327,122 +327,4 @@ func TestModel_MouseWheelScrollsOutput(t *testing.T) {
 	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelUp})
 	m = newModel.(Model)
 	assert.Equal(t, 0, m.offset)
-}
-
-func TestGracefulQuit_QuitsImmediatelyWhenIdle(t *testing.T) {
-	m := newTestModel()
-	m.workState = workIdle
-
-	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
-	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyTab})
-	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	m = newModel.(Model)
-
-	assert.Equal(t, quittingState, m.quitState)
-	assert.NotNil(t, cmd)
-}
-
-func TestGracefulQuit_WaitsWhenRunning(t *testing.T) {
-	m := newTestModel()
-	m.workState = workAction
-	cancelled := false
-	m.cancel.fn = func() { cancelled = true }
-
-	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
-	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyTab})
-	newModel, cmd = newModel.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	m = newModel.(Model)
-
-	assert.Equal(t, quittingState, m.quitState)
-	assert.True(t, cancelled)
-	assert.NotNil(t, cmd)
-
-	_, cmd = m.Update(tea.KeyPressMsg{Code: 'q'})
-
-	assert.Nil(t, cmd)
-}
-
-func TestGracefulQuit_ForceQuitsAfterTimeout(t *testing.T) {
-	m := newTestModel()
-	m.quitState = forceQuitReadyState
-
-	_, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
-
-	assert.NotNil(t, cmd)
-}
-
-func TestGracefulQuit_QuitsOnScanComplete(t *testing.T) {
-	m := newTestModel()
-	m.quitState = quittingState
-	m.workState = workPlan
-
-	_, cmd := m.Update(scanCompleteMsg{})
-
-	assert.NotNil(t, cmd)
-}
-
-func TestGracefulQuit_QuitsOnOutputComplete(t *testing.T) {
-	m := newTestModel()
-	m.quitState = quittingState
-	m.workState = workAction
-
-	_, cmd := m.Update(outputCompleteMsg{})
-
-	assert.NotNil(t, cmd)
-}
-
-func TestGracefulQuit_BlocksKeysWhileQuitting(t *testing.T) {
-	m := newTestModel()
-	m.quitState = quittingState
-	m.viewState = viewList
-
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
-	m = newModel.(Model)
-
-	assert.Equal(t, 0, m.cursor)
-}
-
-func TestGracefulQuit_ForceQuitReadyMsg(t *testing.T) {
-	m := newTestModel()
-	m.quitState = quittingState
-
-	newModel, _ := m.Update(forceQuitReadyMsg{})
-	m = newModel.(Model)
-
-	assert.Equal(t, forceQuitReadyState, m.quitState)
-}
-
-func TestGracefulQuit_CanCancelInitPull(t *testing.T) {
-	runner := terraform.NewTerraformRunner(t.TempDir(), "sleep")
-	m := NewModel(runner)
-
-	cmd := m.Init()
-	require.NotNil(t, cmd)
-
-	assert.NotNil(t, m.cancel.fn)
-}
-
-func TestAdjustOffset(t *testing.T) {
-	visible := 48 - defaultReservedRows - 1
-	tests := []struct {
-		name     string
-		cursor   int
-		offset   int
-		expected int
-	}{
-		{name: "cursor went below visible", cursor: visible, offset: 0, expected: 1},
-		{name: "cursor went above visible", cursor: 0, offset: 1, expected: 0},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := newTestModelEmpty()
-
-			m.cursor = tt.cursor
-			m.offset = tt.offset
-			m.adjustOffset()
-
-			assert.Equal(t, tt.expected, m.offset)
-		})
-	}
 }

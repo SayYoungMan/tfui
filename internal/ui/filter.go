@@ -66,6 +66,18 @@ func (m *Model) rebuildRows() {
 	m.adjustOffset()
 }
 
+// filter box (3) + resource borders (2) + info bar (1) + blank + help bar
+const defaultReservedRows = 8
+
+func (m Model) visibleRows() int {
+	reserved := defaultReservedRows
+	if m.viewWidth < 90 {
+		reserved++
+	}
+
+	return max(1, m.viewHeight-reserved)
+}
+
 func (m *Model) visibleResources() terraform.Resources {
 	var shown terraform.Resources
 	for _, r := range m.resources {
@@ -127,47 +139,4 @@ func treePrefix(isLast []bool) string {
 	}
 
 	return s.String()
-}
-
-func parentModule(address string) string {
-	if !strings.HasPrefix(address, "module.") {
-		return ""
-	}
-
-	raw := strings.Split(address, ".")
-	segments := make([]string, 0, len(raw))
-	// Go through all segments with splitted by . to find if it contains any unmatched " and match it
-	// which means that there is a case like module.vpc["a.b"] that is edge case
-	for i := 0; i < len(raw); i++ {
-		seg := raw[i]
-		for strings.Count(seg, "\"")%2 == 1 && i+1 < len(raw) {
-			i++
-			seg += "." + raw[i]
-		}
-		segments = append(segments, seg)
-	}
-
-	// We need to take 3 trailing segments for data and ephemeral resource otherwise 2
-	trailing := 2
-	if len(segments) >= 3 && (segments[len(segments)-3] == "data" || segments[len(segments)-3] == "ephemeral") {
-		trailing = 3
-	}
-
-	if len(segments) < trailing {
-		return ""
-	}
-	return strings.Join(segments[:len(segments)-trailing], ".")
-}
-
-func isAncestor(ancestor string, child string) bool {
-	for parent := parentModule(child); parent != ""; parent = parentModule(parent) {
-		if parent == ancestor {
-			return true
-		}
-	}
-	return false
-}
-
-func isUnchanged(r terraform.Resource) bool {
-	return r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead
 }
