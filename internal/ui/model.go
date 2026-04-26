@@ -258,7 +258,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.Button == tea.MouseWheelUp && m.offset > 0 {
 				m.offset--
 			} else if msg.Button == tea.MouseWheelDown {
-				if m.offset < m.maxOutputOffset() {
+				if m.offset < len(m.outputLines)-1 {
 					m.offset++
 				}
 			}
@@ -291,9 +291,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case outputLineMsg:
 		m.outputLines = append(m.outputLines, string(msg))
-		maxOff := m.maxOutputOffset()
-		if m.offset >= maxOff {
-			m.offset = maxOff
+		visible := m.viewHeight - defaultReservedOutputRows
+		if len(m.outputLines)-m.offset > visible {
+			m.offset = len(m.outputLines) - visible
 		}
 		return m, waitForOutput(m.outputCh)
 
@@ -421,22 +421,6 @@ const (
 	defaultReservedOutputWidth = 6
 	defaultReservedOutputRows  = 6
 )
-
-func (m Model) maxOutputOffset() int {
-	contentWidth := max(1, m.viewWidth-defaultReservedOutputWidth)
-	boxHeight := max(1, m.viewHeight-defaultReservedOutputRows)
-
-	total := 0
-	for i := len(m.outputLines) - 1; i >= 0; i-- {
-		lineWidth := lipgloss.Width(m.outputLines[i])
-		rows := max(1, (lineWidth+contentWidth-1)/contentWidth)
-		total += rows
-		if total >= boxHeight {
-			return i
-		}
-	}
-	return 0
-}
 
 func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	// initialize

@@ -210,7 +210,7 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.offset--
 		}
 	case "j", "down":
-		if m.offset < m.maxOutputOffset() {
+		if m.offset < len(m.outputLines)-1 {
 			m.offset++
 		}
 	case "esc":
@@ -244,7 +244,7 @@ func (m Model) detailKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.offset--
 		}
 	case "j", "down":
-		if m.offset < m.maxOutputOffset() {
+		if m.offset < len(m.outputLines)-1 {
 			m.offset++
 		}
 	}
