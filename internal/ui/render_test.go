@@ -275,3 +275,25 @@ func TestRenderErrorView_ShowsDiagnosticsAndError(t *testing.T) {
 	assert.Contains(t, view.Content, "failed to start terraform")
 	assert.Contains(t, view.Content, "Esc")
 }
+
+func TestRenderDetailView_NoAttributes(t *testing.T) {
+	r := terraform.Resource{Attributes: nil}
+	m := newTestModelWithResources([]terraform.Resource{r})
+	m.openDetail()
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "No details available")
+}
+
+func TestRenderDetailView_ShowsAddressAndJSON(t *testing.T) {
+	m := newTestModel()
+	m.viewState = viewDetail
+	m.outputLines = []string{"{", `  "id": "x"`, "}"}
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, fmt.Sprintf("Detail (%s)", testResources[0].Address))
+	assert.Contains(t, view.Content, `"id": "x"`)
+	assert.Contains(t, view.Content, "Esc to close")
+}

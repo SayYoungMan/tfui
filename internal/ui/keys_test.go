@@ -252,6 +252,15 @@ func TestNormalModeKeys_ModuleExpandCollapse(t *testing.T) {
 	require.Len(t, m.collapsed, 0)
 }
 
+func TestNormalModeKeys_EnterResourceDetail(t *testing.T) {
+	m := newTestModel()
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewDetail, m.viewState)
+}
+
 func TestFilterModeKeys_FilterFocusAndUnfocus(t *testing.T) {
 	m := newTestModel()
 
@@ -507,26 +516,21 @@ func TestOutputKeys_Navigation(t *testing.T) {
 	m.viewHeight = defaultReservedOutputRows + 2 // 2 visible rows
 	m.outputLines = []string{"line 0", "line 1", "line 2", "line 3"}
 
-	// j scrolls down
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
 	m = newModel.(Model)
 	assert.Equal(t, 1, m.offset)
 
-	// k scrolls up
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
-	m = newModel.(Model)
-	assert.Equal(t, 0, m.offset)
-
-	// Clamp at top
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
-	m = newModel.(Model)
-	assert.Equal(t, 0, m.offset)
-
-	// Clamp at bottom
-	m.offset = 2 // max = 4 lines - 2 visible
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'j'})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = newModel.(Model)
 	assert.Equal(t, 2, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.offset)
 }
 
 func TestErrorViewKeys_Quit(t *testing.T) {
@@ -551,4 +555,52 @@ func TestErrorViewKeys_Quit(t *testing.T) {
 			assert.NotNil(t, cmd)
 		})
 	}
+}
+
+func TestDetailKeys_CloseDetail(t *testing.T) {
+	tests := []struct {
+		name string
+		msg  tea.KeyPressMsg
+	}{
+		{"enter", tea.KeyPressMsg{Code: tea.KeyEnter}},
+		{"esc", tea.KeyPressMsg{Code: tea.KeyEscape}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newTestModel()
+			m.viewState = viewDetail
+			m.outputLines = []string{"test"}
+			m.offset = 3
+
+			newModel, _ := m.Update(tt.msg)
+			m = newModel.(Model)
+
+			assert.Equal(t, viewList, m.viewState)
+			assert.Empty(t, m.outputLines)
+			assert.Zero(t, m.offset)
+		})
+	}
+}
+
+func TestDetailKeys_Scroll(t *testing.T) {
+	m := newTestModelEmpty()
+	m.viewState = viewDetail
+	m.outputLines = []string{"a", "b", "c", "d"}
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.offset)
 }
