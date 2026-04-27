@@ -6,10 +6,16 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
 
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
     - uses: actions/checkout@v6
 
@@ -22,4 +28,50 @@ jobs:
       run: go build -v ./...
 
     - name: Test
-      run: go test -v ./...
+      run: go test -v -coverprofile=coverage.out ./...
+
+    - name: Build coverage report
+      if: github.event_name == 'pull_request'
+      id: coverage
+      run: |
+        {
+          echo 'report<<EOF'
+          echo '<!-- tfui-coverage-report -->'
+          echo '## Test Coverage'
+          echo ''
+          echo '```'
+          go tool cover -func=coverage.out
+          echo '```'
+          echo 'EOF'
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Post coverage comment
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v9
+      env:
+        REPORT: ${{ steps.coverage.outputs.report }}
+      with:
+        script: |
+          const body = process.env.REPORT;
+          const marker = '<!-- tfui-coverage-report -->';
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          const existing = comments.find(c => c.body && c.body.includes(marker));
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }
