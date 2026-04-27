@@ -20,7 +20,7 @@ func (m Model) hasError() bool {
 }
 
 func isUnchanged(r terraform.Resource) bool {
-	return r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead
+	return r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead || r.Action == terraform.ActionUncertain
 }
 
 // returns if it or ancestor module is selected
