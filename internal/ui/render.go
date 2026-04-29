@@ -348,7 +348,7 @@ func (m Model) renderOutputView() string {
 	if m.isRunning() {
 		help = "↑/↓ scroll | Running..."
 	} else {
-		help = "↑/↓ scroll | Esc to close and re-plan"
+		help = "↑/↓ scroll | Done! | Esc / Enter to continue"
 	}
 
 	var s strings.Builder

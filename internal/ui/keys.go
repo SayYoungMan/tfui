@@ -213,7 +213,7 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.offset < len(m.outputLines)-1 {
 			m.offset++
 		}
-	case "esc":
+	case "esc", "enter":
 		if !m.isRunning() {
 			return m.startRescan()
 		}
