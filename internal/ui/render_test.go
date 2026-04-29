@@ -228,12 +228,12 @@ func TestRenderOutputView_HelpTextChangesWhenDone(t *testing.T) {
 	m.workState = workAction
 
 	view := m.View()
-	assert.NotContains(t, view.Content, "Esc to close")
+	assert.NotContains(t, view.Content, "Done! | Esc / Enter to continue")
 	assert.Contains(t, view.Content, "Running...")
 
 	m.workState = workIdle
 	view = m.View()
-	assert.Contains(t, view.Content, "Esc to close")
+	assert.Contains(t, view.Content, "Done! | Esc / Enter to continue")
 	assert.NotContains(t, view.Content, "Running...")
 }
 
