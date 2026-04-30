@@ -5,8 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/SayYoungMan/tfui/pkg/terraform"
 	"github.com/alecthomas/chroma/v2/quick"
 )
 
@@ -28,6 +30,7 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	m.rows = m.rows[:0]
 	m.collapsed = make(map[string]bool)
 	m.selected = make(map[string]bool)
+	m.actionResources = nil
 	m.cursor = 0
 	m.offset = 0
 	m.err = nil
@@ -48,22 +51,40 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 	m.cancel.fn = cancel
 
 	addrs := m.selectedAddresses()
-	action := actionChoices[m.actionCursor]
-
-	actionFuncs := map[string]func(context.Context, []string) <-chan string{
-		"plan":    m.runner.Plan,
-		"apply":   m.runner.Apply,
-		"destroy": m.runner.Destroy,
-		"taint":   m.runner.Taint,
-		"untaint": m.runner.Untaint,
-	}
-	m.outputCh = actionFuncs[action](ctx, addrs)
 	m.outputLines = nil
 	m.workState = workAction
 	m.offset = 0
 	m.viewState = viewOutput
 
-	return m, waitForOutput(m.outputCh)
+	m.actionStartTime = time.Now()
+	m.actionResources = make(map[string]*ActionResource, len(addrs))
+	for _, addr := range addrs {
+		m.actionResources[addr] = &ActionResource{
+			Address: addr,
+			Status:  actionResourcePending,
+		}
+	}
+
+	action := actionChoices[m.actionCursor]
+	switch action {
+	case "apply", "destroy":
+		actionFuncs := map[string]func(context.Context, []string) <-chan terraform.StreamEvent{
+			"apply":   m.runner.Apply,
+			"destroy": m.runner.Destroy,
+		}
+		ch := actionFuncs[action](ctx, addrs)
+		m.eventCh = ch
+		return m, waitForEvent(ch)
+	default:
+		actionFuncs := map[string]func(context.Context, []string) <-chan string{
+			"plan":    m.runner.Plan,
+			"taint":   m.runner.Taint,
+			"untaint": m.runner.Untaint,
+		}
+		m.outputCh = actionFuncs[action](ctx, addrs)
+
+		return m, waitForOutput(m.outputCh)
+	}
 }
 
 func (m *Model) openDetail() {

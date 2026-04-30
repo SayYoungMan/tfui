@@ -50,7 +50,7 @@ func TestGracefulQuit_QuitsOnScanComplete(t *testing.T) {
 	m.quitState = quittingState
 	m.workState = workPlan
 
-	_, cmd := m.Update(scanCompleteMsg{})
+	_, cmd := m.Update(streamCompleteMsg{})
 
 	assert.NotNil(t, cmd)
 }

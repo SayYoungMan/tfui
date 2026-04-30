@@ -47,21 +47,25 @@ func (m Model) handleStatePulled(msg statePulledMsg) (Model, tea.Cmd) {
 }
 
 type (
-	streamEventMsg  terraform.StreamEvent
-	scanCompleteMsg struct{}
+	streamEventMsg    terraform.StreamEvent
+	streamCompleteMsg struct{}
 )
 
 func waitForEvent(ch <-chan terraform.StreamEvent) tea.Cmd {
 	return func() tea.Msg {
 		event, ok := <-ch
 		if !ok {
-			return scanCompleteMsg{}
+			return streamCompleteMsg{}
 		}
 		return streamEventMsg(event)
 	}
 }
 
 func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cmd) {
+	if m.workState == workAction {
+		return m.handleActionEvent(event)
+	}
+
 	if event.Error != nil {
 		m.err = event.Error
 		return m, waitForEvent(m.eventCh)
@@ -88,6 +92,31 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 	}
 
 	m.adjustOffset()
+	return m, waitForEvent(m.eventCh)
+}
+
+func (m Model) handleActionEvent(event terraform.StreamEvent) (tea.Model, tea.Cmd) {
+	if event.Message != "" {
+		m.outputLines = append(m.outputLines, event.Message)
+	}
+
+	if event.Resource == nil {
+		return m, waitForEvent(m.eventCh)
+	}
+
+	ar := m.actionResources[event.Resource.Address]
+	switch event.Type {
+	case "apply_start":
+		ar.Status = actionResourceInProgress
+		ar.TimeToStart = time.Since(m.actionStartTime)
+	case "apply_complete":
+		ar.Status = actionResourceSuccessful
+		ar.TimeToProcess = time.Since(m.actionStartTime) - ar.TimeToStart
+	case "apply_errored":
+		ar.Status = actionResourceFailed
+		ar.TimeToProcess = time.Since(m.actionStartTime) - ar.TimeToStart
+	}
+
 	return m, waitForEvent(m.eventCh)
 }
 

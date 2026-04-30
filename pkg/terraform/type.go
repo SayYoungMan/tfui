@@ -10,6 +10,7 @@ type StreamEvent struct {
 	Hook       *HookPayload
 	Summary    *ChangeSummary
 	Outputs    map[string]OutputValue
+	Message    string
 	Type       string
 	Error      error
 }

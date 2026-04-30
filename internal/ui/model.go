@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -20,6 +22,8 @@ type Model struct {
 
 	resources        terraform.Resources
 	resourceIndexMap map[string]int
+	actionResources  map[string]*ActionResource
+	actionStartTime  time.Time
 
 	rows      []Row
 	collapsed map[string]bool
@@ -90,6 +94,22 @@ type Row struct {
 	TreePrefix string
 	Address    string
 	Parent     string
+}
+
+type actionResourceStatus int
+
+const (
+	actionResourcePending actionResourceStatus = iota
+	actionResourceInProgress
+	actionResourceSuccessful
+	actionResourceFailed
+)
+
+type ActionResource struct {
+	Address       string
+	Status        actionResourceStatus
+	TimeToStart   time.Duration
+	TimeToProcess time.Duration
 }
 
 func NewModel(runner *terraform.TerraformRunner) Model {
@@ -186,7 +206,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case streamEventMsg:
 		return m.handleStreamEvent(terraform.StreamEvent(msg))
 
-	case scanCompleteMsg:
+	case streamCompleteMsg:
 		m.workState = workIdle
 		if m.quitState == quittingState || m.quitState == forceQuitReadyState {
 			return m, tea.Quit

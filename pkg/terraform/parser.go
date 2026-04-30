@@ -34,28 +34,36 @@ func (p *Parser) ParseLine(line []byte) (*StreamEvent, error) {
 		return nil, fmt.Errorf("failed to parse plan JSON: %w", err)
 	}
 
+	var event *StreamEvent
+	var err error
 	switch msg.Type {
 	case "refresh_start":
-		return p.parseRefreshStart(msg.Hook)
+		event, err = p.parseRefreshStart(msg.Hook)
 	case "apply_start", "apply_progress", "apply_complete", "apply_errored":
-		return &StreamEvent{
+		event, err = &StreamEvent{
 			Resource: extractResourceInfo(&msg.Hook.Resource, normalizeAction(msg.Hook.Action), ""),
 			Hook:     msg.Hook,
 			Type:     msg.Type,
 		}, nil
 	case "resource_drift":
-		return p.parseResourceDrift(msg.Change)
+		event, err = p.parseResourceDrift(msg.Change)
 	case "planned_change":
-		return p.parsePlannedChange(msg.Change)
+		event, err = p.parsePlannedChange(msg.Change)
 	case "diagnostic":
-		return p.parseDiagnostic(msg.Diagnostic)
+		event, err = p.parseDiagnostic(msg.Diagnostic)
 	case "change_summary":
-		return p.parseChangeSummary(msg.Changes)
+		event, err = p.parseChangeSummary(msg.Changes)
 	case "outputs":
-		return p.parseOutputs(msg.Outputs)
+		event, err = p.parseOutputs(msg.Outputs)
 	default:
 		return nil, nil
 	}
+
+	if event != nil {
+		event.Message = msg.Message
+	}
+
+	return event, err
 }
 
 func (p *Parser) parseRefreshStart(hook *HookPayload) (*StreamEvent, error) {

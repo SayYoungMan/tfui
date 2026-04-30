@@ -149,7 +149,7 @@ func TestModel_HandleErrorDiagnostic(t *testing.T) {
 	assert.Equal(t, "Invalid reference", m.diagnostics[0].Summary)
 	assert.NotNil(t, cmd)
 
-	newModel, cmd = m.Update(scanCompleteMsg{})
+	newModel, cmd = m.Update(streamCompleteMsg{})
 	m = newModel.(Model)
 
 	assert.Equal(t, viewError, m.viewState)
@@ -162,7 +162,7 @@ func TestModel_ScanComplete_WarningsOnly(t *testing.T) {
 		{Severity: "warning", Summary: "Deprecated attribute"},
 	}
 
-	newModel, _ := m.Update(scanCompleteMsg{})
+	newModel, _ := m.Update(streamCompleteMsg{})
 	m = newModel.(Model)
 
 	assert.Equal(t, viewList, m.viewState)
@@ -174,7 +174,7 @@ func TestModel_ScanComplete(t *testing.T) {
 
 	assert.True(t, m.isRunning())
 
-	newModel, cmd := m.Update(scanCompleteMsg{})
+	newModel, cmd := m.Update(streamCompleteMsg{})
 	m = newModel.(Model)
 
 	assert.False(t, m.isRunning())
