@@ -29,7 +29,7 @@ func (p *Parser) ParseLine(line []byte) (*StreamEvent, error) {
 		return nil, nil
 	}
 
-	var msg PlanMessage
+	var msg Message
 	if err := json.Unmarshal(line, &msg); err != nil {
 		return nil, fmt.Errorf("failed to parse plan JSON: %w", err)
 	}
@@ -37,8 +37,12 @@ func (p *Parser) ParseLine(line []byte) (*StreamEvent, error) {
 	switch msg.Type {
 	case "refresh_start":
 		return p.parseRefreshStart(msg.Hook)
-	case "apply_start":
-		return p.parseApplyStart(msg.Hook)
+	case "apply_start", "apply_progress", "apply_complete", "apply_errored":
+		return &StreamEvent{
+			Resource: extractResourceInfo(&msg.Hook.Resource, normalizeAction(msg.Hook.Action), ""),
+			Hook:     msg.Hook,
+			Type:     msg.Type,
+		}, nil
 	case "resource_drift":
 		return p.parseResourceDrift(msg.Change)
 	case "planned_change":
@@ -62,21 +66,6 @@ func (p *Parser) parseRefreshStart(hook *HookPayload) (*StreamEvent, error) {
 	}
 
 	return &StreamEvent{Resource: extractResourceInfo(&hook.Resource, ActionNoop, "")}, nil
-}
-
-func (p *Parser) parseApplyStart(hook *HookPayload) (*StreamEvent, error) {
-	// We want to record events of apply_complete only when it's finished reading data block
-	if hook.Action != "read" {
-		return nil, nil
-	}
-
-	addr := hook.Resource.Addr
-	if !p.seen[addr] {
-		p.seen[addr] = true
-		p.resourceCount++
-	}
-
-	return &StreamEvent{Resource: extractResourceInfo(&hook.Resource, ActionRead, "")}, nil
 }
 
 func (p *Parser) parseResourceDrift(change *ChangePayload) (*StreamEvent, error) {

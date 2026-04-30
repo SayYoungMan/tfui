@@ -38,16 +38,6 @@ func TestParseApplyStart(t *testing.T) {
 	assertResourceEvent(t, event, "data.aws_caller_identity.current", ActionRead, "")
 }
 
-func TestParseApplyStart_IgnoresNonRead(t *testing.T) {
-	line := []byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Creating...","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.133445+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"create","id_key":"id","id_value":"my-uploads-bucket","elapsed_seconds":2},"type":"apply_start"}`)
-
-	p := NewParser()
-	event, err := p.ParseLine(line)
-
-	require.NoError(t, err)
-	assert.Nil(t, event)
-}
-
 func TestParseResourceDrift(t *testing.T) {
 	p := NewParser()
 
@@ -185,7 +175,6 @@ func TestParseIgnoredTypes(t *testing.T) {
 	lines := [][]byte{
 		[]byte(`{"@level":"info","@message":"Terraform 1.14.8","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:38.279544+01:00","terraform":"1.14.8","type":"version","ui":"1.2"}`),
 		[]byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Refreshing state... [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.111262+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_complete"}`),
-		[]byte(`{"@level":"info","@message":"data.aws_region.current: Refreshing...","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.118603+01:00","hook":{"resource":{"addr":"data.aws_region.current","module":"","resource":"data.aws_region.current","implied_provider":"aws","resource_type":"aws_region","resource_name":"current","resource_key":null},"action":"read"},"type":"apply_complete"}`),
 	}
 
 	p := NewParser()

@@ -169,9 +169,9 @@ func TestStreamOutput_Plan(t *testing.T) {
 
 func TestStreamOutput_Apply(t *testing.T) {
 	output := strings.Join([]string{
-		"aws_s3_bucket.uploads: Modifying...",
-		"aws_s3_bucket.uploads: Modifications complete after 2s",
-		"Apply complete! Resources: 0 added, 1 changed, 0 destroyed.",
+		`{"@level":"info","@message":"aws_s3_bucket.uploads: Modifying...","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"update","elapsed_seconds":0},"type":"apply_start"}`,
+		`{"@level":"info","@message":"aws_s3_bucket.uploads: Modifications complete after 2s [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:48.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"update","id_key":"id","id_value":"my-uploads-bucket","elapsed_seconds":2},"type":"apply_complete"}`,
+		`{"@level":"info","@message":"Apply complete! Resources: 0 added, 1 changed, 0 destroyed.","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:48.108644+01:00","changes":{"add":0,"change":1,"remove":0,"operation":"apply"},"type":"change_summary"}`,
 	}, "\n")
 
 	runner := &TerraformRunner{
@@ -183,22 +183,30 @@ func TestStreamOutput_Apply(t *testing.T) {
 	ctx := context.Background()
 	ch := runner.Apply(ctx, []string{"aws_s3_bucket.uploads"})
 
-	var lines []string
-	for line := range ch {
-		lines = append(lines, line)
+	var events []StreamEvent
+	for event := range ch {
+		events = append(events, event)
 	}
 
-	require.Len(t, lines, 3)
-	assert.Contains(t, lines[0], "Modifying")
-	assert.Contains(t, lines[1], "Modifications complete")
-	assert.Contains(t, lines[2], "Apply complete")
+	require.Len(t, events, 3)
+
+	assert.Equal(t, "apply_start", events[0].Type)
+	assert.Equal(t, "aws_s3_bucket.uploads", events[0].Resource.Address)
+	assert.Equal(t, ActionUpdate, events[0].Resource.Action)
+
+	assert.Equal(t, "apply_complete", events[1].Type)
+	assert.Equal(t, 2, events[1].Hook.ElapsedSeconds)
+
+	assert.NotNil(t, events[2].Summary)
+	assert.Equal(t, 1, events[2].Summary.Change)
+	assert.Equal(t, "apply", events[2].Summary.Operation)
 }
 
 func TestStreamOutput_Destroy(t *testing.T) {
 	output := strings.Join([]string{
-		"aws_s3_bucket.uploads: Destroying...",
-		"aws_s3_bucket.uploads: Destruction complete after 1s",
-		"Destroy complete! Resources: 1 destroyed.",
+		`{"@level":"info","@message":"aws_s3_bucket.uploads: Destroying... [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"delete","elapsed_seconds":0},"type":"apply_start"}`,
+		`{"@level":"info","@message":"aws_s3_bucket.uploads: Destruction complete after 1s","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:47.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"delete","elapsed_seconds":1},"type":"apply_complete"}`,
+		`{"@level":"info","@message":"Destroy complete! Resources: 1 destroyed.","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:47.108644+01:00","changes":{"add":0,"change":0,"remove":1,"operation":"destroy"},"type":"change_summary"}`,
 	}, "\n")
 
 	runner := &TerraformRunner{
@@ -210,15 +218,22 @@ func TestStreamOutput_Destroy(t *testing.T) {
 	ctx := context.Background()
 	ch := runner.Destroy(ctx, []string{"aws_s3_bucket.uploads"})
 
-	var lines []string
-	for line := range ch {
-		lines = append(lines, line)
+	var events []StreamEvent
+	for event := range ch {
+		events = append(events, event)
 	}
 
-	require.Len(t, lines, 3)
-	assert.Contains(t, lines[0], "Destroying")
-	assert.Contains(t, lines[1], "Destruction complete")
-	assert.Contains(t, lines[2], "Destroy complete")
+	require.Len(t, events, 3)
+
+	assert.Equal(t, "apply_start", events[0].Type)
+	assert.Equal(t, ActionDelete, events[0].Resource.Action)
+
+	assert.Equal(t, "apply_complete", events[1].Type)
+	assert.Equal(t, 1, events[1].Hook.ElapsedSeconds)
+
+	assert.NotNil(t, events[2].Summary)
+	assert.Equal(t, 1, events[2].Summary.Remove)
+	assert.Equal(t, "destroy", events[2].Summary.Operation)
 }
 
 func TestStreamOutput_Taint(t *testing.T) {

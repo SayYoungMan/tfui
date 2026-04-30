@@ -31,13 +31,12 @@ func NewTerraformRunner(workdir string, binary string) *TerraformRunner {
 	}
 }
 
-func (tr *TerraformRunner) StreamPlan(ctx context.Context) <-chan StreamEvent {
+func (tr *TerraformRunner) streamJsonEvents(ctx context.Context, args []string) <-chan StreamEvent {
 	ch := make(chan StreamEvent)
 
 	go func() {
 		defer close(ch)
 
-		args := []string{"plan", "-json"}
 		cmd := tr.cmdFactory(ctx, tr.binary, args...)
 		cmd.Dir = tr.workdir
 		cmd.Cancel = func() error {
@@ -81,6 +80,66 @@ func (tr *TerraformRunner) StreamPlan(ctx context.Context) <-chan StreamEvent {
 	return ch
 }
 
+func (tr *TerraformRunner) StreamPlan(ctx context.Context) <-chan StreamEvent {
+	return tr.streamJsonEvents(ctx, []string{"plan", "-json"})
+}
+
+func (tr *TerraformRunner) Plan(ctx context.Context, targets []string) <-chan string {
+	args := []string{"plan"}
+	for _, t := range targets {
+		args = append(args, fmt.Sprintf("-target=%s", t))
+	}
+	return tr.streamOutput(ctx, args)
+}
+
+func (tr *TerraformRunner) Apply(ctx context.Context, targets []string) <-chan StreamEvent {
+	args := []string{"apply", "-auto-approve", "-json"}
+	for _, t := range targets {
+		args = append(args, fmt.Sprintf("-target=%s", t))
+	}
+	return tr.streamJsonEvents(ctx, args)
+}
+
+func (tr *TerraformRunner) Destroy(ctx context.Context, targets []string) <-chan StreamEvent {
+	args := []string{"destroy", "-auto-approve", "-json"}
+	for _, t := range targets {
+		args = append(args, fmt.Sprintf("-target=%s", t))
+	}
+	return tr.streamJsonEvents(ctx, args)
+}
+
+func (tr *TerraformRunner) Taint(ctx context.Context, targets []string) <-chan string {
+	ch := make(chan string)
+
+	go func() {
+		defer close(ch)
+
+		for _, t := range targets {
+			for line := range tr.streamOutput(ctx, []string{"taint", t}) {
+				ch <- line
+			}
+		}
+	}()
+
+	return ch
+}
+
+func (tr *TerraformRunner) Untaint(ctx context.Context, targets []string) <-chan string {
+	ch := make(chan string)
+
+	go func() {
+		defer close(ch)
+
+		for _, t := range targets {
+			for line := range tr.streamOutput(ctx, []string{"untaint", t}) {
+				ch <- line
+			}
+		}
+	}()
+
+	return ch
+}
+
 // Runs a Terraform command and streams raw stdout/stderr
 func (tr *TerraformRunner) streamOutput(ctx context.Context, args []string) <-chan string {
 	ch := make(chan string)
@@ -115,62 +174,6 @@ func (tr *TerraformRunner) streamOutput(ctx context.Context, args []string) <-ch
 
 		if err := cmd.Wait(); err != nil {
 			ch <- fmt.Sprintf("%s %s exited with error: %v", tr.binary, strings.Join(args, " "), err)
-		}
-	}()
-
-	return ch
-}
-
-func (tr *TerraformRunner) Plan(ctx context.Context, targets []string) <-chan string {
-	args := []string{"plan"}
-	for _, t := range targets {
-		args = append(args, fmt.Sprintf("-target=%s", t))
-	}
-	return tr.streamOutput(ctx, args)
-}
-
-func (tr *TerraformRunner) Apply(ctx context.Context, targets []string) <-chan string {
-	args := []string{"apply", "-auto-approve"}
-	for _, t := range targets {
-		args = append(args, fmt.Sprintf("-target=%s", t))
-	}
-	return tr.streamOutput(ctx, args)
-}
-
-func (tr *TerraformRunner) Destroy(ctx context.Context, targets []string) <-chan string {
-	args := []string{"destroy", "-auto-approve"}
-	for _, t := range targets {
-		args = append(args, fmt.Sprintf("-target=%s", t))
-	}
-	return tr.streamOutput(ctx, args)
-}
-
-func (tr *TerraformRunner) Taint(ctx context.Context, targets []string) <-chan string {
-	ch := make(chan string)
-
-	go func() {
-		defer close(ch)
-
-		for _, t := range targets {
-			for line := range tr.streamOutput(ctx, []string{"taint", t}) {
-				ch <- line
-			}
-		}
-	}()
-
-	return ch
-}
-
-func (tr *TerraformRunner) Untaint(ctx context.Context, targets []string) <-chan string {
-	ch := make(chan string)
-
-	go func() {
-		defer close(ch)
-
-		for _, t := range targets {
-			for line := range tr.streamOutput(ctx, []string{"untaint", t}) {
-				ch <- line
-			}
 		}
 	}()
 
