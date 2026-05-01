@@ -59,6 +59,7 @@ const (
 	viewFilter
 	viewActionPicker
 	viewConfirm
+	viewActionResources
 	viewOutput
 	viewError
 	viewDetail
@@ -169,6 +170,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.actionPickerKeys(msg)
 		case viewConfirm:
 			return m.confirmKeys(msg)
+		case viewActionResources:
+			return m.actionResourcesKeys(msg)
 		case viewOutput:
 			return m.outputKeys(msg)
 		case viewError:
@@ -239,6 +242,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
+
+	case actionTickMsg:
+		return m, tickEverySecond()
 	}
 
 	return m, nil
@@ -251,8 +257,11 @@ func (m Model) View() tea.View {
 		viewString = m.renderActionPickerView()
 	case viewConfirm:
 		viewString = m.renderConfirmView()
-	case viewOutput:
-		viewString = m.renderOutputView()
+	case viewActionResources, viewOutput:
+		viewString = m.renderActionResourcesView()
+		if m.viewState == viewOutput {
+			viewString = m.renderOutputLayer(viewString)
+		}
 	case viewError:
 		viewString = m.renderErrorView()
 	case viewDetail:

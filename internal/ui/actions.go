@@ -53,8 +53,8 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 	addrs := m.selectedAddresses()
 	m.outputLines = nil
 	m.workState = workAction
+	m.viewState = viewActionResources
 	m.offset = 0
-	m.viewState = viewOutput
 
 	m.actionStartTime = time.Now()
 	m.actionResources = make(map[string]*ActionResource, len(addrs))
@@ -74,7 +74,7 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 		}
 		ch := actionFuncs[action](ctx, addrs)
 		m.eventCh = ch
-		return m, waitForEvent(ch)
+		return m, tea.Batch(waitForEvent(ch), tickEverySecond())
 	default:
 		actionFuncs := map[string]func(context.Context, []string) <-chan string{
 			"plan":    m.runner.Plan,

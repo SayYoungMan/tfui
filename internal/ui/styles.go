@@ -31,6 +31,7 @@ var (
 				Padding(6, 6)
 	errorStyle          = lipgloss.NewStyle().Foreground(colorCoral)
 	warningStyle        = lipgloss.NewStyle().Foreground(colorAmber)
+	successStyle        = lipgloss.NewStyle().Foreground(colorGreen)
 	infoBarStyle        = lipgloss.NewStyle().Foreground(colorCreamWhite)
 	helpKeyStyle        = lipgloss.NewStyle().Foreground(colorCreamWhite)
 	helpDescStyle       = lipgloss.NewStyle().Foreground(colorSoftGrey)

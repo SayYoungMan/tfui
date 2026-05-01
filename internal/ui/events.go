@@ -104,7 +104,12 @@ func (m Model) handleActionEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 		return m, waitForEvent(m.eventCh)
 	}
 
-	ar := m.actionResources[event.Resource.Address]
+	ar, ok := m.actionResources[event.Resource.Address]
+	if !ok {
+		// There are some apply_start and apply_complete from data sources that are not selected
+		return m, waitForEvent(m.eventCh)
+	}
+
 	switch event.Type {
 	case "apply_start":
 		ar.Status = actionResourceInProgress
@@ -140,5 +145,13 @@ type forceQuitReadyMsg struct{}
 func waitForForceQuit() tea.Cmd {
 	return tea.Tick(10*time.Second, func(t time.Time) tea.Msg {
 		return forceQuitReadyMsg{}
+	})
+}
+
+type actionTickMsg time.Time
+
+func tickEverySecond() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return actionTickMsg(t)
 	})
 }

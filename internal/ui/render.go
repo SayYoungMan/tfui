@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"charm.land/lipgloss/v2"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
@@ -316,14 +317,91 @@ func (m Model) renderConfirmView() string {
 }
 
 const (
-	defaultReservedOutputWidth = 6
-	defaultReservedOutputRows  = 6
+	statusColWidth = 16
+	timeColWidth   = 10
 )
 
-func (m Model) renderOutputView() string {
+func (m Model) renderActionResourcesView() string {
 	action := actionChoices[m.actionCursor]
-	title := fmt.Sprintf("terraform %s", action)
+	title := fmt.Sprintf("%sing %d resources...", action, len(m.selected))
 
+	addrColWidth := max(1, m.viewWidth-statusColWidth-timeColWidth*2-6)
+	header := fmt.Sprintf("  %-*s  %-*s  %-*s  %-*s",
+		addrColWidth, "Resource",
+		statusColWidth, "Status",
+		timeColWidth, "Wait",
+		timeColWidth, "Elapsed",
+	)
+
+	var rows strings.Builder
+	fmt.Fprintln(&rows, dimStyle.Render(header))
+	fmt.Fprintln(&rows, dimStyle.Render(strings.Repeat("─", m.viewWidth)))
+
+	var offset int
+	if m.viewState == viewActionResources {
+		offset = m.offset
+	} else {
+		offset = 0
+	}
+
+	addrs := m.selectedAddresses()
+	visibleRows := max(1, m.viewHeight-4)
+	end := min(offset+visibleRows, len(addrs))
+
+	for _, addr := range addrs[offset:end] {
+		ar := m.actionResources[addr]
+
+		displayAddr := addr
+		if lipgloss.Width(displayAddr) > addrColWidth {
+			displayAddr = ansi.Truncate(displayAddr, addrColWidth, "…")
+		}
+
+		var status, wait, elapsed string
+		switch ar.Status {
+		case actionResourcePending:
+			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Pending"))
+			wait = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(time.Since(m.actionStartTime))))
+			elapsed = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+		case actionResourceInProgress:
+			status = infoBarStyle.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" In Progress"))
+			wait = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.TimeToStart)))
+			elapsed = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(time.Since(m.actionStartTime)-ar.TimeToStart)))
+		case actionResourceSuccessful:
+			status = successStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "✅ Complete"))
+			wait = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.TimeToStart)))
+			elapsed = successStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.TimeToProcess)))
+		case actionResourceFailed:
+			status = errorStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "❌ Failed"))
+			wait = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.TimeToStart)))
+			elapsed = errorStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.TimeToProcess)))
+		}
+
+		fmt.Fprintf(&rows, "  %-*s  %s  %s  %s\n", addrColWidth, displayAddr, status, wait, elapsed)
+	}
+
+	var s strings.Builder
+	fmt.Fprintln(&s, title)
+	fmt.Fprintln(&s)
+	fmt.Fprint(&s, rows.String())
+	fmt.Fprintln(&s)
+
+	var help string
+	if m.isRunning() {
+		help = "'o' raw output | Running..."
+	} else {
+		help = "'o' raw output | Esc to close and re-plan"
+	}
+	fmt.Fprint(&s, help)
+
+	return s.String()
+}
+
+const (
+	defaultReservedOutputWidth = 6
+	defaultReservedOutputRows  = 8
+)
+
+func (m Model) renderOutputLayer(background string) string {
 	boxHeight := max(1, m.viewHeight-defaultReservedOutputRows)
 	contentWidth := max(1, m.viewWidth-defaultReservedOutputWidth)
 	innerHeight := boxHeight - 2 // subtract top and bottom border rows
@@ -339,26 +417,20 @@ func (m Model) renderOutputView() string {
 		visualRows += lineRows
 	}
 
-	box := resourceBorderStyle.
+	modal := resourceBorderStyle.
 		Width(m.viewWidth - 2).
 		Height(boxHeight).
 		Render(strings.TrimSuffix(content.String(), "\n"))
 
-	var help string
-	if m.isRunning() {
-		help = "↑/↓ scroll | Running..."
-	} else {
-		help = "↑/↓ scroll | Done! | Esc / Enter to continue"
-	}
+	modalWidth := lipgloss.Width(modal)
+	modalHeight := lipgloss.Height(modal)
+	x := max(0, (m.viewWidth-modalWidth)/2)
+	y := max(0, (m.viewHeight-modalHeight)/2)
 
-	var s strings.Builder
-	fmt.Fprintln(&s, title)
-	fmt.Fprintln(&s)
-	fmt.Fprintln(&s, box)
-	fmt.Fprintln(&s)
-	fmt.Fprint(&s, help)
+	bg := lipgloss.NewLayer(dimStyle.Render(background))
+	fg := lipgloss.NewLayer(modal).X(x).Y(y).Z(1)
 
-	return s.String()
+	return lipgloss.NewCompositor(bg, fg).Render()
 }
 
 func (m Model) renderDetailView() string {
