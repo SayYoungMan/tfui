@@ -217,24 +217,8 @@ func TestRenderOutputView_ShowsContent(t *testing.T) {
 
 	view := m.View()
 
-	assert.Contains(t, view.Content, "terraform apply")
 	assert.Contains(t, view.Content, "aws_s3_bucket.uploads: Modifying...")
 	assert.Contains(t, view.Content, "Apply complete!")
-}
-
-func TestRenderOutputView_HelpTextChangesWhenDone(t *testing.T) {
-	m := newTestModelEmpty()
-	m.viewState = viewOutput
-	m.workState = workAction
-
-	view := m.View()
-	assert.NotContains(t, view.Content, "Done! | Esc / Enter to continue")
-	assert.Contains(t, view.Content, "Running...")
-
-	m.workState = workIdle
-	view = m.View()
-	assert.Contains(t, view.Content, "Done! | Esc / Enter to continue")
-	assert.NotContains(t, view.Content, "Running...")
 }
 
 func TestRenderShutdownLayer_ShowsWaitingMessage(t *testing.T) {

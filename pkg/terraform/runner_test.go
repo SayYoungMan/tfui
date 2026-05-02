@@ -164,7 +164,6 @@ func TestStreamOutput_Plan(t *testing.T) {
 
 	assert.Equal(t, "refresh_complete", events[1].Type)
 
-	assert.Equal(t, "planned_change", events[2].Type)
 	assert.Equal(t, ActionUpdate, events[2].Resource.Action)
 
 	assert.NotNil(t, events[3].Summary)

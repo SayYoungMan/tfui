@@ -425,7 +425,7 @@ func TestConfirmKeys_ConfirmToOutput(t *testing.T) {
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
-	assert.Equal(t, viewOutput, m.viewState)
+	assert.Equal(t, viewActionResources, m.viewState)
 }
 
 func TestConfirmKeys_EscToPicker(t *testing.T) {
@@ -499,15 +499,27 @@ func TestQuitConfirmKeys_Confirm(t *testing.T) {
 	assert.NotNil(t, cmd)
 }
 
-func TestOutputKeys_EscBlockedWhileOutputing(t *testing.T) {
-	m := newTestModel()
-	m.viewState = viewOutput
-	m.workState = workAction
+func TestOutputKeys_EscEnterToActionResources(t *testing.T) {
+	tests := []struct {
+		name string
+		key  rune
+	}{
+		{name: "Esc", key: tea.KeyEscape},
+		{name: "Enter", key: tea.KeyEnter},
+	}
 
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
-	m = newModel.(Model)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newTestModel()
+			m.viewState = viewOutput
+			m.workState = workAction
 
-	assert.Equal(t, viewOutput, m.viewState)
+			newModel, _ := m.Update(tea.KeyPressMsg{Code: tt.key})
+			m = newModel.(Model)
+
+			assert.Equal(t, viewActionResources, m.viewState)
+		})
+	}
 }
 
 func TestOutputKeys_Navigation(t *testing.T) {

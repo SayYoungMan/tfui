@@ -174,7 +174,6 @@ func TestParseOutputs(t *testing.T) {
 func TestParseIgnoredTypes(t *testing.T) {
 	lines := [][]byte{
 		[]byte(`{"@level":"info","@message":"Terraform 1.14.8","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:38.279544+01:00","terraform":"1.14.8","type":"version","ui":"1.2"}`),
-		[]byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Refreshing state... [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.111262+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_complete"}`),
 	}
 
 	p := NewParser()
