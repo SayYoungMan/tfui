@@ -236,7 +236,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case actionTickMsg:
-		return m, tickEverySecond()
+		if m.workState == workAction {
+			return m, tickEverySecond()
+		}
 	}
 
 	return m, nil

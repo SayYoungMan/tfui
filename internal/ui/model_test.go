@@ -3,6 +3,7 @@ package ui
 import (
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
@@ -327,4 +328,33 @@ func TestModel_MouseWheelScrollsOutput(t *testing.T) {
 	newModel, _ = m.Update(tea.MouseWheelMsg{Button: tea.MouseWheelUp})
 	m = newModel.(Model)
 	assert.Equal(t, 0, m.offset)
+}
+
+func TestUpdate_StreamComplete_PendingToSkipped(t *testing.T) {
+	m := newActionTestModel()
+	m.actionResources["aws_s3_bucket.a"].Status = actionResourceSuccessful
+	// aws_s3_bucket.b stays pending
+
+	newModel, _ := m.Update(streamCompleteMsg{})
+	m = newModel.(Model)
+
+	assert.Equal(t, actionResourceSuccessful, m.actionResources["aws_s3_bucket.a"].Status)
+	assert.Equal(t, actionResourceSkipped, m.actionResources["aws_s3_bucket.b"].Status)
+}
+
+func TestUpdate_ActionTick_ReschedulesWhenRunning(t *testing.T) {
+	m := newActionTestModel()
+
+	_, cmd := m.Update(actionTickMsg(time.Now()))
+
+	assert.NotNil(t, cmd)
+}
+
+func TestUpdate_ActionTick_StopsWhenIdle(t *testing.T) {
+	m := newActionTestModel()
+	m.workState = workIdle
+
+	_, cmd := m.Update(actionTickMsg(time.Now()))
+
+	assert.Nil(t, cmd)
 }
