@@ -135,7 +135,7 @@ func TestStreamPlan_ContextCancellation(t *testing.T) {
 	}
 }
 
-func TestStreamOutput_Plan(t *testing.T) {
+func TestStreamJsonEvents_Plan(t *testing.T) {
 	output := strings.Join([]string{
 		`{"@level":"info","@message":"aws_s3_bucket.uploads: Refreshing state... [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_start"}`,
 		`{"@level":"info","@message":"aws_s3_bucket.uploads: Refresh complete [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_complete"}`,
@@ -171,7 +171,7 @@ func TestStreamOutput_Plan(t *testing.T) {
 	assert.Equal(t, "plan", events[3].Summary.Operation)
 }
 
-func TestStreamOutput_Apply(t *testing.T) {
+func TestStreamJsonEvents_Apply(t *testing.T) {
 	output := strings.Join([]string{
 		`{"@level":"info","@message":"aws_s3_bucket.uploads: Modifying...","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"update","elapsed_seconds":0},"type":"apply_start"}`,
 		`{"@level":"info","@message":"aws_s3_bucket.uploads: Modifications complete after 2s [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:48.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"update","id_key":"id","id_value":"my-uploads-bucket","elapsed_seconds":2},"type":"apply_complete"}`,
@@ -206,7 +206,7 @@ func TestStreamOutput_Apply(t *testing.T) {
 	assert.Equal(t, "apply", events[2].Summary.Operation)
 }
 
-func TestStreamOutput_Destroy(t *testing.T) {
+func TestStreamJsonEvents_Destroy(t *testing.T) {
 	output := strings.Join([]string{
 		`{"@level":"info","@message":"aws_s3_bucket.uploads: Destroying... [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"delete","elapsed_seconds":0},"type":"apply_start"}`,
 		`{"@level":"info","@message":"aws_s3_bucket.uploads: Destruction complete after 1s","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:47.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"delete","elapsed_seconds":1},"type":"apply_complete"}`,
@@ -240,7 +240,7 @@ func TestStreamOutput_Destroy(t *testing.T) {
 	assert.Equal(t, "destroy", events[2].Summary.Operation)
 }
 
-func TestStreamOutput_Taint(t *testing.T) {
+func TestStreamPerResource_Taint(t *testing.T) {
 	output := "Resource instance aws_s3_bucket.uploads has been marked as tainted."
 
 	runner := &TerraformRunner{
@@ -250,25 +250,30 @@ func TestStreamOutput_Taint(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	ch := runner.Taint(ctx, []string{"aws_s3_bucket.uploads"})
+	targets := []string{"aws_s3_bucket.a", "aws_s3_bucket.b"}
+	ch := runner.Taint(ctx, targets)
 
 	var events []StreamEvent
 	for event := range ch {
 		events = append(events, event)
 	}
 
-	require.Len(t, events, 3)
+	require.Len(t, events, 6)
 
 	assert.Equal(t, "apply_start", events[0].Type)
-	assert.Equal(t, "aws_s3_bucket.uploads", events[0].Resource.Address)
-
+	assert.Equal(t, "aws_s3_bucket.a", events[0].Resource.Address)
 	assert.Contains(t, events[1].Message, "tainted")
-
 	assert.Equal(t, "apply_complete", events[2].Type)
-	assert.Equal(t, "aws_s3_bucket.uploads", events[2].Resource.Address)
+	assert.Equal(t, "aws_s3_bucket.a", events[2].Resource.Address)
+
+	assert.Equal(t, "apply_start", events[3].Type)
+	assert.Equal(t, "aws_s3_bucket.b", events[3].Resource.Address)
+	assert.Contains(t, events[4].Message, "tainted")
+	assert.Equal(t, "apply_complete", events[5].Type)
+	assert.Equal(t, "aws_s3_bucket.b", events[5].Resource.Address)
 }
 
-func TestStreamOutput_Untaint(t *testing.T) {
+func TestStreamPerResource_Untaint(t *testing.T) {
 	output := "Resource instance aws_s3_bucket.uploads has been successfully untainted."
 
 	runner := &TerraformRunner{
@@ -293,5 +298,30 @@ func TestStreamOutput_Untaint(t *testing.T) {
 	assert.Contains(t, events[1].Message, "untainted")
 
 	assert.Equal(t, "apply_complete", events[2].Type)
+	assert.Equal(t, "aws_s3_bucket.uploads", events[2].Resource.Address)
+}
+
+func TestStreamPerResource_Error(t *testing.T) {
+	runner := &TerraformRunner{
+		binary:     "terraform",
+		workdir:    t.TempDir(),
+		cmdFactory: mockCmdFactory("Error: No such resource", 1),
+	}
+
+	ch := runner.Taint(context.Background(), []string{"aws_s3_bucket.uploads"})
+
+	var events []StreamEvent
+	for event := range ch {
+		events = append(events, event)
+	}
+
+	require.Len(t, events, 3)
+
+	assert.Equal(t, "apply_start", events[0].Type)
+	assert.Equal(t, "aws_s3_bucket.uploads", events[0].Resource.Address)
+
+	assert.Contains(t, events[1].Message, "Error")
+
+	assert.Equal(t, "apply_errored", events[2].Type)
 	assert.Equal(t, "aws_s3_bucket.uploads", events[2].Resource.Address)
 }

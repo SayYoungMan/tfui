@@ -28,6 +28,18 @@ func TestParseRefreshStart(t *testing.T) {
 	assert.Equal(t, "aws", event.Resource.ImpliedProvider)
 }
 
+func TestParseRefreshComplete(t *testing.T) {
+	line := []byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Refresh complete [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_complete"}`)
+
+	p := NewParser()
+	event, err := p.ParseLine(line)
+
+	require.NoError(t, err)
+	require.NotNil(t, event)
+	assert.Equal(t, "refresh_complete", event.Type)
+	assert.Equal(t, "aws_s3_bucket.uploads", event.Resource.Address)
+}
+
 func TestParseApplyStart(t *testing.T) {
 	line := []byte(`{"@level":"info","@message":"data.aws_caller_identity.current: Reading...","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.133445+01:00","hook":{"resource":{"addr":"data.aws_caller_identity.current","module":"","resource":"data.aws_caller_identity.current","implied_provider":"aws","resource_type":"aws_caller_identity","resource_name":"current","resource_key":null},"action":"read","id_key":"id","id_value":"123456789012","elapsed_seconds":0},"type":"apply_start"}`)
 
@@ -36,6 +48,32 @@ func TestParseApplyStart(t *testing.T) {
 
 	require.NoError(t, err)
 	assertResourceEvent(t, event, "data.aws_caller_identity.current", ActionRead, "")
+}
+
+func TestParseApplyProgress(t *testing.T) {
+	line := []byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Still creating... [30s elapsed]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"create","elapsed_seconds":30},"type":"apply_progress"}`)
+
+	p := NewParser()
+	event, err := p.ParseLine(line)
+
+	require.NoError(t, err)
+	require.NotNil(t, event)
+	assert.Equal(t, "apply_progress", event.Type)
+	assert.Equal(t, 30, event.Hook.ElapsedSeconds)
+	assert.Equal(t, "aws_s3_bucket.uploads", event.Resource.Address)
+}
+
+func TestParseApplyErrored(t *testing.T) {
+	line := []byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Creation errored after 5s","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"create","elapsed_seconds":5},"type":"apply_errored"}`)
+
+	p := NewParser()
+	event, err := p.ParseLine(line)
+
+	require.NoError(t, err)
+	require.NotNil(t, event)
+	assert.Equal(t, "apply_errored", event.Type)
+	assert.Equal(t, 5, event.Hook.ElapsedSeconds)
+	assert.Equal(t, "aws_s3_bucket.uploads", event.Resource.Address)
 }
 
 func TestParseResourceDrift(t *testing.T) {
@@ -189,6 +227,41 @@ func TestParseInvalidJSON(t *testing.T) {
 	_, err := p.ParseLine([]byte("not json at all"))
 
 	assert.Error(t, err)
+}
+
+func TestParseLine_MessagePopulated(t *testing.T) {
+	tests := []struct {
+		name    string
+		line    []byte
+		message string
+	}{
+		{
+			name:    "refresh_start",
+			line:    []byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Refreshing state...","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_start"}`),
+			message: "aws_s3_bucket.uploads: Refreshing state...",
+		},
+		{
+			name:    "planned_change",
+			line:    []byte(`{"@level":"info","@message":"aws_s3_bucket.uploads: Plan to update in-place","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:47.040866+01:00","change":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"update"},"type":"planned_change"}`),
+			message: "aws_s3_bucket.uploads: Plan to update in-place",
+		},
+		{
+			name:    "change_summary",
+			line:    []byte(`{"@level":"info","@message":"Plan: 1 to add, 0 to change, 0 to destroy.","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:47.040866+01:00","changes":{"add":1,"change":0,"remove":0,"operation":"plan"},"type":"change_summary"}`),
+			message: "Plan: 1 to add, 0 to change, 0 to destroy.",
+		},
+	}
+
+	p := NewParser()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			event, err := p.ParseLine(tt.line)
+
+			require.NoError(t, err)
+			require.NotNil(t, event)
+			assert.Equal(t, tt.message, event.Message)
+		})
+	}
 }
 
 // Helper function to easily compare created event from the input data
