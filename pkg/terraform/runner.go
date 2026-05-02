@@ -84,12 +84,12 @@ func (tr *TerraformRunner) StreamPlan(ctx context.Context) <-chan StreamEvent {
 	return tr.streamJsonEvents(ctx, []string{"plan", "-json"})
 }
 
-func (tr *TerraformRunner) Plan(ctx context.Context, targets []string) <-chan string {
-	args := []string{"plan"}
+func (tr *TerraformRunner) Plan(ctx context.Context, targets []string) <-chan StreamEvent {
+	args := []string{"plan", "-json"}
 	for _, t := range targets {
 		args = append(args, fmt.Sprintf("-target=%s", t))
 	}
-	return tr.streamOutput(ctx, args)
+	return tr.streamJsonEvents(ctx, args)
 }
 
 func (tr *TerraformRunner) Apply(ctx context.Context, targets []string) <-chan StreamEvent {

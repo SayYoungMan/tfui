@@ -137,14 +137,10 @@ func TestStreamPlan_ContextCancellation(t *testing.T) {
 
 func TestStreamOutput_Plan(t *testing.T) {
 	output := strings.Join([]string{
-		"Terraform will perform the following actions:",
-		"  # aws_s3_bucket.uploads will be updated in-place",
-		"  ~ resource \"aws_s3_bucket\" \"uploads\" {",
-		"      ~ tags = {",
-		"          + \"Environment\" = \"production\"",
-		"        }",
-		"    }",
-		"Plan: 0 to add, 1 to change, 0 to destroy.",
+		`{"@level":"info","@message":"aws_s3_bucket.uploads: Refreshing state... [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_start"}`,
+		`{"@level":"info","@message":"aws_s3_bucket.uploads: Refresh complete [id=my-uploads-bucket]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"my-uploads-bucket"},"type":"refresh_complete"}`,
+		`{"@level":"info","@message":"aws_s3_bucket.uploads: Plan to update in-place","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:47.040866+01:00","change":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"update"},"type":"planned_change"}`,
+		`{"@level":"info","@message":"Plan: 0 to add, 1 to change, 0 to destroy.","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:47.040866+01:00","changes":{"add":0,"change":1,"remove":0,"operation":"plan"},"type":"change_summary"}`,
 	}, "\n")
 
 	runner := &TerraformRunner{
@@ -156,15 +152,24 @@ func TestStreamOutput_Plan(t *testing.T) {
 	ctx := context.Background()
 	ch := runner.Plan(ctx, []string{"aws_s3_bucket.uploads"})
 
-	var lines []string
-	for line := range ch {
-		lines = append(lines, line)
+	var events []StreamEvent
+	for event := range ch {
+		events = append(events, event)
 	}
 
-	require.Len(t, lines, 8)
-	assert.Contains(t, lines[0], "Terraform will perform the following actions")
-	assert.Contains(t, lines[1], "aws_s3_bucket.uploads")
-	assert.Contains(t, lines[7], "Plan: 0 to add, 1 to change, 0 to destroy")
+	require.Len(t, events, 4)
+
+	assert.Equal(t, "refresh_start", events[0].Type)
+	assert.Equal(t, "aws_s3_bucket.uploads", events[0].Resource.Address)
+
+	assert.Equal(t, "refresh_complete", events[1].Type)
+
+	assert.Equal(t, "planned_change", events[2].Type)
+	assert.Equal(t, ActionUpdate, events[2].Resource.Action)
+
+	assert.NotNil(t, events[3].Summary)
+	assert.Equal(t, 1, events[3].Summary.Change)
+	assert.Equal(t, "plan", events[3].Summary.Operation)
 }
 
 func TestStreamOutput_Apply(t *testing.T) {

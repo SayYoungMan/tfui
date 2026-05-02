@@ -12,6 +12,60 @@ import (
 	"github.com/alecthomas/chroma/v2/quick"
 )
 
+type actionResourceStatus int
+
+const (
+	actionResourcePending          actionResourceStatus = iota // Before 'refresh_start' arrives
+	actionResourceReadingState                                 // While refreshing
+	actionResourceWaitingForAction                             // After 'refresh_complete' but before 'apply_start'
+	actionResourceInProgress                                   // During apply
+	actionResourceSuccessful
+	actionResourceFailed
+	actionResourceSkipped // This happens when you want to apply change to a resource with no change
+)
+
+type ActionResource struct {
+	Address            string
+	Status             actionResourceStatus
+	ReadStartedAt      time.Time
+	ReadCompletedAt    time.Time
+	ProcessStartedAt   time.Time
+	ProcessCompletedAt time.Time
+}
+
+// duration of how long it waited to be picked up for refresh
+func (ar *ActionResource) waitDuration(startTime time.Time) time.Duration {
+	if ar.ReadStartedAt.IsZero() {
+		return time.Since(startTime)
+	}
+	return ar.ReadStartedAt.Sub(startTime)
+}
+
+// duration of how long the refresh took place
+func (ar *ActionResource) readDuration() time.Duration {
+	// For taint, there is no refreshing state
+	if ar.ReadStartedAt.IsZero() {
+		return 0
+	}
+
+	if ar.ReadCompletedAt.IsZero() {
+		return time.Since(ar.ReadStartedAt)
+	}
+	return ar.ReadCompletedAt.Sub(ar.ReadStartedAt)
+}
+
+// duration of how long the action took place
+func (ar *ActionResource) processDuration() time.Duration {
+	if ar.ProcessStartedAt.IsZero() {
+		return 0
+	}
+
+	if ar.ProcessCompletedAt.IsZero() {
+		return time.Since(ar.ProcessStartedAt)
+	}
+	return ar.ProcessCompletedAt.Sub(ar.ProcessStartedAt)
+}
+
 func (m Model) gracefulQuit() (tea.Model, tea.Cmd) {
 	m.quitState = quittingState
 	if m.cancel.fn != nil {
@@ -67,8 +121,9 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 
 	action := actionChoices[m.actionCursor]
 	switch action {
-	case "apply", "destroy":
+	case "plan", "apply", "destroy":
 		actionFuncs := map[string]func(context.Context, []string) <-chan terraform.StreamEvent{
+			"plan":    m.runner.Plan,
 			"apply":   m.runner.Apply,
 			"destroy": m.runner.Destroy,
 		}
@@ -77,7 +132,6 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 		return m, tea.Batch(waitForEvent(ch), tickEverySecond())
 	default:
 		actionFuncs := map[string]func(context.Context, []string) <-chan string{
-			"plan":    m.runner.Plan,
 			"taint":   m.runner.Taint,
 			"untaint": m.runner.Untaint,
 		}

@@ -37,9 +37,7 @@ func (p *Parser) ParseLine(line []byte) (*StreamEvent, error) {
 	var event *StreamEvent
 	var err error
 	switch msg.Type {
-	case "refresh_start":
-		event, err = p.parseRefreshStart(msg.Hook)
-	case "apply_start", "apply_progress", "apply_complete", "apply_errored":
+	case "refresh_start", "refresh_complete", "apply_start", "apply_progress", "apply_complete", "apply_errored":
 		event, err = &StreamEvent{
 			Resource: extractResourceInfo(&msg.Hook.Resource, normalizeAction(msg.Hook.Action), ""),
 			Hook:     msg.Hook,
@@ -64,16 +62,6 @@ func (p *Parser) ParseLine(line []byte) (*StreamEvent, error) {
 	}
 
 	return event, err
-}
-
-func (p *Parser) parseRefreshStart(hook *HookPayload) (*StreamEvent, error) {
-	addr := hook.Resource.Addr
-	if !p.seen[addr] {
-		p.seen[addr] = true
-		p.resourceCount++
-	}
-
-	return &StreamEvent{Resource: extractResourceInfo(&hook.Resource, ActionNoop, "")}, nil
 }
 
 func (p *Parser) parseResourceDrift(change *ChangePayload) (*StreamEvent, error) {

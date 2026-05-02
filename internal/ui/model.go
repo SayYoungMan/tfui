@@ -97,23 +97,6 @@ type Row struct {
 	Parent     string
 }
 
-type actionResourceStatus int
-
-const (
-	actionResourcePending actionResourceStatus = iota
-	actionResourceInProgress
-	actionResourceSuccessful
-	actionResourceFailed
-	actionResourceSkipped // This happens when you want to apply change to a resource with no change
-)
-
-type ActionResource struct {
-	Address       string
-	Status        actionResourceStatus
-	TimeToStart   time.Duration
-	TimeToProcess time.Duration
-}
-
 func NewModel(runner *terraform.TerraformRunner) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot

@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"charm.land/lipgloss/v2"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
@@ -325,12 +324,13 @@ func (m Model) renderActionResourcesView() string {
 	action := actionChoices[m.actionCursor]
 	title := fmt.Sprintf("%sing %d resources...", action, len(m.selected))
 
-	addrColWidth := max(1, m.viewWidth-statusColWidth-timeColWidth*2-6)
-	header := fmt.Sprintf("  %-*s  %-*s  %-*s  %-*s",
+	addrColWidth := max(1, m.viewWidth-statusColWidth-timeColWidth*3-10)
+	header := fmt.Sprintf("  %-*s  %-*s  %-*s  %-*s  %-*s",
 		addrColWidth, "Resource",
 		statusColWidth, "Status",
 		timeColWidth, "Wait",
-		timeColWidth, "Elapsed",
+		timeColWidth, "Read",
+		timeColWidth, "Process",
 	)
 
 	var rows strings.Builder
@@ -356,31 +356,35 @@ func (m Model) renderActionResourcesView() string {
 			displayAddr = ansi.Truncate(displayAddr, addrColWidth, "…")
 		}
 
-		var status, wait, elapsed string
+		var status string
+		wait := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.waitDuration(m.actionStartTime))))
+		read := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.readDuration())))
+		process := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
 		switch ar.Status {
 		case actionResourcePending:
 			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Pending"))
-			wait = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(time.Since(m.actionStartTime))))
-			elapsed = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+			read = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+		case actionResourceReadingState:
+			status = infoBarStyle.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" Reading"))
+			read = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.readDuration())))
+		case actionResourceWaitingForAction:
+			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Waiting"))
 		case actionResourceInProgress:
 			status = infoBarStyle.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" In Progress"))
-			wait = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.TimeToStart)))
-			elapsed = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(time.Since(m.actionStartTime)-ar.TimeToStart)))
+			process = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.processDuration())))
 		case actionResourceSuccessful:
 			status = successStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "✅ Complete"))
-			wait = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.TimeToStart)))
-			elapsed = successStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.TimeToProcess)))
+			process = successStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.processDuration())))
 		case actionResourceFailed:
 			status = errorStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "❌ Failed"))
-			wait = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.TimeToStart)))
-			elapsed = errorStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.TimeToProcess)))
+			process = errorStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.processDuration())))
 		case actionResourceSkipped:
 			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "— No change"))
 			wait = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
-			elapsed = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+			read = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
 		}
 
-		fmt.Fprintf(&rows, "  %-*s  %s  %s  %s\n", addrColWidth, displayAddr, status, wait, elapsed)
+		fmt.Fprintf(&rows, "  %-*s  %s  %s  %s  %s\n", addrColWidth, displayAddr, status, wait, read, process)
 	}
 
 	var s strings.Builder
