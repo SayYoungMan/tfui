@@ -253,13 +253,20 @@ func TestStreamOutput_Taint(t *testing.T) {
 	ctx := context.Background()
 	ch := runner.Taint(ctx, []string{"aws_s3_bucket.uploads"})
 
-	var lines []string
-	for line := range ch {
-		lines = append(lines, line)
+	var events []StreamEvent
+	for event := range ch {
+		events = append(events, event)
 	}
 
-	require.Len(t, lines, 1)
-	assert.Contains(t, lines[0], "tainted")
+	require.Len(t, events, 3)
+
+	assert.Equal(t, "apply_start", events[0].Type)
+	assert.Equal(t, "aws_s3_bucket.uploads", events[0].Resource.Address)
+
+	assert.Contains(t, events[1].Message, "tainted")
+
+	assert.Equal(t, "apply_complete", events[2].Type)
+	assert.Equal(t, "aws_s3_bucket.uploads", events[2].Resource.Address)
 }
 
 func TestStreamOutput_Untaint(t *testing.T) {
@@ -274,11 +281,18 @@ func TestStreamOutput_Untaint(t *testing.T) {
 	ctx := context.Background()
 	ch := runner.Untaint(ctx, []string{"aws_s3_bucket.uploads"})
 
-	var lines []string
-	for line := range ch {
-		lines = append(lines, line)
+	var events []StreamEvent
+	for event := range ch {
+		events = append(events, event)
 	}
 
-	require.Len(t, lines, 1)
-	assert.Contains(t, lines[0], "untainted")
+	require.Len(t, events, 3)
+
+	assert.Equal(t, "apply_start", events[0].Type)
+	assert.Equal(t, "aws_s3_bucket.uploads", events[0].Resource.Address)
+
+	assert.Contains(t, events[1].Message, "untainted")
+
+	assert.Equal(t, "apply_complete", events[2].Type)
+	assert.Equal(t, "aws_s3_bucket.uploads", events[2].Resource.Address)
 }

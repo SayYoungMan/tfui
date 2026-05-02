@@ -35,6 +35,10 @@ type ActionResource struct {
 
 // duration of how long it waited to be picked up for refresh
 func (ar *ActionResource) waitDuration(startTime time.Time) time.Duration {
+	// For taint / untaint it doesn't refresh state so wait time is until process start
+	if !ar.ProcessStartedAt.IsZero() {
+		return ar.ProcessStartedAt.Sub(startTime)
+	}
 	if ar.ReadStartedAt.IsZero() {
 		return time.Since(startTime)
 	}
@@ -120,25 +124,17 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 	}
 
 	action := actionChoices[m.actionCursor]
-	switch action {
-	case "plan", "apply", "destroy":
-		actionFuncs := map[string]func(context.Context, []string) <-chan terraform.StreamEvent{
-			"plan":    m.runner.Plan,
-			"apply":   m.runner.Apply,
-			"destroy": m.runner.Destroy,
-		}
-		ch := actionFuncs[action](ctx, addrs)
-		m.eventCh = ch
-		return m, tea.Batch(waitForEvent(ch), tickEverySecond())
-	default:
-		actionFuncs := map[string]func(context.Context, []string) <-chan string{
-			"taint":   m.runner.Taint,
-			"untaint": m.runner.Untaint,
-		}
-		m.outputCh = actionFuncs[action](ctx, addrs)
-
-		return m, waitForOutput(m.outputCh)
+	actionFuncs := map[string]func(context.Context, []string) <-chan terraform.StreamEvent{
+		"plan":    m.runner.Plan,
+		"apply":   m.runner.Apply,
+		"destroy": m.runner.Destroy,
+		"taint":   m.runner.Taint,
+		"untaint": m.runner.Untaint,
 	}
+	ch := actionFuncs[action](ctx, addrs)
+	m.eventCh = ch
+
+	return m, tea.Batch(waitForEvent(ch), tickEverySecond())
 }
 
 func (m *Model) openDetail() {
