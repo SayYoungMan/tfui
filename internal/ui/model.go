@@ -104,6 +104,7 @@ const (
 	actionResourceInProgress
 	actionResourceSuccessful
 	actionResourceFailed
+	actionResourceSkipped // This happens when you want to apply change to a resource with no change
 )
 
 type ActionResource struct {
@@ -211,6 +212,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case streamCompleteMsg:
 		m.workState = workIdle
+
+		// If some resources are still pending that means they have no change
+		for _, ar := range m.actionResources {
+			if ar.Status == actionResourcePending {
+				ar.Status = actionResourceSkipped
+			}
+		}
+
 		if m.quitState == quittingState || m.quitState == forceQuitReadyState {
 			return m, tea.Quit
 		}

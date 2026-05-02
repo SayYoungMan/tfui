@@ -374,6 +374,10 @@ func (m Model) renderActionResourcesView() string {
 			status = errorStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "❌ Failed"))
 			wait = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.TimeToStart)))
 			elapsed = errorStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.TimeToProcess)))
+		case actionResourceSkipped:
+			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "— No change"))
+			wait = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+			elapsed = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
 		}
 
 		fmt.Fprintf(&rows, "  %-*s  %s  %s  %s\n", addrColWidth, displayAddr, status, wait, elapsed)
