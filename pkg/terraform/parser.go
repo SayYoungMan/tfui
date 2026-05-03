@@ -38,6 +38,9 @@ func (p *Parser) ParseLine(line []byte) (*StreamEvent, error) {
 	var err error
 	switch msg.Type {
 	case "refresh_start", "refresh_complete", "apply_start", "apply_progress", "apply_complete", "apply_errored":
+		if msg.Hook == nil {
+			return nil, nil
+		}
 		event, err = &StreamEvent{
 			Resource: extractResourceInfo(&msg.Hook.Resource, normalizeAction(msg.Hook.Action), ""),
 			Hook:     msg.Hook,

@@ -123,6 +123,9 @@ func (tr *TerraformRunner) streamPerResource(ctx context.Context, command string
 		defer close(ch)
 
 		for _, t := range targets {
+			if ctx.Err() != nil {
+				return
+			}
 			ch <- StreamEvent{
 				Type:     "apply_start",
 				Resource: &Resource{Address: t},
