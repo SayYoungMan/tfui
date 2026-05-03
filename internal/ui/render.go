@@ -316,14 +316,100 @@ func (m Model) renderConfirmView() string {
 }
 
 const (
-	defaultReservedOutputWidth = 6
-	defaultReservedOutputRows  = 6
+	statusColWidth = 16
+	timeColWidth   = 10
 )
 
-func (m Model) renderOutputView() string {
+func (m Model) renderActionResourcesView() string {
 	action := actionChoices[m.actionCursor]
-	title := fmt.Sprintf("terraform %s", action)
+	title := fmt.Sprintf("%sing %d resources...", action, len(m.selected))
 
+	addrColWidth := max(1, m.viewWidth-statusColWidth-timeColWidth*3-10)
+	header := fmt.Sprintf("  %-*s  %-*s  %-*s  %-*s  %-*s",
+		addrColWidth, "Resource",
+		statusColWidth, "Status",
+		timeColWidth, "Wait",
+		timeColWidth, "Read",
+		timeColWidth, "Process",
+	)
+
+	var rows strings.Builder
+	fmt.Fprintln(&rows, dimStyle.Render(header))
+	fmt.Fprintln(&rows, dimStyle.Render(strings.Repeat("─", m.viewWidth)))
+
+	var offset int
+	if m.viewState == viewActionResources {
+		offset = m.offset
+	} else {
+		offset = 0
+	}
+
+	addrs := m.selectedAddresses()
+	visibleRows := max(1, m.viewHeight-4)
+	end := min(offset+visibleRows, len(addrs))
+
+	for _, addr := range addrs[offset:end] {
+		ar := m.actionResources[addr]
+
+		displayAddr := addr
+		if lipgloss.Width(displayAddr) > addrColWidth {
+			displayAddr = ansi.Truncate(displayAddr, addrColWidth, "…")
+		}
+
+		var status string
+		wait := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.waitDuration(m.actionStartTime))))
+		read := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.readDuration())))
+		process := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+		switch ar.Status {
+		case actionResourcePending:
+			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Pending"))
+			read = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+		case actionResourceReadingState:
+			status = infoBarStyle.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" Reading"))
+			read = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.readDuration())))
+		case actionResourceWaitingForAction:
+			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Waiting"))
+		case actionResourceInProgress:
+			status = infoBarStyle.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" In Progress"))
+			process = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.processDuration())))
+		case actionResourceSuccessful:
+			status = successStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "✅ Complete"))
+			process = successStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.processDuration())))
+		case actionResourceFailed:
+			status = errorStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "❌ Failed"))
+			process = errorStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.processDuration())))
+		case actionResourceSkipped:
+			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "— No change"))
+			wait = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+			read = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+		}
+
+		fmt.Fprintf(&rows, "  %-*s  %s  %s  %s  %s\n", addrColWidth, displayAddr, status, wait, read, process)
+	}
+
+	var s strings.Builder
+	fmt.Fprintln(&s, title)
+	fmt.Fprintln(&s)
+	fmt.Fprint(&s, rows.String())
+	fmt.Fprintln(&s)
+
+	var help string
+	if m.isRunning() {
+		help = "'o' raw output | Running..."
+	} else {
+		help = "'o' raw output | Esc to close and re-plan"
+	}
+	fmt.Fprint(&s, help)
+
+	return s.String()
+}
+
+const (
+	defaultReservedOutputWidth = 6
+	defaultReservedOutputRows  = 8
+)
+
+func (m Model) renderOutputLayer(background string) string {
 	boxHeight := max(1, m.viewHeight-defaultReservedOutputRows)
 	contentWidth := max(1, m.viewWidth-defaultReservedOutputWidth)
 	innerHeight := boxHeight - 2 // subtract top and bottom border rows
@@ -339,26 +425,20 @@ func (m Model) renderOutputView() string {
 		visualRows += lineRows
 	}
 
-	box := resourceBorderStyle.
+	modal := resourceBorderStyle.
 		Width(m.viewWidth - 2).
 		Height(boxHeight).
 		Render(strings.TrimSuffix(content.String(), "\n"))
 
-	var help string
-	if m.isRunning() {
-		help = "↑/↓ scroll | Running..."
-	} else {
-		help = "↑/↓ scroll | Done! | Esc / Enter to continue"
-	}
+	modalWidth := lipgloss.Width(modal)
+	modalHeight := lipgloss.Height(modal)
+	x := max(0, (m.viewWidth-modalWidth)/2)
+	y := max(0, (m.viewHeight-modalHeight)/2)
 
-	var s strings.Builder
-	fmt.Fprintln(&s, title)
-	fmt.Fprintln(&s)
-	fmt.Fprintln(&s, box)
-	fmt.Fprintln(&s)
-	fmt.Fprint(&s, help)
+	bg := lipgloss.NewLayer(dimStyle.Render(background))
+	fg := lipgloss.NewLayer(modal).X(x).Y(y).Z(1)
 
-	return s.String()
+	return lipgloss.NewCompositor(bg, fg).Render()
 }
 
 func (m Model) renderDetailView() string {

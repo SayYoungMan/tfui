@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
@@ -204,7 +205,73 @@ func TestRenderConfirmView_TruncatesLongSelections(t *testing.T) {
 	assert.NotContains(t, view.Content, "aws_s3_bucket.b_10")
 }
 
-func TestRenderOutputView_ShowsContent(t *testing.T) {
+func TestRenderActionResourcesView_ShowsContent(t *testing.T) {
+	m := newActionTestModel()
+	m.actionCursor = 1 // apply
+	m.selected = map[string]bool{"aws_s3_bucket.a": true, "aws_s3_bucket.b": true}
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "applying 2 resources...")
+
+	assert.Contains(t, view.Content, "Resource")
+	assert.Contains(t, view.Content, "Status")
+	assert.Contains(t, view.Content, "Wait")
+	assert.Contains(t, view.Content, "Read")
+	assert.Contains(t, view.Content, "Process")
+
+	assert.Contains(t, view.Content, "aws_s3_bucket.a")
+	assert.Contains(t, view.Content, "aws_s3_bucket.b")
+
+	assert.Contains(t, view.Content, "Running...")
+	assert.Contains(t, view.Content, "'o' raw output")
+
+	m.workState = workIdle
+	view = m.View()
+	assert.Contains(t, view.Content, "Esc to close and re-plan")
+	assert.NotContains(t, view.Content, "Running...")
+}
+
+func TestRenderActionResourcesView_DifferentResourceStates(t *testing.T) {
+	tests := []struct {
+		status         string
+		actionResource ActionResource
+	}{
+		{status: "Pending", actionResource: ActionResource{}},
+		{status: "Complete", actionResource: ActionResource{Status: actionResourceSuccessful, ProcessStartedAt: time.Now().Add(-3 * time.Second), ProcessCompletedAt: time.Now()}},
+		{status: "Failed", actionResource: ActionResource{Status: actionResourceFailed}},
+		{status: "No change", actionResource: ActionResource{Status: actionResourceSkipped}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.status, func(t *testing.T) {
+			m := newActionTestModel()
+			m.selected = map[string]bool{"aws_s3_bucket.a": true}
+			m.actionResources["aws_s3_bucket.a"] = &tt.actionResource
+
+			view := m.View()
+
+			assert.Contains(t, view.Content, tt.status)
+		})
+	}
+}
+
+func TestRenderActionResourcesView_TruncatesLongAddress(t *testing.T) {
+	longAddr := "module.very_long_module_name.module.another_long_name.aws_s3_bucket.extremely_long_bucket_name_that_exceeds_width"
+	m := newActionTestModel()
+	m.viewWidth = 60
+	m.selected = map[string]bool{longAddr: true}
+	m.actionResources = map[string]*ActionResource{
+		longAddr: {Address: longAddr, Status: actionResourcePending},
+	}
+
+	view := m.View()
+
+	assert.NotContains(t, view.Content, longAddr)
+	assert.Contains(t, view.Content, "…")
+}
+
+func TestRenderOutputLayer_ShowsContent(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
 	m.actionCursor = 1
@@ -217,24 +284,8 @@ func TestRenderOutputView_ShowsContent(t *testing.T) {
 
 	view := m.View()
 
-	assert.Contains(t, view.Content, "terraform apply")
 	assert.Contains(t, view.Content, "aws_s3_bucket.uploads: Modifying...")
 	assert.Contains(t, view.Content, "Apply complete!")
-}
-
-func TestRenderOutputView_HelpTextChangesWhenDone(t *testing.T) {
-	m := newTestModelEmpty()
-	m.viewState = viewOutput
-	m.workState = workAction
-
-	view := m.View()
-	assert.NotContains(t, view.Content, "Done! | Esc / Enter to continue")
-	assert.Contains(t, view.Content, "Running...")
-
-	m.workState = workIdle
-	view = m.View()
-	assert.Contains(t, view.Content, "Done! | Esc / Enter to continue")
-	assert.NotContains(t, view.Content, "Running...")
 }
 
 func TestRenderShutdownLayer_ShowsWaitingMessage(t *testing.T) {

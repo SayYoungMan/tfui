@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	tea "charm.land/bubbletea/v2"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 )
@@ -39,6 +41,21 @@ func newTestModelWithResources(resources []terraform.Resource) Model {
 	m.workState = workIdle
 	m.cancel = &cancelWrapper{}
 
+	return m
+}
+
+// Test model currently applying resources
+func newActionTestModel() Model {
+	m := newTestModel()
+	m.workState = workAction
+	m.viewState = viewActionResources
+	m.actionStartTime = time.Now().Add(-5 * time.Second)
+	m.actionResources = map[string]*ActionResource{
+		"aws_s3_bucket.a": {Address: "aws_s3_bucket.a", Status: actionResourcePending},
+		"aws_s3_bucket.b": {Address: "aws_s3_bucket.b", Status: actionResourcePending},
+	}
+	m.actionCursor = 1 // apply
+	m.eventCh = make(chan terraform.StreamEvent, 1)
 	return m
 }
 

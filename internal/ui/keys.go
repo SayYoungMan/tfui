@@ -203,6 +203,30 @@ func (m Model) selectedAddresses() []string {
 	return addrs
 }
 
+func (m Model) actionResourcesKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "k", "up":
+		if m.offset > 0 {
+			m.offset--
+		}
+	case "j", "down":
+		if m.offset < len(m.actionResources)-1 {
+			m.offset++
+		}
+	case "esc", "enter":
+		if !m.isRunning() {
+			return m.startRescan()
+		}
+	case "o":
+		m.offset = 0
+		m.viewState = viewOutput
+	case "q", "ctrl+c":
+		m.cancel.fn()
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
 func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "k", "up":
@@ -216,7 +240,12 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "esc", "enter":
 		if !m.isRunning() {
 			return m.startRescan()
+		} else {
+			m.viewState = viewActionResources
 		}
+	case "o":
+		m.offset = 0
+		m.viewState = viewActionResources
 	case "q", "ctrl+c":
 		m.cancel.fn()
 		return m, tea.Quit

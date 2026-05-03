@@ -47,21 +47,25 @@ func (m Model) handleStatePulled(msg statePulledMsg) (Model, tea.Cmd) {
 }
 
 type (
-	streamEventMsg  terraform.StreamEvent
-	scanCompleteMsg struct{}
+	streamEventMsg    terraform.StreamEvent
+	streamCompleteMsg struct{}
 )
 
 func waitForEvent(ch <-chan terraform.StreamEvent) tea.Cmd {
 	return func() tea.Msg {
 		event, ok := <-ch
 		if !ok {
-			return scanCompleteMsg{}
+			return streamCompleteMsg{}
 		}
 		return streamEventMsg(event)
 	}
 }
 
 func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cmd) {
+	if m.workState == workAction {
+		return m.handleActionEvent(event)
+	}
+
 	if event.Error != nil {
 		m.err = event.Error
 		return m, waitForEvent(m.eventCh)
@@ -91,6 +95,47 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 	return m, waitForEvent(m.eventCh)
 }
 
+func (m Model) handleActionEvent(event terraform.StreamEvent) (tea.Model, tea.Cmd) {
+	if event.Message != "" {
+		m.outputLines = append(m.outputLines, event.Message)
+	}
+
+	if event.Resource == nil {
+		return m, waitForEvent(m.eventCh)
+	}
+
+	ar, ok := m.actionResources[event.Resource.Address]
+	if !ok {
+		// There are some apply_start and apply_complete from data sources that are not selected
+		return m, waitForEvent(m.eventCh)
+	}
+
+	currentAction := actionChoices[m.actionCursor]
+	switch event.Type {
+	case "refresh_start":
+		ar.Status = actionResourceReadingState
+		ar.ReadStartedAt = time.Now()
+	case "refresh_complete":
+		if currentAction == "plan" {
+			ar.Status = actionResourceSuccessful
+		} else {
+			ar.Status = actionResourceWaitingForAction
+		}
+		ar.ReadCompletedAt = time.Now()
+	case "apply_start":
+		ar.Status = actionResourceInProgress
+		ar.ProcessStartedAt = time.Now()
+	case "apply_complete":
+		ar.Status = actionResourceSuccessful
+		ar.ProcessCompletedAt = time.Now()
+	case "apply_errored":
+		ar.Status = actionResourceFailed
+		ar.ProcessCompletedAt = time.Now()
+	}
+
+	return m, waitForEvent(m.eventCh)
+}
+
 type (
 	outputLineMsg     string
 	outputCompleteMsg struct{}
@@ -111,5 +156,13 @@ type forceQuitReadyMsg struct{}
 func waitForForceQuit() tea.Cmd {
 	return tea.Tick(10*time.Second, func(t time.Time) tea.Msg {
 		return forceQuitReadyMsg{}
+	})
+}
+
+type actionTickMsg time.Time
+
+func tickEverySecond() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return actionTickMsg(t)
 	})
 }

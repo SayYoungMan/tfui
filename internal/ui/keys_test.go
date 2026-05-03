@@ -425,7 +425,7 @@ func TestConfirmKeys_ConfirmToOutput(t *testing.T) {
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
-	assert.Equal(t, viewOutput, m.viewState)
+	assert.Equal(t, viewActionResources, m.viewState)
 }
 
 func TestConfirmKeys_EscToPicker(t *testing.T) {
@@ -499,15 +499,85 @@ func TestQuitConfirmKeys_Confirm(t *testing.T) {
 	assert.NotNil(t, cmd)
 }
 
-func TestOutputKeys_EscBlockedWhileOutputing(t *testing.T) {
-	m := newTestModel()
-	m.viewState = viewOutput
-	m.workState = workAction
+func TestActionResourcesKeys_Navigation(t *testing.T) {
+	m := newActionTestModel()
+	m.viewState = viewActionResources
+	m.offset = 0
 
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.offset)
+}
+
+func TestActionResourcesKeys_oToOutput(t *testing.T) {
+	m := newActionTestModel()
+	m.viewState = viewActionResources
+	m.offset = 1
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'o'})
 	m = newModel.(Model)
 
 	assert.Equal(t, viewOutput, m.viewState)
+	assert.Equal(t, 0, m.offset)
+}
+
+func TestActionResourcesKeys_RescanWhenIdle(t *testing.T) {
+	tests := []struct {
+		name string
+		key  rune
+	}{
+		{name: "Esc", key: tea.KeyEscape},
+		{name: "Enter", key: tea.KeyEnter},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newActionTestModel()
+			m.viewState = viewActionResources
+			m.workState = workIdle
+			m.runner = terraform.NewTerraformRunner(t.TempDir(), "true")
+
+			_, cmd := m.Update(tea.KeyPressMsg{Code: tt.key})
+
+			assert.NotNil(t, cmd)
+		})
+	}
+}
+
+func TestOutputKeys_ToActionResources(t *testing.T) {
+	tests := []struct {
+		name string
+		key  rune
+	}{
+		{name: "Esc", key: tea.KeyEscape},
+		{name: "Enter", key: tea.KeyEnter},
+		{name: "o", key: 'o'},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newTestModel()
+			m.viewState = viewOutput
+			m.workState = workAction
+
+			newModel, _ := m.Update(tea.KeyPressMsg{Code: tt.key})
+			m = newModel.(Model)
+
+			assert.Equal(t, viewActionResources, m.viewState)
+		})
+	}
 }
 
 func TestOutputKeys_Navigation(t *testing.T) {

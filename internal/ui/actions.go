@@ -5,10 +5,70 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/SayYoungMan/tfui/pkg/terraform"
 	"github.com/alecthomas/chroma/v2/quick"
 )
+
+type actionResourceStatus int
+
+const (
+	actionResourcePending          actionResourceStatus = iota // Before 'refresh_start' arrives
+	actionResourceReadingState                                 // While refreshing
+	actionResourceWaitingForAction                             // After 'refresh_complete' but before 'apply_start'
+	actionResourceInProgress                                   // During apply
+	actionResourceSuccessful
+	actionResourceFailed
+	actionResourceSkipped // This happens when you want to apply change to a resource with no change
+)
+
+type ActionResource struct {
+	Address            string
+	Status             actionResourceStatus
+	ReadStartedAt      time.Time
+	ReadCompletedAt    time.Time
+	ProcessStartedAt   time.Time
+	ProcessCompletedAt time.Time
+}
+
+// duration of how long it waited to be picked up for refresh
+func (ar *ActionResource) waitDuration(startTime time.Time) time.Duration {
+	// For taint / untaint it doesn't refresh state so wait time is until process start
+	if !ar.ProcessStartedAt.IsZero() {
+		return ar.ProcessStartedAt.Sub(startTime)
+	}
+	if ar.ReadStartedAt.IsZero() {
+		return time.Since(startTime)
+	}
+	return ar.ReadStartedAt.Sub(startTime)
+}
+
+// duration of how long the refresh took place
+func (ar *ActionResource) readDuration() time.Duration {
+	// For taint, there is no refreshing state
+	if ar.ReadStartedAt.IsZero() {
+		return 0
+	}
+
+	if ar.ReadCompletedAt.IsZero() {
+		return time.Since(ar.ReadStartedAt)
+	}
+	return ar.ReadCompletedAt.Sub(ar.ReadStartedAt)
+}
+
+// duration of how long the action took place
+func (ar *ActionResource) processDuration() time.Duration {
+	if ar.ProcessStartedAt.IsZero() {
+		return 0
+	}
+
+	if ar.ProcessCompletedAt.IsZero() {
+		return time.Since(ar.ProcessStartedAt)
+	}
+	return ar.ProcessCompletedAt.Sub(ar.ProcessStartedAt)
+}
 
 func (m Model) gracefulQuit() (tea.Model, tea.Cmd) {
 	m.quitState = quittingState
@@ -28,6 +88,7 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	m.rows = m.rows[:0]
 	m.collapsed = make(map[string]bool)
 	m.selected = make(map[string]bool)
+	m.actionResources = nil
 	m.cursor = 0
 	m.offset = 0
 	m.err = nil
@@ -48,22 +109,32 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 	m.cancel.fn = cancel
 
 	addrs := m.selectedAddresses()
-	action := actionChoices[m.actionCursor]
+	m.outputLines = nil
+	m.workState = workAction
+	m.viewState = viewActionResources
+	m.offset = 0
 
-	actionFuncs := map[string]func(context.Context, []string) <-chan string{
+	m.actionStartTime = time.Now()
+	m.actionResources = make(map[string]*ActionResource, len(addrs))
+	for _, addr := range addrs {
+		m.actionResources[addr] = &ActionResource{
+			Address: addr,
+			Status:  actionResourcePending,
+		}
+	}
+
+	action := actionChoices[m.actionCursor]
+	actionFuncs := map[string]func(context.Context, []string) <-chan terraform.StreamEvent{
 		"plan":    m.runner.Plan,
 		"apply":   m.runner.Apply,
 		"destroy": m.runner.Destroy,
 		"taint":   m.runner.Taint,
 		"untaint": m.runner.Untaint,
 	}
-	m.outputCh = actionFuncs[action](ctx, addrs)
-	m.outputLines = nil
-	m.workState = workAction
-	m.offset = 0
-	m.viewState = viewOutput
+	ch := actionFuncs[action](ctx, addrs)
+	m.eventCh = ch
 
-	return m, waitForOutput(m.outputCh)
+	return m, tea.Batch(waitForEvent(ch), tickEverySecond())
 }
 
 func (m *Model) openDetail() {

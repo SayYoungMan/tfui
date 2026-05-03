@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 )
@@ -100,4 +102,12 @@ func (m *Model) adjustOffset() {
 	if m.cursor < m.offset {
 		m.offset = m.cursor
 	}
+}
+
+func (m *Model) formatElapsed(d time.Duration) string {
+	d = d.Truncate(time.Second)
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	return fmt.Sprintf("%dm %ds", int(d.Minutes()), int(d.Seconds())%60)
 }

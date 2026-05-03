@@ -7,8 +7,11 @@ import "encoding/json"
 type StreamEvent struct {
 	Resource   *Resource
 	Diagnostic *Diagnostic
+	Hook       *HookPayload
 	Summary    *ChangeSummary
 	Outputs    map[string]OutputValue
+	Message    string
+	Type       string
 	Error      error
 }
 
@@ -75,10 +78,10 @@ func (r Resources) Len() int {
 	return len(r)
 }
 
-// --- Below are raw JSON structures from `terraform plan -json` ---
+// --- Below are raw JSON structures from `terraform plan/apply -json` ---
 
-// struct for every line of plan -json output.
-type PlanMessage struct {
+// struct for every line of plan/apply -json output.
+type Message struct {
 	Level      string                 `json:"@level"`
 	Message    string                 `json:"@message"`
 	Module     string                 `json:"@module"`
