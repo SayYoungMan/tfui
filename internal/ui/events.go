@@ -25,6 +25,10 @@ func (m *Model) waitForState() tea.Cmd {
 
 func (m Model) handleStatePulled(msg statePulledMsg) (Model, tea.Cmd) {
 	if msg.err != nil {
+		// If the error is due to trying to quit in the middle, just quit
+		if m.quitState == quittingState || m.quitState == forceQuitReadyState {
+			return m, tea.Quit
+		}
 		m.err = msg.err
 		m.workState = workIdle
 		m.viewState = viewError
