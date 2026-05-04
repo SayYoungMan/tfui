@@ -45,7 +45,7 @@ func (m Model) handleStatePulled(msg statePulledMsg) (Model, tea.Cmd) {
 	m.cancel.fn = cancel
 	m.workState = workPlan
 
-	ch := m.runner.StreamPlan(ctx)
+	ch := m.runner.Plan(ctx, nil)
 	m.eventCh = ch
 	return m, waitForEvent(ch)
 }

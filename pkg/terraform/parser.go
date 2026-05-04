@@ -2,112 +2,76 @@ package terraform
 
 import (
 	"encoding/json"
-	"fmt"
+
+	"charm.land/log/v2"
 )
 
-// Parser converts raw JSON line from `terraform plan -json` into StreamEvents.
-type Parser struct {
-	seen          map[string]bool // map of addresses already parsed
-	resourceCount int
-	warningCount  int
-	errorCount    int
-}
-
-func NewParser() *Parser {
-	return &Parser{
-		seen: make(map[string]bool),
-	}
-}
-
-func (p *Parser) Stats() (resources, errors, warnings int) {
-	return p.resourceCount, p.errorCount, p.warningCount
-}
-
 // ParseLine parses single line of JSON into a StreamEvent
-func (p *Parser) ParseLine(line []byte) (*StreamEvent, error) {
+func ParseLine(line []byte) *StreamEvent {
 	if len(line) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	var msg Message
 	if err := json.Unmarshal(line, &msg); err != nil {
-		return nil, fmt.Errorf("failed to parse plan JSON: %w", err)
+		log.Debug("failed to parse plan JSON", "error", err, "line", string(line))
+		return nil
 	}
 
 	var event *StreamEvent
-	var err error
 	switch msg.Type {
 	case "refresh_start", "refresh_complete", "apply_start", "apply_progress", "apply_complete", "apply_errored":
-		if msg.Hook == nil {
-			return nil, nil
+		if msg.Hook != nil {
+			event = &StreamEvent{
+				Resource: extractResourceInfo(&msg.Hook.Resource, normalizeAction(msg.Hook.Action), ""),
+				Type:     msg.Type,
+			}
 		}
-		event, err = &StreamEvent{
-			Resource: extractResourceInfo(&msg.Hook.Resource, normalizeAction(msg.Hook.Action), ""),
-			Hook:     msg.Hook,
-			Type:     msg.Type,
-		}, nil
 	case "resource_drift":
-		event, err = p.parseResourceDrift(msg.Change)
+		if msg.Change != nil {
+			event = &StreamEvent{
+				Resource: extractResourceInfo(&msg.Change.Resource, normalizeAction(msg.Change.Action), "drift"),
+				Type:     msg.Type,
+			}
+		}
 	case "planned_change":
-		event, err = p.parsePlannedChange(msg.Change)
+		if msg.Change != nil {
+			event = &StreamEvent{
+				Resource: extractResourceInfo(&msg.Change.Resource, normalizeAction(msg.Change.Action), msg.Change.Reason),
+				Type:     msg.Type,
+			}
+		}
 	case "diagnostic":
-		event, err = p.parseDiagnostic(msg.Diagnostic)
+		if msg.Diagnostic != nil {
+			event = &StreamEvent{
+				Diagnostic: msg.Diagnostic,
+				Type:       msg.Type,
+			}
+		}
 	case "change_summary":
-		event, err = p.parseChangeSummary(msg.Changes)
+		if msg.Changes != nil {
+			event = &StreamEvent{
+				Summary: msg.Changes,
+				Type:    msg.Type,
+			}
+		}
 	case "outputs":
-		event, err = p.parseOutputs(msg.Outputs)
+		if msg.Outputs != nil {
+			event = &StreamEvent{
+				Outputs: msg.Outputs,
+				Type:    msg.Type,
+			}
+		}
 	default:
-		return nil, nil
+		return nil
 	}
 
-	if event != nil {
-		event.Message = msg.Message
+	if event == nil {
+		return nil
 	}
+	event.Message = msg.Message
 
-	return event, err
-}
-
-func (p *Parser) parseResourceDrift(change *ChangePayload) (*StreamEvent, error) {
-	addr := change.Resource.Addr
-	if !p.seen[addr] {
-		p.seen[addr] = true
-		p.resourceCount++
-	}
-
-	action := normalizeAction(change.Action)
-
-	return &StreamEvent{Resource: extractResourceInfo(&change.Resource, action, "drift")}, nil
-}
-
-func (p *Parser) parsePlannedChange(change *ChangePayload) (*StreamEvent, error) {
-	addr := change.Resource.Addr
-	if !p.seen[addr] {
-		p.seen[addr] = true
-		p.resourceCount++
-	}
-
-	action := normalizeAction(change.Action)
-
-	return &StreamEvent{Resource: extractResourceInfo(&change.Resource, action, change.Reason)}, nil
-}
-
-func (p *Parser) parseDiagnostic(diag *Diagnostic) (*StreamEvent, error) {
-	switch diag.Severity {
-	case "error":
-		p.errorCount++
-	case "warning":
-		p.warningCount++
-	}
-
-	return &StreamEvent{Diagnostic: diag}, nil
-}
-
-func (p *Parser) parseChangeSummary(changes *ChangeSummary) (*StreamEvent, error) {
-	return &StreamEvent{Summary: changes}, nil
-}
-
-func (p *Parser) parseOutputs(outputs map[string]OutputValue) (*StreamEvent, error) {
-	return &StreamEvent{Outputs: outputs}, nil
+	return event
 }
 
 func extractResourceInfo(info *ResourceInfo, action Action, reason string) *Resource {

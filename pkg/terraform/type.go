@@ -7,7 +7,6 @@ import "encoding/json"
 type StreamEvent struct {
 	Resource   *Resource
 	Diagnostic *Diagnostic
-	Hook       *HookPayload
 	Summary    *ChangeSummary
 	Outputs    map[string]OutputValue
 	Message    string

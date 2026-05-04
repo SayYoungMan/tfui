@@ -31,6 +31,30 @@ func NewTerraformRunner(workdir string, binary string) *TerraformRunner {
 	}
 }
 
+func (tr *TerraformRunner) Plan(ctx context.Context, targets []string) <-chan StreamEvent {
+	args := []string{"plan", "-json"}
+	for _, t := range targets {
+		args = append(args, fmt.Sprintf("-target=%s", t))
+	}
+	return tr.streamJsonEvents(ctx, args)
+}
+
+func (tr *TerraformRunner) Apply(ctx context.Context, targets []string) <-chan StreamEvent {
+	args := []string{"apply", "-auto-approve", "-json"}
+	for _, t := range targets {
+		args = append(args, fmt.Sprintf("-target=%s", t))
+	}
+	return tr.streamJsonEvents(ctx, args)
+}
+
+func (tr *TerraformRunner) Destroy(ctx context.Context, targets []string) <-chan StreamEvent {
+	args := []string{"destroy", "-auto-approve", "-json"}
+	for _, t := range targets {
+		args = append(args, fmt.Sprintf("-target=%s", t))
+	}
+	return tr.streamJsonEvents(ctx, args)
+}
+
 func (tr *TerraformRunner) streamJsonEvents(ctx context.Context, args []string) <-chan StreamEvent {
 	ch := make(chan StreamEvent)
 
@@ -54,16 +78,11 @@ func (tr *TerraformRunner) streamJsonEvents(ctx context.Context, args []string) 
 			return
 		}
 
-		parser := NewParser()
 		scanner := bufio.NewScanner(stdout)
 		scanner.Buffer(make([]byte, 0, MB), MB)
 
 		for scanner.Scan() {
-			event, err := parser.ParseLine(scanner.Bytes())
-			if err != nil {
-				ch <- StreamEvent{Error: err}
-				continue
-			}
+			event := ParseLine(scanner.Bytes())
 			if event != nil {
 				ch <- *event
 			}
@@ -78,34 +97,6 @@ func (tr *TerraformRunner) streamJsonEvents(ctx context.Context, args []string) 
 	}()
 
 	return ch
-}
-
-func (tr *TerraformRunner) StreamPlan(ctx context.Context) <-chan StreamEvent {
-	return tr.streamJsonEvents(ctx, []string{"plan", "-json"})
-}
-
-func (tr *TerraformRunner) Plan(ctx context.Context, targets []string) <-chan StreamEvent {
-	args := []string{"plan", "-json"}
-	for _, t := range targets {
-		args = append(args, fmt.Sprintf("-target=%s", t))
-	}
-	return tr.streamJsonEvents(ctx, args)
-}
-
-func (tr *TerraformRunner) Apply(ctx context.Context, targets []string) <-chan StreamEvent {
-	args := []string{"apply", "-auto-approve", "-json"}
-	for _, t := range targets {
-		args = append(args, fmt.Sprintf("-target=%s", t))
-	}
-	return tr.streamJsonEvents(ctx, args)
-}
-
-func (tr *TerraformRunner) Destroy(ctx context.Context, targets []string) <-chan StreamEvent {
-	args := []string{"destroy", "-auto-approve", "-json"}
-	for _, t := range targets {
-		args = append(args, fmt.Sprintf("-target=%s", t))
-	}
-	return tr.streamJsonEvents(ctx, args)
 }
 
 func (tr *TerraformRunner) Taint(ctx context.Context, targets []string) <-chan StreamEvent {

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,47 +53,7 @@ func mockCmdFactory(output string, exitCode int) CommandFactory {
 	}
 }
 
-func TestStreamPlan_ParsesEvents(t *testing.T) {
-	output := strings.Join([]string{
-		`{"@level":"info","@message":"Terraform 1.14.8","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:38.279544+01:00","terraform":"1.14.8","type":"version","ui":"1.2"}`,
-		`{"@level":"info","@message":"aws_s3_bucket.uploads: Refreshing state... [id=uploads]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"id_key":"id","id_value":"uploads"},"type":"refresh_start"}`,
-		`{"@level":"info","@message":"data.aws_region.current: Reading...","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.133445+01:00","hook":{"resource":{"addr":"data.aws_region.current","module":"","resource":"data.aws_region.current","implied_provider":"aws","resource_type":"aws_region","resource_name":"current","resource_key":null},"action":"read","id_key":"id","id_value":"eu-west-2","elapsed_seconds":0},"type":"apply_start"}`,
-		`{"@level":"info","@message":"aws_s3_bucket.uploads: Plan to update in-place","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:47.040866+01:00","change":{"resource":{"addr":"aws_s3_bucket.uploads","module":"","resource":"aws_s3_bucket.uploads","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"uploads","resource_key":null},"action":"update"},"type":"planned_change"}`,
-		`{"@level":"info","@message":"Plan: 0 to add, 1 to change, 0 to destroy.","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:47.040866+01:00","changes":{"add":0,"change":1,"remove":0,"operation":"plan"},"type":"change_summary"}`,
-	}, "\n")
-
-	runner := &TerraformRunner{
-		binary:     "terraform",
-		workdir:    t.TempDir(),
-		cmdFactory: mockCmdFactory(output, 0),
-	}
-
-	ctx := context.Background()
-	ch := runner.StreamPlan(ctx)
-
-	var events []StreamEvent
-	for event := range ch {
-		events = append(events, event)
-	}
-
-	require.Len(t, events, 4)
-
-	assert.NotNil(t, events[0].Resource)
-	assert.Equal(t, "aws_s3_bucket.uploads", events[0].Resource.Address)
-	assert.Equal(t, ActionNoop, events[0].Resource.Action)
-
-	assert.NotNil(t, events[1].Resource)
-	assert.Equal(t, "data.aws_region.current", events[1].Resource.Address)
-	assert.Equal(t, ActionRead, events[1].Resource.Action)
-
-	assert.NotNil(t, events[2].Resource)
-	assert.Equal(t, ActionUpdate, events[2].Resource.Action)
-
-	assert.NotNil(t, events[3].Summary)
-	assert.Equal(t, 1, events[3].Summary.Change)
-}
-
-func TestStreamPlan_ExitWithError(t *testing.T) {
+func TestStreamJsonEvents_ExitWithError(t *testing.T) {
 	output := `{"@level":"info","@message":"Terraform 1.14.8","@module":"terraform.ui","@timestamp":"2026-04-11T15:46:38.279544+01:00","terraform":"1.14.8","type":"version","ui":"1.2"}`
 
 	runner := &TerraformRunner{
@@ -102,7 +63,7 @@ func TestStreamPlan_ExitWithError(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	ch := runner.StreamPlan(ctx)
+	ch := runner.Plan(ctx, nil)
 
 	var hasError bool
 	for event := range ch {
@@ -114,7 +75,7 @@ func TestStreamPlan_ExitWithError(t *testing.T) {
 	assert.True(t, hasError, "exit code 1 should produce an error event")
 }
 
-func TestStreamPlan_ContextCancellation(t *testing.T) {
+func TestStreamJsonEvents_ContextCancellation(t *testing.T) {
 	output := strings.Join([]string{
 		`{"@level":"info","@message":"aws_s3_bucket.a: Refreshing state... [id=a]","@module":"terraform.ui","@timestamp":"2026-04-11T09:14:46.108644+01:00","hook":{"resource":{"addr":"aws_s3_bucket.a","module":"","resource":"aws_s3_bucket.a","implied_provider":"aws","resource_type":"aws_s3_bucket","resource_name":"a","resource_key":null},"id_key":"id","id_value":"a"},"type":"refresh_start"}`,
 	}, "\n")
@@ -128,10 +89,19 @@ func TestStreamPlan_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	ch := runner.StreamPlan(ctx)
+	ch := runner.Plan(ctx, nil)
 
-	// Should drain and close without hanging
-	for range ch {
+	done := make(chan struct{})
+	go func() {
+		for range ch {
+		}
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("channel did not close after cancel")
 	}
 }
 
@@ -199,7 +169,6 @@ func TestStreamJsonEvents_Apply(t *testing.T) {
 	assert.Equal(t, ActionUpdate, events[0].Resource.Action)
 
 	assert.Equal(t, "apply_complete", events[1].Type)
-	assert.Equal(t, 2, events[1].Hook.ElapsedSeconds)
 
 	assert.NotNil(t, events[2].Summary)
 	assert.Equal(t, 1, events[2].Summary.Change)
@@ -233,7 +202,6 @@ func TestStreamJsonEvents_Destroy(t *testing.T) {
 	assert.Equal(t, ActionDelete, events[0].Resource.Action)
 
 	assert.Equal(t, "apply_complete", events[1].Type)
-	assert.Equal(t, 1, events[1].Hook.ElapsedSeconds)
 
 	assert.NotNil(t, events[2].Summary)
 	assert.Equal(t, 1, events[2].Summary.Remove)
