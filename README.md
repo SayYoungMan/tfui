@@ -63,5 +63,7 @@ tfui --binary tofu
 | Workspace switcher | 🔲 Planned |
 | Stress test for large input | 🔲 Planned |
 | Analytics Report | 🔲 Planned |
+| Terragrunt Support | 🔲 Planned |
+| History Viewer | 🔲 Planned |
 
 Those are some features in mind but not in order of importance
