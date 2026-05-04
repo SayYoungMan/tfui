@@ -18,48 +18,49 @@ func ParseLine(line []byte) *StreamEvent {
 		return nil
 	}
 
+	msgType := MessageType(msg.Type)
 	var event *StreamEvent
-	switch msg.Type {
-	case "refresh_start", "refresh_complete", "apply_start", "apply_progress", "apply_complete", "apply_errored":
+	switch msgType {
+	case MsgTypeRefreshStart, MsgTypeRefreshComplete, MsgTypeApplyStart, MsgTypeApplyProgress, MsgTypeApplyComplete, MsgTypeApplyErrored:
 		if msg.Hook != nil {
 			event = &StreamEvent{
 				Resource: extractResourceInfo(&msg.Hook.Resource, normalizeAction(msg.Hook.Action), ""),
-				Type:     msg.Type,
+				Type:     msgType,
 			}
 		}
-	case "resource_drift":
+	case MsgTypeResourceDrift:
 		if msg.Change != nil {
 			event = &StreamEvent{
 				Resource: extractResourceInfo(&msg.Change.Resource, normalizeAction(msg.Change.Action), "drift"),
-				Type:     msg.Type,
+				Type:     msgType,
 			}
 		}
-	case "planned_change":
+	case MsgTypePlannedChange:
 		if msg.Change != nil {
 			event = &StreamEvent{
 				Resource: extractResourceInfo(&msg.Change.Resource, normalizeAction(msg.Change.Action), msg.Change.Reason),
-				Type:     msg.Type,
+				Type:     msgType,
 			}
 		}
-	case "diagnostic":
+	case MsgTypeDiagnostic:
 		if msg.Diagnostic != nil {
 			event = &StreamEvent{
 				Diagnostic: msg.Diagnostic,
-				Type:       msg.Type,
+				Type:       msgType,
 			}
 		}
-	case "change_summary":
+	case MsgTypeChangeSummary:
 		if msg.Changes != nil {
 			event = &StreamEvent{
 				Summary: msg.Changes,
-				Type:    msg.Type,
+				Type:    msgType,
 			}
 		}
-	case "outputs":
+	case MsgTypeOutputs:
 		if msg.Outputs != nil {
 			event = &StreamEvent{
 				Outputs: msg.Outputs,
-				Type:    msg.Type,
+				Type:    msgType,
 			}
 		}
 	default:
@@ -85,28 +86,5 @@ func extractResourceInfo(info *ResourceInfo, action Action, reason string) *Reso
 		ImpliedProvider: info.ImpliedProvider,
 		Action:          action,
 		Reason:          reason,
-	}
-}
-
-func normalizeAction(raw string) Action {
-	switch raw {
-	case "create":
-		return ActionCreate
-	case "read":
-		return ActionRead
-	case "update":
-		return ActionUpdate
-	case "delete":
-		return ActionDelete
-	case "replace":
-		return ActionReplace
-	case "move":
-		return ActionMove
-	case "import":
-		return ActionImport
-	case "no-op", "noop":
-		return ActionNoop
-	default:
-		return ActionNoop
 	}
 }

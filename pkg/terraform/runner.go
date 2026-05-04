@@ -118,7 +118,7 @@ func (tr *TerraformRunner) streamPerResource(ctx context.Context, command string
 				return
 			}
 			ch <- StreamEvent{
-				Type:     "apply_start",
+				Type:     MsgTypeApplyStart,
 				Resource: &Resource{Address: t},
 			}
 
@@ -130,9 +130,9 @@ func (tr *TerraformRunner) streamPerResource(ctx context.Context, command string
 				ch <- StreamEvent{Message: strings.TrimSpace(string(output))}
 			}
 
-			eventType := "apply_complete"
+			eventType := MsgTypeApplyComplete
 			if err != nil {
-				eventType = "apply_errored"
+				eventType = MsgTypeApplyErrored
 			}
 			ch <- StreamEvent{
 				Type:     eventType,

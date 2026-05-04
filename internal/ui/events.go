@@ -116,23 +116,23 @@ func (m Model) handleActionEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 
 	currentAction := actionChoices[m.actionCursor]
 	switch event.Type {
-	case "refresh_start":
+	case terraform.MsgTypeRefreshStart:
 		ar.Status = actionResourceReadingState
 		ar.ReadStartedAt = time.Now()
-	case "refresh_complete":
+	case terraform.MsgTypeRefreshComplete:
 		if currentAction == "plan" {
 			ar.Status = actionResourceSuccessful
 		} else {
 			ar.Status = actionResourceWaitingForAction
 		}
 		ar.ReadCompletedAt = time.Now()
-	case "apply_start":
+	case terraform.MsgTypeApplyStart:
 		ar.Status = actionResourceInProgress
 		ar.ProcessStartedAt = time.Now()
-	case "apply_complete":
+	case terraform.MsgTypeApplyComplete:
 		ar.Status = actionResourceSuccessful
 		ar.ProcessCompletedAt = time.Now()
-	case "apply_errored":
+	case terraform.MsgTypeApplyErrored:
 		ar.Status = actionResourceFailed
 		ar.ProcessCompletedAt = time.Now()
 	}

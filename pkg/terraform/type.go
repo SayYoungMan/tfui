@@ -10,9 +10,26 @@ type StreamEvent struct {
 	Summary    *ChangeSummary
 	Outputs    map[string]OutputValue
 	Message    string
-	Type       string
+	Type       MessageType
 	Error      error
 }
+
+// https://developer.hashicorp.com/terraform/internals/machine-readable-ui#message-types
+type MessageType string
+
+const (
+	MsgTypeRefreshStart    MessageType = "refresh_start"
+	MsgTypeRefreshComplete MessageType = "refresh_complete"
+	MsgTypeApplyStart      MessageType = "apply_start"
+	MsgTypeApplyProgress   MessageType = "apply_progress"
+	MsgTypeApplyComplete   MessageType = "apply_complete"
+	MsgTypeApplyErrored    MessageType = "apply_errored"
+	MsgTypeResourceDrift   MessageType = "resource_drift"
+	MsgTypePlannedChange   MessageType = "planned_change"
+	MsgTypeDiagnostic      MessageType = "diagnostic"
+	MsgTypeChangeSummary   MessageType = "change_summary"
+	MsgTypeOutputs         MessageType = "outputs"
+)
 
 // Action describes what terraform is planning to do with the resource
 // List taken from https://developer.hashicorp.com/terraform/internals/machine-readable-ui#action-1
@@ -49,6 +66,29 @@ func (a Action) Symbol() string {
 		return " "
 	default:
 		return "?"
+	}
+}
+
+func normalizeAction(raw string) Action {
+	switch raw {
+	case "create":
+		return ActionCreate
+	case "read":
+		return ActionRead
+	case "update":
+		return ActionUpdate
+	case "delete":
+		return ActionDelete
+	case "replace":
+		return ActionReplace
+	case "move":
+		return ActionMove
+	case "import":
+		return ActionImport
+	case "no-op", "noop":
+		return ActionNoop
+	default:
+		return ActionNoop
 	}
 }
 

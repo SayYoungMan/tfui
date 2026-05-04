@@ -15,7 +15,7 @@ func TestHandleActionEvent_RefreshStart(t *testing.T) {
 	m := newActionTestModel()
 
 	newModel, cmd := m.Update(streamEventMsg(terraform.StreamEvent{
-		Type:     "refresh_start",
+		Type:     terraform.MsgTypeRefreshStart,
 		Resource: &terraform.Resource{Address: testAddr},
 	}))
 	m = newModel.(Model)
@@ -44,7 +44,7 @@ func TestHandleActionEvent_RefreshComplete(t *testing.T) {
 			m.actionResources[testAddr].ReadStartedAt = time.Now().Add(-2 * time.Second)
 
 			newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
-				Type:     "refresh_complete",
+				Type:     terraform.MsgTypeRefreshComplete,
 				Resource: &terraform.Resource{Address: testAddr},
 			}))
 			m = newModel.(Model)
@@ -61,7 +61,7 @@ func TestHandleActionEvent_ApplyStart(t *testing.T) {
 	m.actionResources[testAddr].Status = actionResourceWaitingForAction
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
-		Type:     "apply_start",
+		Type:     terraform.MsgTypeApplyStart,
 		Resource: &terraform.Resource{Address: testAddr},
 	}))
 	m = newModel.(Model)
@@ -77,7 +77,7 @@ func TestHandleActionEvent_ApplyComplete(t *testing.T) {
 	m.actionResources[testAddr].ProcessStartedAt = time.Now().Add(-3 * time.Second)
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
-		Type:     "apply_complete",
+		Type:     terraform.MsgTypeApplyComplete,
 		Resource: &terraform.Resource{Address: testAddr},
 	}))
 	m = newModel.(Model)
@@ -93,7 +93,7 @@ func TestHandleActionEvent_ApplyErrored(t *testing.T) {
 	m.actionResources[testAddr].ProcessStartedAt = time.Now().Add(-3 * time.Second)
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
-		Type:     "apply_errored",
+		Type:     terraform.MsgTypeApplyErrored,
 		Resource: &terraform.Resource{Address: testAddr},
 	}))
 	m = newModel.(Model)
@@ -107,7 +107,7 @@ func TestHandleActionEvent_UnknownAddress(t *testing.T) {
 	m := newActionTestModel()
 
 	newModel, cmd := m.Update(streamEventMsg(terraform.StreamEvent{
-		Type:     "apply_start",
+		Type:     terraform.MsgTypeApplyStart,
 		Resource: &terraform.Resource{Address: "aws_iam_role.unknown"},
 	}))
 	m = newModel.(Model)
@@ -120,7 +120,7 @@ func TestHandleActionEvent_NilResource(t *testing.T) {
 	m := newActionTestModel()
 
 	newModel, cmd := m.Update(streamEventMsg(terraform.StreamEvent{
-		Type:    "change_summary",
+		Type:    terraform.MsgTypeChangeSummary,
 		Message: "Apply complete!",
 	}))
 	m = newModel.(Model)
@@ -132,7 +132,7 @@ func TestHandleActionEvent_AppendsMessage(t *testing.T) {
 	m := newActionTestModel()
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
-		Type:     "apply_start",
+		Type:     terraform.MsgTypeApplyStart,
 		Resource: &terraform.Resource{Address: testAddr},
 		Message:  "aws_s3_bucket.a: Modifying...",
 	}))

@@ -22,6 +22,7 @@ func TestParseRefreshStart(t *testing.T) {
 	assert.Empty(t, event.Resource.Module)
 	assert.Equal(t, "aws_s3_bucket", event.Resource.ResourceType)
 	assert.Equal(t, "aws", event.Resource.ImpliedProvider)
+	assert.Equal(t, MsgTypeRefreshStart, event.Type)
 }
 
 func TestParseRefreshComplete(t *testing.T) {
@@ -30,7 +31,7 @@ func TestParseRefreshComplete(t *testing.T) {
 	event := ParseLine(line)
 
 	require.NotNil(t, event)
-	assert.Equal(t, "refresh_complete", event.Type)
+	assert.Equal(t, MsgTypeRefreshComplete, event.Type)
 	assert.Equal(t, "aws_s3_bucket.uploads", event.Resource.Address)
 }
 
@@ -40,6 +41,7 @@ func TestParseApplyStart(t *testing.T) {
 	event := ParseLine(line)
 
 	assertResourceEvent(t, event, "data.aws_caller_identity.current", ActionRead, "")
+	assert.Equal(t, MsgTypeApplyStart, event.Type)
 }
 
 func TestParseApplyProgress(t *testing.T) {
@@ -48,7 +50,7 @@ func TestParseApplyProgress(t *testing.T) {
 	event := ParseLine(line)
 
 	require.NotNil(t, event)
-	assert.Equal(t, "apply_progress", event.Type)
+	assert.Equal(t, MsgTypeApplyProgress, event.Type)
 	assert.Equal(t, "aws_s3_bucket.uploads", event.Resource.Address)
 }
 
@@ -58,7 +60,7 @@ func TestParseApplyErrored(t *testing.T) {
 	event := ParseLine(line)
 
 	require.NotNil(t, event)
-	assert.Equal(t, "apply_errored", event.Type)
+	assert.Equal(t, MsgTypeApplyErrored, event.Type)
 	assert.Equal(t, "aws_s3_bucket.uploads", event.Resource.Address)
 }
 

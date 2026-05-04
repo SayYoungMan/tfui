@@ -129,10 +129,10 @@ func TestStreamJsonEvents_Plan(t *testing.T) {
 
 	require.Len(t, events, 4)
 
-	assert.Equal(t, "refresh_start", events[0].Type)
+	assert.Equal(t, MsgTypeRefreshStart, events[0].Type)
 	assert.Equal(t, "aws_s3_bucket.uploads", events[0].Resource.Address)
 
-	assert.Equal(t, "refresh_complete", events[1].Type)
+	assert.Equal(t, MsgTypeRefreshComplete, events[1].Type)
 
 	assert.Equal(t, ActionUpdate, events[2].Resource.Action)
 
@@ -164,11 +164,11 @@ func TestStreamJsonEvents_Apply(t *testing.T) {
 
 	require.Len(t, events, 3)
 
-	assert.Equal(t, "apply_start", events[0].Type)
+	assert.Equal(t, MsgTypeApplyStart, events[0].Type)
 	assert.Equal(t, "aws_s3_bucket.uploads", events[0].Resource.Address)
 	assert.Equal(t, ActionUpdate, events[0].Resource.Action)
 
-	assert.Equal(t, "apply_complete", events[1].Type)
+	assert.Equal(t, MsgTypeApplyComplete, events[1].Type)
 
 	assert.NotNil(t, events[2].Summary)
 	assert.Equal(t, 1, events[2].Summary.Change)
@@ -198,10 +198,10 @@ func TestStreamJsonEvents_Destroy(t *testing.T) {
 
 	require.Len(t, events, 3)
 
-	assert.Equal(t, "apply_start", events[0].Type)
+	assert.Equal(t, MsgTypeApplyStart, events[0].Type)
 	assert.Equal(t, ActionDelete, events[0].Resource.Action)
 
-	assert.Equal(t, "apply_complete", events[1].Type)
+	assert.Equal(t, MsgTypeApplyComplete, events[1].Type)
 
 	assert.NotNil(t, events[2].Summary)
 	assert.Equal(t, 1, events[2].Summary.Remove)
@@ -228,16 +228,16 @@ func TestStreamPerResource_Taint(t *testing.T) {
 
 	require.Len(t, events, 6)
 
-	assert.Equal(t, "apply_start", events[0].Type)
+	assert.Equal(t, MsgTypeApplyStart, events[0].Type)
 	assert.Equal(t, "aws_s3_bucket.a", events[0].Resource.Address)
 	assert.Contains(t, events[1].Message, "tainted")
-	assert.Equal(t, "apply_complete", events[2].Type)
+	assert.Equal(t, MsgTypeApplyComplete, events[2].Type)
 	assert.Equal(t, "aws_s3_bucket.a", events[2].Resource.Address)
 
-	assert.Equal(t, "apply_start", events[3].Type)
+	assert.Equal(t, MsgTypeApplyStart, events[3].Type)
 	assert.Equal(t, "aws_s3_bucket.b", events[3].Resource.Address)
 	assert.Contains(t, events[4].Message, "tainted")
-	assert.Equal(t, "apply_complete", events[5].Type)
+	assert.Equal(t, MsgTypeApplyComplete, events[5].Type)
 	assert.Equal(t, "aws_s3_bucket.b", events[5].Resource.Address)
 }
 
@@ -260,12 +260,12 @@ func TestStreamPerResource_Untaint(t *testing.T) {
 
 	require.Len(t, events, 3)
 
-	assert.Equal(t, "apply_start", events[0].Type)
+	assert.Equal(t, MsgTypeApplyStart, events[0].Type)
 	assert.Equal(t, "aws_s3_bucket.uploads", events[0].Resource.Address)
 
 	assert.Contains(t, events[1].Message, "untainted")
 
-	assert.Equal(t, "apply_complete", events[2].Type)
+	assert.Equal(t, MsgTypeApplyComplete, events[2].Type)
 	assert.Equal(t, "aws_s3_bucket.uploads", events[2].Resource.Address)
 }
 
@@ -285,11 +285,11 @@ func TestStreamPerResource_Error(t *testing.T) {
 
 	require.Len(t, events, 3)
 
-	assert.Equal(t, "apply_start", events[0].Type)
+	assert.Equal(t, MsgTypeApplyStart, events[0].Type)
 	assert.Equal(t, "aws_s3_bucket.uploads", events[0].Resource.Address)
 
 	assert.Contains(t, events[1].Message, "Error")
 
-	assert.Equal(t, "apply_errored", events[2].Type)
+	assert.Equal(t, MsgTypeApplyErrored, events[2].Type)
 	assert.Equal(t, "aws_s3_bucket.uploads", events[2].Resource.Address)
 }
