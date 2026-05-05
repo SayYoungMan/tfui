@@ -20,16 +20,15 @@ type Model struct {
 	cancel    *cancelWrapper
 	quitState quitState
 
-	resources        terraform.Resources
-	resourceIndexMap map[string]int
-	actionResources  map[string]*ActionResource
-	actionStartTime  time.Time
+	resources       terraform.Resources
+	actionResources map[string]*ActionResource
+	actionStartTime time.Time
 
-	rows      []Row
-	collapsed map[string]bool
-	selected  map[string]bool
-	cursor    int // indicates which resource idx we are pointing at
-	offset    int // indicates which resource is shown at the top
+	rootItem *Item
+	rows     []Row
+	selected map[string]bool
+	cursor   int // indicates which resource idx we are pointing at
+	offset   int // indicates which resource is shown at the top
 
 	filterInput   textinput.Model
 	hideUnchanged bool
@@ -83,34 +82,19 @@ const (
 	forceQuitReadyState
 )
 
-type rowKind int
-
-const (
-	rowResource rowKind = iota
-	rowModule
-)
-
-type Row struct {
-	Kind       rowKind
-	TreePrefix string
-	Address    string
-	Parent     string
-}
-
 func NewModel(runner *terraform.TerraformRunner) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 
 	return Model{
-		runner:           runner,
-		resources:        []terraform.Resource{},
-		collapsed:        make(map[string]bool),
-		selected:         make(map[string]bool),
-		resourceIndexMap: make(map[string]int),
-		filterInput:      newFilterInput(),
-		workState:        workStatePull,
-		cancel:           &cancelWrapper{},
-		spinner:          s,
+		runner:      runner,
+		resources:   []terraform.Resource{},
+		selected:    make(map[string]bool),
+		rootItem:    &Item{Module: &Module{Address: ""}},
+		filterInput: newFilterInput(),
+		workState:   workStatePull,
+		cancel:      &cancelWrapper{},
+		spinner:     s,
 	}
 }
 

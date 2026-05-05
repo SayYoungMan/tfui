@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"sort"
 	"strings"
 
 	"charm.land/bubbles/v2/textinput"
@@ -30,40 +29,6 @@ func (m *Model) updateFilter(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, cmd
-}
-
-func (m *Model) rebuildRows() {
-	resources := m.visibleResources()
-
-	rowMap := make(map[string]Row, len(resources)*2)
-	children := make(map[string][]string)
-
-	for _, r := range resources {
-		for addr := r.Module; addr != ""; addr = parentModule(addr) {
-			if _, exists := rowMap[addr]; exists {
-				break
-			}
-			parent := parentModule(addr)
-			rowMap[addr] = Row{Kind: rowModule, Address: addr, Parent: parent}
-			children[parent] = append(children[parent], addr)
-		}
-
-		rowMap[r.Address] = Row{Kind: rowResource, Address: r.Address, Parent: r.Module}
-		children[r.Module] = append(children[r.Module], r.Address)
-	}
-
-	// Sort children list for stable output
-	for parent := range children {
-		sort.Strings(children[parent])
-	}
-
-	m.rows = m.rows[:0]
-	m.addRowsDFS(rowMap, children, "", []bool{})
-
-	if m.cursor >= len(m.rows) {
-		m.cursor = max(0, len(m.rows)-1)
-	}
-	m.adjustOffset()
 }
 
 // filter box (3) + resource borders (2) + info bar (1) + blank + help bar

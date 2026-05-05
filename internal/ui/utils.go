@@ -39,7 +39,7 @@ func (m Model) isSelectedOrAncestor(addr string) bool {
 		return true
 	}
 
-	for path := parentModule(addr); path != ""; path = parentModule(path) {
+	for path := parentModuleAddr(addr); path != ""; path = parentModuleAddr(path) {
 		if m.selected[path] {
 			return true
 		}
@@ -48,7 +48,7 @@ func (m Model) isSelectedOrAncestor(addr string) bool {
 }
 
 func isAncestor(ancestor string, child string) bool {
-	for parent := parentModule(child); parent != ""; parent = parentModule(parent) {
+	for parent := parentModuleAddr(child); parent != ""; parent = parentModuleAddr(parent) {
 		if parent == ancestor {
 			return true
 		}
@@ -56,7 +56,7 @@ func isAncestor(ancestor string, child string) bool {
 	return false
 }
 
-func parentModule(address string) string {
+func parentModuleAddr(address string) string {
 	if !strings.HasPrefix(address, "module.") {
 		return ""
 	}
@@ -87,15 +87,14 @@ func parentModule(address string) string {
 }
 
 // return the most direct module from current cursor position
-func (m *Model) currentCursorModule() string {
-	cursorRow := m.rows[m.cursor]
+func (m *Model) currentCursorModule() *Module {
+	cursorItem := m.rows[m.cursor].Item
 
-	currentModule := cursorRow.Address
-	if cursorRow.Kind == rowResource {
-		currentModule = cursorRow.Parent
+	if cursorItem.IsResource() {
+		return cursorItem.Parent
 	}
 
-	return currentModule
+	return cursorItem.Module
 }
 
 func (m *Model) adjustOffset() {

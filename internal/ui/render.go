@@ -42,11 +42,10 @@ func (m Model) renderResourcesBox() string {
 		row := m.rows[i]
 
 		var line string
-		switch row.Kind {
-		case rowModule:
-			line = m.renderModuleLine(i)
-		case rowResource:
+		if row.Item.IsResource() {
 			line = m.renderResourceLine(i)
+		} else {
+			line = m.renderModuleLine(i)
 		}
 
 		// Truncate the end to fit to screen
@@ -69,7 +68,7 @@ func (m Model) renderResourcesBox() string {
 func (m Model) renderResourceLine(idx int) string {
 	row := m.rows[idx]
 
-	address := row.Address
+	address := row.Item.Address()
 	r := m.resources[m.resourceIndexMap[address]]
 	if r.Reason != "" {
 		address += fmt.Sprintf(" (%s)", r.Reason)

@@ -26,7 +26,7 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.collapsed[row.Address] = true
 			m.rebuildRows()
 		} else if row.Kind == rowResource {
-			parent := parentModule(row.Address)
+			parent := parentModuleAddr(row.Address)
 			if parent == "" {
 				break
 			}

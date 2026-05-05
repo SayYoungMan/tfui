@@ -53,7 +53,7 @@ func TestParentModule(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, parentModule(tt.address))
+			assert.Equal(t, tt.expected, parentModuleAddr(tt.address))
 		})
 	}
 }
