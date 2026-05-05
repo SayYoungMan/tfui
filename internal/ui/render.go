@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"charm.land/lipgloss/v2"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
@@ -402,6 +403,14 @@ func (m Model) renderActionResourcesView() string {
 	fmt.Fprint(&s, help)
 
 	return s.String()
+}
+
+func (m *Model) formatElapsed(d time.Duration) string {
+	d = d.Truncate(time.Second)
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	return fmt.Sprintf("%dm %ds", int(d.Minutes()), int(d.Seconds())%60)
 }
 
 const (

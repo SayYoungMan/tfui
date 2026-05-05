@@ -1,9 +1,8 @@
 package ui
 
 import (
-	"fmt"
+	"sort"
 	"strings"
-	"time"
 
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 )
@@ -23,6 +22,15 @@ func (m Model) hasError() bool {
 
 func isUnchanged(r terraform.Resource) bool {
 	return r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead || r.Action == terraform.ActionUncertain
+}
+
+func (m Model) selectedAddresses() []string {
+	addrs := make([]string, 0, len(m.selected))
+	for addr := range m.selected {
+		addrs = append(addrs, addr)
+	}
+	sort.Strings(addrs)
+	return addrs
 }
 
 // returns if it or ancestor module is selected
@@ -102,12 +110,4 @@ func (m *Model) adjustOffset() {
 	if m.cursor < m.offset {
 		m.offset = m.cursor
 	}
-}
-
-func (m *Model) formatElapsed(d time.Duration) string {
-	d = d.Truncate(time.Second)
-	if d < time.Minute {
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	}
-	return fmt.Sprintf("%dm %ds", int(d.Minutes()), int(d.Seconds())%60)
 }

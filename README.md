@@ -1,6 +1,7 @@
 # tfui
 [![Build & Test](https://github.com/SayYoungMan/tfui/actions/workflows/build_test.yml/badge.svg?branch=main)](https://github.com/SayYoungMan/tfui/actions/workflows/build_test.yml)
 ![GitHub Release](https://img.shields.io/github/v/release/SayYoungMan/tfui)
+[![Go Report Card](https://goreportcard.com/badge/github.com/SayYoungMan/tfui)](https://goreportcard.com/report/github.com/SayYoungMan/tfui)
 
 Interactive TUI for performing Terraform workflows
 
@@ -65,5 +66,7 @@ tfui --binary tofu
 | Analytics Report | 🔲 Planned |
 | Terragrunt Support | 🔲 Planned |
 | History Viewer | 🔲 Planned |
+| Resource Dependency View| 🔲 Planned |
+
 
 Those are some features in mind but not in order of importance

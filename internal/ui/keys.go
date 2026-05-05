@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"sort"
-
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 )
@@ -192,15 +190,6 @@ func (m Model) quitConfirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
-}
-
-func (m Model) selectedAddresses() []string {
-	addrs := make([]string, 0, len(m.selected))
-	for addr := range m.selected {
-		addrs = append(addrs, addr)
-	}
-	sort.Strings(addrs)
-	return addrs
 }
 
 func (m Model) actionResourcesKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
