@@ -20,7 +20,7 @@ func (m Model) hasError() bool {
 	return m.err != nil
 }
 
-func isUnchanged(r terraform.Resource) bool {
+func isUnchanged(r *terraform.Resource) bool {
 	return r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead || r.Action == terraform.ActionUncertain
 }
 

@@ -35,9 +35,8 @@ func (m Model) handleStatePulled(msg statePulledMsg) (Model, tea.Cmd) {
 		return m, nil
 	}
 
-	for _, r := range msg.resources {
-		m.resourceIndexMap[r.Address] = len(m.resources)
-		m.resources = append(m.resources, r)
+	for i, r := range msg.resources {
+		m.resources[r.Address] = &msg.resources[i]
 	}
 	m.rebuildRows()
 
@@ -82,16 +81,11 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 
 	if event.Resource != nil {
 		addr := event.Resource.Address
-		if idx, exists := m.resourceIndexMap[addr]; exists {
-			existing := m.resources[idx]
-			updated := *event.Resource
-			updated.Attributes = existing.Attributes
-			m.resources[idx] = updated
-		} else {
-			newIdx := len(m.resources)
-			m.resourceIndexMap[addr] = newIdx
-			m.resources = append(m.resources, *event.Resource)
+		if existing, exists := m.resources[addr]; exists {
+			event.Resource.Attributes = existing.Attributes
 		}
+		m.resources[addr] = event.Resource
+
 		m.rebuildRows()
 	}
 

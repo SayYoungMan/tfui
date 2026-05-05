@@ -70,7 +70,7 @@ func (m Model) renderResourceLine(idx int) string {
 	row := m.rows[idx]
 
 	address := row.Address
-	r := m.resources[m.resourceIndexMap[address]]
+	r := m.resources[address]
 	if r.Reason != "" {
 		address += fmt.Sprintf(" (%s)", r.Reason)
 	}
@@ -255,8 +255,7 @@ func (m Model) renderConfirmView() string {
 	var resourceLines []string
 	for _, addr := range addrs {
 		var line string
-		if idx, isResource := m.resourceIndexMap[addr]; isResource {
-			r := m.resources[idx]
+		if r, isResource := m.resources[addr]; isResource {
 			line = fmt.Sprintf("  %s %s", r.Action.Symbol(), addr)
 			if style, ok := actionStyles[r.Action]; ok {
 				line = style.Render(line)

@@ -76,10 +76,11 @@ func TestListKeys_ScrollsUpWithCursor(t *testing.T) {
 	m.viewHeight = 3 + defaultReservedRows
 
 	for i := range 10 {
-		m.resources = append(m.resources, terraform.Resource{
-			Address: fmt.Sprintf("aws_s3_bucket.bucket_%d", i),
+		addr := fmt.Sprintf("aws_s3_bucket.bucket_%d", i)
+		m.resources[addr] = &terraform.Resource{
+			Address: addr,
 			Action:  terraform.ActionNoop,
-		})
+		}
 	}
 
 	m.cursor = 5
@@ -119,12 +120,12 @@ func TestListKeys_ToggleSelect(t *testing.T) {
 	// Select first resource
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	m = newModel.(Model)
-	assert.True(t, m.selected[m.resources[0].Address])
+	assert.True(t, m.selected[testResources[0].Address])
 
 	// Deselect it
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	m = newModel.(Model)
-	assert.False(t, m.selected[m.resources[0].Address])
+	assert.False(t, m.selected[testResources[0].Address])
 }
 
 func TestListKeys_SelectEmptyList(t *testing.T) {
@@ -162,7 +163,7 @@ func TestListKeys_RemoveSelectionIfParentSelected(t *testing.T) {
 func TestListKeys_ActionBlockedWhileScanning(t *testing.T) {
 	m := newTestModel()
 	m.workState = workPlan
-	m.selected = map[string]bool{m.resources[0].Address: true}
+	m.selected = map[string]bool{testResources[0].Address: true}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = newModel.(Model)
@@ -207,7 +208,7 @@ func TestListKeys_RefreshBlockedWhileScanning(t *testing.T) {
 func TestListKeys_TabOpensActionPicker(t *testing.T) {
 	m := newTestModel()
 	m.workState = workIdle
-	m.selected = map[string]bool{m.resources[0].Address: true}
+	m.selected = map[string]bool{testResources[0].Address: true}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = newModel.(Model)
@@ -341,7 +342,7 @@ func TestActionPickerKeys_EscReturnsToList(t *testing.T) {
 func TestActionPickerKeys_CursorResetsOnEntry(t *testing.T) {
 	m := newTestModel()
 	m.workState = workIdle
-	m.selected = map[string]bool{m.resources[0].Address: true}
+	m.selected = map[string]bool{testResources[0].Address: true}
 	m.actionCursor = 3
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
@@ -366,7 +367,7 @@ func TestActionPickerKeys_EnterGoesConfirmView(t *testing.T) {
 func TestConfirmKeys_DefaultsToCancel(t *testing.T) {
 	m := newTestModel()
 	m.viewState = viewActionPicker
-	m.selected = map[string]bool{m.resources[0].Address: true}
+	m.selected = map[string]bool{testResources[0].Address: true}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)

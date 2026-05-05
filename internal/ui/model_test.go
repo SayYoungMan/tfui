@@ -30,8 +30,7 @@ func TestModel_HandleRefreshComplete(t *testing.T) {
 	m = newModel.(Model)
 
 	require.Len(t, m.resources, 1)
-	assert.Equal(t, testResourceAddr, m.resources[0].Address)
-	assert.Equal(t, terraform.ActionNoop, m.resources[0].Action)
+	assert.Equal(t, terraform.ActionNoop, m.resources[testResourceAddr].Action)
 	assert.NotNil(t, cmd)
 }
 
@@ -49,8 +48,7 @@ func TestModel_HandleDataSourceRead(t *testing.T) {
 	m = newModel.(Model)
 
 	require.Len(t, m.resources, 1)
-	assert.Equal(t, testDataSourceAddr, m.resources[0].Address)
-	assert.Equal(t, terraform.ActionRead, m.resources[0].Action)
+	assert.Equal(t, terraform.ActionRead, m.resources[testDataSourceAddr].Action)
 	assert.NotNil(t, cmd)
 }
 
@@ -74,8 +72,8 @@ func TestModel_UpdateExistingResource(t *testing.T) {
 	m = newModel.(Model)
 
 	require.Len(t, m.resources, 1)
-	assert.Equal(t, testResourceAddr, m.resources[0].Address)
-	assert.Equal(t, terraform.ActionUpdate, m.resources[0].Action)
+	assert.Equal(t, testResourceAddr, m.resources[testResourceAddr].Address)
+	assert.Equal(t, terraform.ActionUpdate, m.resources[testResourceAddr].Action)
 	assert.NotNil(t, cmd)
 }
 
@@ -100,9 +98,9 @@ func TestModel_DriftExistingResource(t *testing.T) {
 	m = newModel.(Model)
 
 	require.Len(t, m.resources, 1)
-	assert.Equal(t, testResourceAddr, m.resources[0].Address)
-	assert.Equal(t, terraform.ActionUpdate, m.resources[0].Action)
-	assert.Equal(t, "drift", m.resources[0].Reason)
+	assert.Equal(t, testResourceAddr, m.resources[testResourceAddr].Address)
+	assert.Equal(t, terraform.ActionUpdate, m.resources[testResourceAddr].Action)
+	assert.Equal(t, "drift", m.resources[testResourceAddr].Reason)
 	assert.NotNil(t, cmd)
 }
 
@@ -129,7 +127,7 @@ func TestModel_HideUnchanged_ResourceBecomesChanged(t *testing.T) {
 	}))
 	m = newModel.(Model)
 
-	assert.Equal(t, terraform.ActionUpdate, m.resources[0].Action)
+	assert.Equal(t, terraform.ActionUpdate, m.resources[testResourceAddr].Action)
 	require.Len(t, m.rows, 1)
 }
 
@@ -198,7 +196,7 @@ func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
 
 	var theLine string
 	for line := range strings.SplitSeq(m.View().Content, "\n") {
-		if strings.Contains(line, m.resources[2].Address) {
+		if strings.Contains(line, resources[2].Address) {
 			theLine = line
 		}
 	}

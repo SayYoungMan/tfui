@@ -93,7 +93,7 @@ func (m *Model) visibleResources() terraform.Resources {
 	}
 
 	filtered := fuzzy.FindFrom(filter, shown)
-	resources := make([]terraform.Resource, len(filtered))
+	resources := make([]*terraform.Resource, len(filtered))
 	for i, r := range filtered {
 		resources[i] = shown[r.Index]
 	}

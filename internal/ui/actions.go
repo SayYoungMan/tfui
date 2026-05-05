@@ -83,8 +83,7 @@ func (m Model) gracefulQuit() (tea.Model, tea.Cmd) {
 
 func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	// initialize
-	m.resources = m.resources[:0]
-	m.resourceIndexMap = make(map[string]int)
+	m.resources = make(map[string]*terraform.Resource)
 	m.rows = m.rows[:0]
 	m.collapsed = make(map[string]bool)
 	m.selected = make(map[string]bool)
@@ -139,7 +138,7 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 
 func (m *Model) openDetail() {
 	addr := m.rows[m.cursor].Address
-	r := m.resources[m.resourceIndexMap[addr]]
+	r := m.resources[addr]
 
 	m.offset = 0
 	m.viewState = viewDetail

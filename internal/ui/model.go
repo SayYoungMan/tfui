@@ -20,10 +20,9 @@ type Model struct {
 	cancel    *cancelWrapper
 	quitState quitState
 
-	resources        terraform.Resources
-	resourceIndexMap map[string]int
-	actionResources  map[string]*ActionResource
-	actionStartTime  time.Time
+	resources       map[string]*terraform.Resource
+	actionResources map[string]*ActionResource
+	actionStartTime time.Time
 
 	rows      []Row
 	collapsed map[string]bool
@@ -102,15 +101,14 @@ func NewModel(runner *terraform.TerraformRunner) Model {
 	s.Spinner = spinner.Dot
 
 	return Model{
-		runner:           runner,
-		resources:        []terraform.Resource{},
-		collapsed:        make(map[string]bool),
-		selected:         make(map[string]bool),
-		resourceIndexMap: make(map[string]int),
-		filterInput:      newFilterInput(),
-		workState:        workStatePull,
-		cancel:           &cancelWrapper{},
-		spinner:          s,
+		runner:      runner,
+		resources:   make(map[string]*terraform.Resource),
+		collapsed:   make(map[string]bool),
+		selected:    make(map[string]bool),
+		filterInput: newFilterInput(),
+		workState:   workStatePull,
+		cancel:      &cancelWrapper{},
+		spinner:     s,
 	}
 }
 
