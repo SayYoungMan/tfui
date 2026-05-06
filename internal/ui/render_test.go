@@ -59,11 +59,11 @@ func TestRenderListView_ShowsCursor(t *testing.T) {
 
 func TestRenderListView_ShowsSelected(t *testing.T) {
 	m := newTestModel()
-	m.selected = map[string]bool{m.resources[1].Address: true}
+	m.selected = map[string]bool{testResources[1].Address: true}
 
 	view := m.View()
 	for line := range strings.SplitSeq(view.Content, "\n") {
-		if strings.Contains(line, m.resources[1].Address) {
+		if strings.Contains(line, testResources[1].Address) {
 			assert.Contains(t, line, ansiString)
 		}
 	}
@@ -111,7 +111,7 @@ func TestRenderListView_ViewShowsScanning(t *testing.T) {
 
 func TestRenderListView_ViewShowsSelectedCount(t *testing.T) {
 	m := newTestModel()
-	m.selected = map[string]bool{m.resources[0].Address: true}
+	m.selected = map[string]bool{testResources[0].Address: true}
 
 	view := m.View()
 
@@ -156,7 +156,7 @@ func TestRenderListView_ShowsHideUnchangedInfo(t *testing.T) {
 func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {
 	m := newTestModel()
 	m.viewState = viewActionPicker
-	m.selected = map[string]bool{m.resources[0].Address: true, m.resources[1].Address: true}
+	m.selected = map[string]bool{testResources[0].Address: true, testResources[1].Address: true}
 
 	view := m.View()
 
@@ -171,15 +171,15 @@ func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {
 
 func TestRenderConfirmView_ShowsResourcesAndButtons(t *testing.T) {
 	m := newTestModel()
-	m.selected = map[string]bool{m.resources[0].Address: true, m.resources[2].Address: true}
+	m.selected = map[string]bool{testResources[0].Address: true, testResources[2].Address: true}
 	m.viewState = viewConfirm
 	m.actionCursor = 1
 
 	view := m.View()
 
 	assert.Contains(t, view.Content, "apply 2 resource(s)?")
-	assert.Contains(t, view.Content, m.resources[0].Address)
-	assert.Contains(t, view.Content, m.resources[2].Address)
+	assert.Contains(t, view.Content, testResources[0].Address)
+	assert.Contains(t, view.Content, testResources[2].Address)
 	assert.Contains(t, view.Content, "Cancel")
 	assert.Contains(t, view.Content, "Confirm")
 }
@@ -190,10 +190,9 @@ func TestRenderConfirmView_TruncatesLongSelections(t *testing.T) {
 
 	for i := range 15 {
 		addr := fmt.Sprintf("aws_s3_bucket.b_%02d", i)
-		m.resources = append(m.resources, terraform.Resource{
+		m.resources[addr] = &terraform.Resource{
 			Address: addr, Action: terraform.ActionDelete,
-		})
-		m.resourceIndexMap[addr] = i
+		}
 		m.selected[addr] = true
 	}
 

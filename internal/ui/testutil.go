@@ -28,12 +28,10 @@ func newTestModel() Model {
 
 func newTestModelWithResources(resources []terraform.Resource) Model {
 	m := NewModel(&terraform.TerraformRunner{})
-	m.resources = resources
-	m.selected = make(map[string]bool)
-	m.resourceIndexMap = make(map[string]int)
-	for i, r := range m.resources {
-		m.resourceIndexMap[r.Address] = i
+	for i, r := range resources {
+		m.resources[r.Address] = &resources[i]
 	}
+	m.selected = make(map[string]bool)
 	m.rebuildRows()
 	m.viewHeight = 48
 	m.viewWidth = 80

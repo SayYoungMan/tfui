@@ -107,7 +107,7 @@ type Resource struct {
 }
 
 // Implement these methods to satisfy interface of fuzzy matching
-type Resources []Resource
+type Resources []*Resource
 
 func (r Resources) String(i int) string {
 	return r[i].Address

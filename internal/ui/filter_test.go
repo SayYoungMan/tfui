@@ -25,7 +25,7 @@ func TestRebuildRows_MatchesSubset(t *testing.T) {
 
 	addrs := make([]string, len(m.rows))
 	for i, row := range m.rows {
-		addrs[i] = row.Address
+		addrs[i] = row.Item.Address()
 	}
 
 	assert.Len(t, m.rows, 3)
@@ -84,7 +84,7 @@ func TestRebuildRows_Collapse(t *testing.T) {
 	m.rebuildRows()
 
 	assert.Len(t, m.rows, 1)
-	assert.Equal(t, "module.a", m.rows[0].Address)
+	assert.Equal(t, "module.a", m.rows[0].Item.Address())
 }
 
 func TestRebuildRows_FilterIncludesParent(t *testing.T) {
@@ -97,8 +97,8 @@ func TestRebuildRows_FilterIncludesParent(t *testing.T) {
 	m.rebuildRows()
 
 	assert.Len(t, m.rows, 2)
-	assert.Equal(t, "module.a", m.rows[0].Address)
-	assert.Equal(t, "module.a.aws_s3.x", m.rows[1].Address)
+	assert.Equal(t, "module.a", m.rows[0].Item.Address())
+	assert.Equal(t, "module.a.aws_s3.x", m.rows[1].Item.Address())
 }
 
 func TestTreePrefix(t *testing.T) {

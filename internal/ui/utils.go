@@ -20,7 +20,7 @@ func (m Model) hasError() bool {
 	return m.err != nil
 }
 
-func isUnchanged(r terraform.Resource) bool {
+func isUnchanged(r *terraform.Resource) bool {
 	return r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead || r.Action == terraform.ActionUncertain
 }
 
@@ -56,6 +56,7 @@ func isAncestor(ancestor string, child string) bool {
 	return false
 }
 
+// Takes the address and check for last occurring module.x and returns it
 func parentModuleAddr(address string) string {
 	if !strings.HasPrefix(address, "module.") {
 		return ""

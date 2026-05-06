@@ -20,15 +20,16 @@ type Model struct {
 	cancel    *cancelWrapper
 	quitState quitState
 
-	resources       terraform.Resources
+	resources       map[string]*terraform.Resource
 	actionResources map[string]*ActionResource
 	actionStartTime time.Time
 
-	rootItem *Item
-	rows     []Row
-	selected map[string]bool
-	cursor   int // indicates which resource idx we are pointing at
-	offset   int // indicates which resource is shown at the top
+	rootItem  *Item
+	rows      []Row
+	collapsed map[string]bool
+	selected  map[string]bool
+	cursor    int // indicates which resource idx we are pointing at
+	offset    int // indicates which resource is shown at the top
 
 	filterInput   textinput.Model
 	hideUnchanged bool
@@ -88,7 +89,8 @@ func NewModel(runner *terraform.TerraformRunner) Model {
 
 	return Model{
 		runner:      runner,
-		resources:   []terraform.Resource{},
+		resources:   make(map[string]*terraform.Resource),
+		collapsed:   make(map[string]bool),
 		selected:    make(map[string]bool),
 		rootItem:    &Item{Module: &Module{Address: ""}},
 		filterInput: newFilterInput(),
