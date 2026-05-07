@@ -257,7 +257,9 @@ func TestRenderActionResourcesView_DifferentResourceStates(t *testing.T) {
 
 func TestRenderActionResourcesView_TruncatesLongAddress(t *testing.T) {
 	longAddr := "module.very_long_module_name.module.another_long_name.aws_s3_bucket.extremely_long_bucket_name_that_exceeds_width"
-	m := newActionTestModel()
+	m := newTestModelWithResources([]terraform.Resource{
+		{Address: longAddr},
+	})
 	m.viewWidth = 60
 	m.selected = map[string]bool{longAddr: true}
 	m.actionResources = map[string]*ActionResource{

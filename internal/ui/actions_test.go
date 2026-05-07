@@ -183,7 +183,11 @@ func TestGracefulQuit_CanCancelInitPull(t *testing.T) {
 }
 
 func TestStartAction_PopulatesActionResources(t *testing.T) {
-	m := NewModel(terraform.NewTerraformRunner(t.TempDir(), "true"))
+	m := newTestModelWithResources([]terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionCreate},
+		{Address: "aws_s3_bucket.b", Action: terraform.ActionCreate},
+	})
+	m.runner = terraform.NewTerraformRunner(t.TempDir(), "true")
 	m.workState = workIdle
 	m.selected = map[string]bool{
 		"aws_s3_bucket.a": true,
