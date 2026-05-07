@@ -34,13 +34,13 @@ func (m Model) selectedAddresses() []string {
 }
 
 // returns if it or ancestor module is selected
-func (m Model) isSelectedOrAncestor(addr string) bool {
-	if m.selected[addr] {
+func (m Model) isSelectedOrAncestor(item *Item) bool {
+	if m.selected[item.Address()] {
 		return true
 	}
 
-	for path := parentModuleAddr(addr); path != ""; path = parentModuleAddr(path) {
-		if m.selected[path] {
+	for parent := item.Parent; parent != m.rootItem; parent = parent.Parent {
+		if m.selected[parent.Address()] {
 			return true
 		}
 	}
@@ -92,7 +92,7 @@ func (m *Model) currentCursorModule() *Module {
 	cursorItem := m.rows[m.cursor].Item
 
 	if cursorItem.IsResource() {
-		return cursorItem.Parent
+		return cursorItem.Parent.Module
 	}
 
 	return cursorItem.Module

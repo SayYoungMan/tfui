@@ -25,14 +25,14 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if item.IsModule() && !m.collapsed[item.Address()] {
 			m.collapsed[item.Module.Address] = true
 			m.rebuildRows()
-		} else if item.IsResource() && item.Parent != m.rootItem.Module {
+		} else if item.IsResource() && item.Parent != m.rootItem {
 			// Collapse resource's parent module
-			m.collapsed[item.Parent.Address] = true
+			m.collapsed[item.Parent.Address()] = true
 			m.rebuildRows()
 
 			// Set cursor on its parent after collapse
 			for i, r := range m.rows {
-				if r.Item.Address() == item.Parent.Address {
+				if r.Item.Address() == item.Parent.Address() {
 					m.cursor = i
 					m.adjustOffset()
 					break
@@ -93,12 +93,13 @@ func (m *Model) toggleSelected() {
 	if len(m.rows) <= 0 {
 		return
 	}
-	addr := m.rows[m.cursor].Item.Address()
+	row := m.rows[m.cursor]
+	addr := row.Item.Address()
 	if m.selected[addr] {
 		delete(m.selected, addr)
 	} else {
 		// This is case where parent module is selected but this resource was not so skip
-		if m.isSelectedOrAncestor(addr) {
+		if m.isSelectedOrAncestor(row.Item) {
 			return
 		}
 		// Remove from selected map if there is a child row that was selected

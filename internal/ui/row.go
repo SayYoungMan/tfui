@@ -78,7 +78,7 @@ func treePrefix(isLast []bool) string {
 type Item struct {
 	Resource *terraform.Resource
 	Module   *Module
-	Parent   *Module
+	Parent   *Item
 }
 
 // True for resource item and false for module item
@@ -106,7 +106,7 @@ func (m *Model) buildItemTree(resources []*terraform.Resource) {
 		parentItem := m.buildModuleItem(r.Module, itemMap)
 		item := &Item{
 			Resource: resources[i],
-			Parent:   parentItem.Module,
+			Parent:   parentItem,
 		}
 		parentItem.Module.Children = append(parentItem.Module.Children, item)
 	}
@@ -131,7 +131,7 @@ func (m *Model) buildModuleItem(addr string, itemMap map[string]*Item) *Item {
 
 	item := &Item{
 		Module: &Module{Address: addr},
-		Parent: parentItem.Module,
+		Parent: parentItem,
 	}
 	parentItem.Module.Children = append(parentItem.Module.Children, item)
 	itemMap[addr] = item

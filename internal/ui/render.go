@@ -77,7 +77,7 @@ func (m Model) renderResourceLine(idx int) string {
 
 	currentModule := m.currentCursorModule()
 	prefix := row.TreePrefix
-	if currentModule == row.Item.Parent {
+	if currentModule == row.Item.Parent.Module {
 		prefix = treePrefixCurrentStyle.Render(prefix)
 	} else {
 		prefix = treePrefixDefaultStyle.Render(prefix)
@@ -87,7 +87,7 @@ func (m Model) renderResourceLine(idx int) string {
 	switch {
 	case idx == m.cursor:
 		line = cursorStyle.Render(line)
-	case m.isSelectedOrAncestor(addr):
+	case m.isSelectedOrAncestor(row.Item):
 		line = selectedStyle.Render(line)
 	}
 	if style, ok := actionStyles[r.Action]; ok {
@@ -109,7 +109,7 @@ func (m Model) renderModuleLine(idx int) string {
 	switch {
 	case idx == m.cursor:
 		line = cursorStyle.Render(line)
-	case m.isSelectedOrAncestor(row.Item.Address()):
+	case m.isSelectedOrAncestor(row.Item):
 		line = selectedStyle.Render(line)
 	}
 

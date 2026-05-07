@@ -85,6 +85,7 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	// initialize
 	m.resources = make(map[string]*terraform.Resource)
 	m.rows = m.rows[:0]
+	m.collapsed = make(map[string]bool)
 	m.selected = make(map[string]bool)
 	m.actionResources = nil
 	m.cursor = 0
