@@ -2,7 +2,6 @@ package ui
 
 import (
 	"sort"
-	"strings"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -32,40 +31,6 @@ func (m *Model) updateFilter(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *Model) rebuildRows() {
-	resources := m.visibleResources()
-
-	rowMap := make(map[string]Row, len(resources)*2)
-	children := make(map[string][]string)
-
-	for _, r := range resources {
-		for addr := r.Module; addr != ""; addr = parentModule(addr) {
-			if _, exists := rowMap[addr]; exists {
-				break
-			}
-			parent := parentModule(addr)
-			rowMap[addr] = Row{Kind: rowModule, Address: addr, Parent: parent}
-			children[parent] = append(children[parent], addr)
-		}
-
-		rowMap[r.Address] = Row{Kind: rowResource, Address: r.Address, Parent: r.Module}
-		children[r.Module] = append(children[r.Module], r.Address)
-	}
-
-	// Sort children list for stable output
-	for parent := range children {
-		sort.Strings(children[parent])
-	}
-
-	m.rows = m.rows[:0]
-	m.addRowsDFS(rowMap, children, "", []bool{})
-
-	if m.cursor >= len(m.rows) {
-		m.cursor = max(0, len(m.rows)-1)
-	}
-	m.adjustOffset()
-}
-
 // filter box (3) + resource borders (2) + info bar (1) + blank + help bar
 const defaultReservedRows = 8
 
@@ -78,6 +43,8 @@ func (m Model) visibleRows() int {
 	return max(1, m.viewHeight-reserved)
 }
 
+// returns slice of resources that matches the filter result, in rank order (if tie alphabetical)
+// if there is no filter applied, return the result in alphabetical order
 func (m *Model) visibleResources() terraform.Resources {
 	var shown terraform.Resources
 	for _, r := range m.resources {
@@ -89,54 +56,25 @@ func (m *Model) visibleResources() terraform.Resources {
 
 	filter := m.filterInput.Value()
 	if filter == "" {
+		sort.Slice(shown, func(i, j int) bool {
+			return shown[i].Address < shown[j].Address
+		})
 		return shown
 	}
 
-	filtered := fuzzy.FindFrom(filter, shown)
+	// Sorting myself because there is a bug in fuzzy where it doesn't obey the input order
+	// https://github.com/sahilm/fuzzy/issues/27 (Raised issue)
+	filtered := fuzzy.FindFromNoSort(filter, shown)
+	sort.SliceStable(filtered, func(i, j int) bool {
+		if filtered[i].Score != filtered[j].Score {
+			return filtered[i].Score > filtered[j].Score
+		}
+		return filtered[i].Index < filtered[j].Index
+	})
+
 	resources := make([]*terraform.Resource, len(filtered))
 	for i, r := range filtered {
 		resources[i] = shown[r.Index]
 	}
 	return resources
-}
-
-func (m *Model) addRowsDFS(rowMap map[string]Row, children map[string][]string, parent string, isLast []bool) {
-	if parent != "" {
-		isLast = append(isLast, false)
-	}
-	for i, addr := range children[parent] {
-		if i == len(children[parent])-1 && len(isLast) > 0 {
-			isLast[len(isLast)-1] = true
-		}
-
-		row := rowMap[addr]
-		row.TreePrefix = treePrefix(isLast)
-		m.rows = append(m.rows, row)
-		if row.Kind == rowModule && !m.collapsed[addr] {
-			m.addRowsDFS(rowMap, children, addr, isLast)
-		}
-	}
-}
-
-func treePrefix(isLast []bool) string {
-	if len(isLast) == 0 {
-		return ""
-	}
-
-	var s strings.Builder
-	for i := range len(isLast) - 1 {
-		if isLast[i] {
-			s.WriteString("   ")
-		} else {
-			s.WriteString("│  ")
-		}
-	}
-
-	if isLast[len(isLast)-1] {
-		s.WriteString("└─ ")
-	} else {
-		s.WriteString("├─ ")
-	}
-
-	return s.String()
 }

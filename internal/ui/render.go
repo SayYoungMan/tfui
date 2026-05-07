@@ -42,11 +42,10 @@ func (m Model) renderResourcesBox() string {
 		row := m.rows[i]
 
 		var line string
-		switch row.Kind {
-		case rowModule:
-			line = m.renderModuleLine(i)
-		case rowResource:
+		if row.Item.IsResource() {
 			line = m.renderResourceLine(i)
+		} else {
+			line = m.renderModuleLine(i)
 		}
 
 		// Truncate the end to fit to screen
@@ -68,27 +67,27 @@ func (m Model) renderResourcesBox() string {
 
 func (m Model) renderResourceLine(idx int) string {
 	row := m.rows[idx]
+	addr := row.Item.Address()
+	r := m.resources[addr]
 
-	address := row.Address
-	r := m.resources[address]
 	if r.Reason != "" {
-		address += fmt.Sprintf(" (%s)", r.Reason)
+		addr += fmt.Sprintf(" (%s)", r.Reason)
 	}
 	adornment := r.Action.Symbol()
 
 	currentModule := m.currentCursorModule()
 	prefix := row.TreePrefix
-	if currentModule == row.Parent {
+	if currentModule == row.Item.Parent.Module {
 		prefix = treePrefixCurrentStyle.Render(prefix)
 	} else {
 		prefix = treePrefixDefaultStyle.Render(prefix)
 	}
 
-	line := fmt.Sprintf("%s %s", adornment, address)
+	line := fmt.Sprintf("%s %s", adornment, addr)
 	switch {
 	case idx == m.cursor:
 		line = cursorStyle.Render(line)
-	case m.isSelectedOrAncestor(row.Address):
+	case m.isSelectedOrAncestor(row.Item):
 		line = selectedStyle.Render(line)
 	}
 	if style, ok := actionStyles[r.Action]; ok {
@@ -101,30 +100,25 @@ func (m Model) renderResourceLine(idx int) string {
 func (m Model) renderModuleLine(idx int) string {
 	row := m.rows[idx]
 
-	currentModule := m.currentCursorModule()
-	prefix := row.TreePrefix
-	if currentModule == row.Address {
-		prefix = treePrefixCurrentStyle.Render(prefix)
-	} else {
-		prefix = treePrefixDefaultStyle.Render(prefix)
-	}
-
 	symbol := "▾"
-	if m.collapsed[row.Address] {
+	if m.collapsed[row.Item.Address()] {
 		symbol = "▸"
 	}
-	line := fmt.Sprintf("%s %s", symbol, row.Address)
+	line := fmt.Sprintf("%s %s", symbol, row.Item.Address())
 
 	switch {
 	case idx == m.cursor:
 		line = cursorStyle.Render(line)
-	case m.isSelectedOrAncestor(row.Address):
+	case m.isSelectedOrAncestor(row.Item):
 		line = selectedStyle.Render(line)
 	}
 
-	if currentModule == row.Address {
+	prefix := row.TreePrefix
+	if m.currentCursorModule() == row.Item.Module {
+		prefix = treePrefixCurrentStyle.Render(prefix)
 		line = treePrefixCurrentStyle.Render(line)
 	} else {
+		prefix = treePrefixDefaultStyle.Render(prefix)
 		line = moduleStyle.Render(line)
 	}
 
@@ -450,7 +444,7 @@ func (m Model) renderOutputLayer(background string) string {
 }
 
 func (m Model) renderDetailView() string {
-	addr := m.rows[m.cursor].Address
+	addr := m.rows[m.cursor].Item.Address()
 	title := fmt.Sprintf("Detail (%s)", addr)
 
 	boxHeight := max(1, m.viewHeight-defaultReservedOutputRows)

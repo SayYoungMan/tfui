@@ -21,52 +21,47 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if len(m.rows) == 0 {
 			break
 		}
-		row := m.rows[m.cursor]
-		if row.Kind == rowModule && !m.collapsed[row.Address] {
-			m.collapsed[row.Address] = true
+		item := m.rows[m.cursor].Item
+		if item.IsModule() && !m.collapsed[item.Address()] {
+			m.collapsed[item.Module.Address] = true
 			m.rebuildRows()
-		} else if row.Kind == rowResource {
-			parent := parentModule(row.Address)
-			if parent == "" {
-				break
-			}
-
-			m.collapsed[parent] = true
+		} else if item.IsResource() && item.Parent != m.rootItem {
+			// Collapse resource's parent module
+			m.collapsed[item.Parent.Address()] = true
 			m.rebuildRows()
 
 			// Set cursor on its parent after collapse
 			for i, r := range m.rows {
-				if r.Address != parent {
-					continue
+				if r.Item.Address() == item.Parent.Address() {
+					m.cursor = i
+					m.adjustOffset()
+					break
 				}
-				m.cursor = i
-				m.adjustOffset()
-				break
 			}
 		}
 	case "l", "right":
 		if len(m.rows) == 0 {
 			break
 		}
-		row := m.rows[m.cursor]
-		if row.Kind == rowModule && m.collapsed[row.Address] {
-			delete(m.collapsed, row.Address)
+		item := m.rows[m.cursor].Item
+		if item.IsModule() && m.collapsed[item.Address()] {
+			delete(m.collapsed, item.Module.Address)
 			m.rebuildRows()
 		}
 	case "enter":
 		if len(m.rows) == 0 {
 			break
 		}
-		row := m.rows[m.cursor]
-		if row.Kind == rowModule {
-			if m.collapsed[row.Address] {
-				delete(m.collapsed, row.Address)
+		item := m.rows[m.cursor].Item
+		if item.IsModule() {
+			if m.collapsed[item.Module.Address] {
+				delete(m.collapsed, item.Module.Address)
 			} else {
-				m.collapsed[row.Address] = true
+				m.collapsed[item.Module.Address] = true
 			}
 			m.rebuildRows()
 		}
-		if row.Kind == rowResource {
+		if item.IsResource() {
 			m.openDetail()
 		}
 	case "space":
@@ -99,12 +94,12 @@ func (m *Model) toggleSelected() {
 		return
 	}
 	row := m.rows[m.cursor]
-	addr := row.Address
+	addr := row.Item.Address()
 	if m.selected[addr] {
 		delete(m.selected, addr)
 	} else {
 		// This is case where parent module is selected but this resource was not so skip
-		if m.isSelectedOrAncestor(addr) {
+		if m.isSelectedOrAncestor(row.Item) {
 			return
 		}
 		// Remove from selected map if there is a child row that was selected

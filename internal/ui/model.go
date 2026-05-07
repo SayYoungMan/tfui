@@ -24,6 +24,7 @@ type Model struct {
 	actionResources map[string]*ActionResource
 	actionStartTime time.Time
 
+	rootItem  *Item
 	rows      []Row
 	collapsed map[string]bool
 	selected  map[string]bool
@@ -82,20 +83,6 @@ const (
 	forceQuitReadyState
 )
 
-type rowKind int
-
-const (
-	rowResource rowKind = iota
-	rowModule
-)
-
-type Row struct {
-	Kind       rowKind
-	TreePrefix string
-	Address    string
-	Parent     string
-}
-
 func NewModel(runner *terraform.TerraformRunner) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -105,6 +92,7 @@ func NewModel(runner *terraform.TerraformRunner) Model {
 		resources:   make(map[string]*terraform.Resource),
 		collapsed:   make(map[string]bool),
 		selected:    make(map[string]bool),
+		rootItem:    &Item{Module: &Module{Address: ""}},
 		filterInput: newFilterInput(),
 		workState:   workStatePull,
 		cancel:      &cancelWrapper{},

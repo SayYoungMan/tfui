@@ -37,7 +37,7 @@ func TestIsAncestor(t *testing.T) {
 	assert.False(t, isAncestor("module.a", "aws_s3.x"))
 }
 
-func TestParentModule(t *testing.T) {
+func TestParentModuleAddr(t *testing.T) {
 	tests := []struct {
 		name     string
 		address  string
@@ -53,7 +53,7 @@ func TestParentModule(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, parentModule(tt.address))
+			assert.Equal(t, tt.expected, parentModuleAddr(tt.address))
 		})
 	}
 }

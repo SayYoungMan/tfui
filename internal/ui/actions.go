@@ -137,8 +137,7 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) openDetail() {
-	addr := m.rows[m.cursor].Address
-	r := m.resources[addr]
+	r := m.rows[m.cursor].Item.Resource
 
 	m.offset = 0
 	m.viewState = viewDetail
