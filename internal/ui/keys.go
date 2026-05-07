@@ -45,7 +45,7 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		item := m.rows[m.cursor].Item
 		if item.IsModule() && m.collapsed[item.Address()] {
-			m.collapsed[item.Module.Address] = false
+			delete(m.collapsed, item.Module.Address)
 			m.rebuildRows()
 		}
 	case "enter":
@@ -55,7 +55,7 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		item := m.rows[m.cursor].Item
 		if item.IsModule() {
 			if m.collapsed[item.Module.Address] {
-				m.collapsed[item.Module.Address] = false
+				delete(m.collapsed, item.Module.Address)
 			} else {
 				m.collapsed[item.Module.Address] = true
 			}

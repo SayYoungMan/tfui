@@ -16,6 +16,7 @@ func (m *Model) rebuildRows() {
 	resources := m.visibleResources()
 	m.buildItemTree(resources)
 
+	m.rows = m.rows[:0]
 	m.recursiveBuildRow(m.rootItem, []bool{})
 
 	if m.cursor >= len(m.rows) {
@@ -98,6 +99,7 @@ func (i *Item) Address() string {
 
 // Builds tree of *Item with module hierarchy
 func (m *Model) buildItemTree(resources []*terraform.Resource) {
+	m.rootItem = &Item{Module: &Module{Address: ""}}
 	itemMap := map[string]*Item{"": m.rootItem}
 
 	for i, r := range resources {

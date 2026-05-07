@@ -43,7 +43,7 @@ func (m Model) visibleRows() int {
 	return max(1, m.viewHeight-reserved)
 }
 
-// returns slice of resources that matches the filter result, in rank order
+// returns slice of resources that matches the filter result, in rank order (if tie alphabetical)
 // if there is no filter applied, return the result in alphabetical order
 func (m *Model) visibleResources() terraform.Resources {
 	var shown terraform.Resources
@@ -62,7 +62,16 @@ func (m *Model) visibleResources() terraform.Resources {
 		return shown
 	}
 
-	filtered := fuzzy.FindFrom(filter, shown)
+	// Sorting myself because there is a bug in fuzzy where it doesn't obey the input order
+	// https://github.com/sahilm/fuzzy/issues/27 (Raised issue)
+	filtered := fuzzy.FindFromNoSort(filter, shown)
+	sort.SliceStable(filtered, func(i, j int) bool {
+		if filtered[i].Score != filtered[j].Score {
+			return filtered[i].Score > filtered[j].Score
+		}
+		return filtered[i].Index < filtered[j].Index
+	})
+
 	resources := make([]*terraform.Resource, len(filtered))
 	for i, r := range filtered {
 		resources[i] = shown[r.Index]
