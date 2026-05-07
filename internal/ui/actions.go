@@ -107,15 +107,16 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancel.fn = cancel
 
-	addrs := m.selectedAddresses()
 	m.outputLines = nil
 	m.workState = workAction
 	m.viewState = viewActionResources
 	m.offset = 0
-
 	m.actionStartTime = time.Now()
-	m.actionResources = make(map[string]*ActionResource, len(addrs))
-	for _, addr := range addrs {
+
+	resources := m.selectedResources()
+	m.actionResources = make(map[string]*ActionResource, len(resources))
+	for _, resource := range resources {
+		addr := resource.Address
 		m.actionResources[addr] = &ActionResource{
 			Address: addr,
 			Status:  actionResourcePending,
@@ -130,6 +131,7 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 		"taint":   m.runner.Taint,
 		"untaint": m.runner.Untaint,
 	}
+	addrs := m.selectedAddresses()
 	ch := actionFuncs[action](ctx, addrs)
 	m.eventCh = ch
 

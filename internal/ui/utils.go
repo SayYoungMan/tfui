@@ -33,6 +33,35 @@ func (m Model) selectedAddresses() []string {
 	return addrs
 }
 
+func (m Model) selectedResources() []*terraform.Resource {
+	var resources []*terraform.Resource
+	type stackElem struct {
+		item             *Item
+		ancestorSelected bool
+	}
+
+	stack := []stackElem{{item: m.rootItem, ancestorSelected: false}}
+	for len(stack) > 0 {
+		elem := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+
+		selected := elem.ancestorSelected || m.selected[elem.item.Address()]
+
+		if elem.item.IsResource() {
+			if selected {
+				resources = append(resources, elem.item.Resource)
+			}
+			continue
+		}
+
+		for _, child := range elem.item.Module.Children {
+			stack = append(stack, stackElem{item: child, ancestorSelected: selected})
+		}
+	}
+
+	return resources
+}
+
 // returns if it or ancestor module is selected
 func (m Model) isSelectedOrAncestor(item *Item) bool {
 	if m.selected[item.Address()] {

@@ -316,7 +316,7 @@ const (
 
 func (m Model) renderActionResourcesView() string {
 	action := actionChoices[m.actionCursor]
-	title := fmt.Sprintf("%sing %d resources...", action, len(m.selected))
+	title := fmt.Sprintf("%sing %d resources...", action, len(m.actionResources))
 
 	addrColWidth := max(1, m.viewWidth-statusColWidth-timeColWidth*3-10)
 	header := fmt.Sprintf("  %-*s  %-*s  %-*s  %-*s  %-*s",
@@ -338,11 +338,12 @@ func (m Model) renderActionResourcesView() string {
 		offset = 0
 	}
 
-	addrs := m.selectedAddresses()
+	resources := m.selectedResources()
 	visibleRows := max(1, m.viewHeight-4)
-	end := min(offset+visibleRows, len(addrs))
+	end := min(offset+visibleRows, len(resources))
 
-	for _, addr := range addrs[offset:end] {
+	for _, resource := range resources[offset:end] {
+		addr := resource.Address
 		ar := m.actionResources[addr]
 
 		displayAddr := addr
