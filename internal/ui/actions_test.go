@@ -211,3 +211,23 @@ func TestStartAction_PopulatesActionResources(t *testing.T) {
 	assert.Nil(t, m.outputLines)
 	assert.Equal(t, 0, m.offset)
 }
+
+func TestStartAction_ExpandsModuleSelection(t *testing.T) {
+	m := newTestModelWithResources([]terraform.Resource{
+		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
+		{Address: "module.a.aws_s3.y", Module: "module.a", Action: terraform.ActionCreate},
+		{Address: "aws_s3.outside", Action: terraform.ActionCreate},
+	})
+	m.runner = terraform.NewTerraformRunner(t.TempDir(), "true")
+	m.selected = map[string]bool{"module.a": true}
+
+	m.actionCursor = 1 // apply
+	m.viewState = viewConfirm
+	m.confirmCursor = 1
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+
+	assert.Len(t, m.actionResources, 2)
+	assert.Contains(t, m.actionResources, "module.a.aws_s3.x")
+	assert.Contains(t, m.actionResources, "module.a.aws_s3.y")
+}

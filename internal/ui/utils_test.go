@@ -3,8 +3,56 @@ package ui
 import (
 	"testing"
 
+	"github.com/SayYoungMan/tfui/pkg/terraform"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestSelectedResources_Empty(t *testing.T) {
+	m := newTestModelEmpty()
+
+	resources := m.selectedResources()
+
+	assert.Empty(t, resources)
+}
+
+func TestSelectedResources_OnlyResources(t *testing.T) {
+	m := newTestModelWithResources([]terraform.Resource{
+		{Address: "aws_s3.a", Action: terraform.ActionCreate},
+		{Address: "aws_s3.b", Action: terraform.ActionCreate},
+		{Address: "aws_s3.c", Action: terraform.ActionCreate},
+	})
+	m.selected = map[string]bool{"aws_s3.a": true, "aws_s3.c": true}
+
+	resources := m.selectedResources()
+
+	addrs := make([]string, len(resources))
+	for i, r := range resources {
+		addrs[i] = r.Address
+	}
+	assert.Len(t, resources, 2)
+	assert.Contains(t, addrs, "aws_s3.a")
+	assert.Contains(t, addrs, "aws_s3.c")
+}
+
+func TestSelectedResources_NestedModules(t *testing.T) {
+	m := newTestModelWithResources([]terraform.Resource{
+		{Address: "module.a.module.b.aws_s3.x", Module: "module.a.module.b", Action: terraform.ActionCreate},
+		{Address: "module.a.module.b.aws_s3.y", Module: "module.a.module.b", Action: terraform.ActionCreate},
+		{Address: "module.a.aws_s3.z", Module: "module.a", Action: terraform.ActionCreate},
+	})
+	m.selected = map[string]bool{"module.a": true}
+
+	resources := m.selectedResources()
+
+	addrs := make([]string, len(resources))
+	for i, r := range resources {
+		addrs[i] = r.Address
+	}
+	assert.Len(t, resources, 3)
+	assert.Contains(t, addrs, "module.a.module.b.aws_s3.x")
+	assert.Contains(t, addrs, "module.a.module.b.aws_s3.y")
+	assert.Contains(t, addrs, "module.a.aws_s3.z")
+}
 
 func TestAdjustOffset(t *testing.T) {
 	visible := 48 - defaultReservedRows - 1
