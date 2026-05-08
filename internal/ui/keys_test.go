@@ -31,7 +31,7 @@ func TestListKeys_Quit(t *testing.T) {
 }
 
 func TestListKeys_CursorNavigation(t *testing.T) {
-	resources := []terraform.Resource{
+	resources := []*terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
@@ -138,7 +138,7 @@ func TestListKeys_SelectEmptyList(t *testing.T) {
 }
 
 func TestListKeys_RemoveSelectionIfParentSelected(t *testing.T) {
-	resources := []terraform.Resource{
+	resources := []*terraform.Resource{
 		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
 	}
 	m := newTestModelWithResources(resources)
@@ -218,7 +218,7 @@ func TestListKeys_TabOpensActionPicker(t *testing.T) {
 }
 
 func TestListKeys_ModuleExpandCollapse(t *testing.T) {
-	resources := []terraform.Resource{
+	resources := []*terraform.Resource{
 		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
 	}
 	m := newTestModelWithResources(resources)

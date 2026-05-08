@@ -16,7 +16,7 @@ func TestSelectedResources_Empty(t *testing.T) {
 }
 
 func TestSelectedResources_OnlyResources(t *testing.T) {
-	m := newTestModelWithResources([]terraform.Resource{
+	m := newTestModelWithResources([]*terraform.Resource{
 		{Address: "aws_s3.a", Action: terraform.ActionCreate},
 		{Address: "aws_s3.b", Action: terraform.ActionCreate},
 		{Address: "aws_s3.c", Action: terraform.ActionCreate},
@@ -35,7 +35,7 @@ func TestSelectedResources_OnlyResources(t *testing.T) {
 }
 
 func TestSelectedResources_NestedModules(t *testing.T) {
-	m := newTestModelWithResources([]terraform.Resource{
+	m := newTestModelWithResources([]*terraform.Resource{
 		{Address: "module.a.module.b.aws_s3.x", Module: "module.a.module.b", Action: terraform.ActionCreate},
 		{Address: "module.a.module.b.aws_s3.y", Module: "module.a.module.b", Action: terraform.ActionCreate},
 		{Address: "module.a.aws_s3.z", Module: "module.a", Action: terraform.ActionCreate},

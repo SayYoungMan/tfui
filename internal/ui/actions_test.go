@@ -183,7 +183,7 @@ func TestGracefulQuit_CanCancelInitPull(t *testing.T) {
 }
 
 func TestStartAction_PopulatesActionResources(t *testing.T) {
-	m := newTestModelWithResources([]terraform.Resource{
+	m := newTestModelWithResources([]*terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionCreate},
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionCreate},
 	})
@@ -213,7 +213,7 @@ func TestStartAction_PopulatesActionResources(t *testing.T) {
 }
 
 func TestStartAction_ExpandsModuleSelection(t *testing.T) {
-	m := newTestModelWithResources([]terraform.Resource{
+	m := newTestModelWithResources([]*terraform.Resource{
 		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
 		{Address: "module.a.aws_s3.y", Module: "module.a", Action: terraform.ActionCreate},
 		{Address: "aws_s3.outside", Action: terraform.ActionCreate},

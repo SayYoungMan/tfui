@@ -73,7 +73,7 @@ func TestRebuildRows_CursorLastWhenRowsShrink(t *testing.T) {
 }
 
 func TestRebuildRows_Collapse(t *testing.T) {
-	resources := []terraform.Resource{
+	resources := []*terraform.Resource{
 		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
 		{Address: "module.a.aws_s3.y", Module: "module.a", Action: terraform.ActionCreate},
 	}
@@ -88,7 +88,7 @@ func TestRebuildRows_Collapse(t *testing.T) {
 }
 
 func TestRebuildRows_FilterIncludesParent(t *testing.T) {
-	resources := []terraform.Resource{
+	resources := []*terraform.Resource{
 		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
 	}
 	m := newTestModelWithResources(resources)
@@ -102,7 +102,7 @@ func TestRebuildRows_FilterIncludesParent(t *testing.T) {
 }
 
 func TestTreePrefix(t *testing.T) {
-	resources := []terraform.Resource{
+	resources := []*terraform.Resource{
 		{Address: "module.a.module.b.aws_s3.x", Module: "module.a.module.b", Action: terraform.ActionCreate},
 		{Address: "module.a.module.c.aws_s3.y", Module: "module.a.module.c", Action: terraform.ActionCreate},
 	}

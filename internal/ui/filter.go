@@ -54,11 +54,12 @@ func (m *Model) visibleResources() terraform.Resources {
 		shown = append(shown, r)
 	}
 
+	sort.Slice(shown, func(i, j int) bool {
+		return shown[i].Address < shown[j].Address
+	})
+
 	filter := m.filterInput.Value()
 	if filter == "" {
-		sort.Slice(shown, func(i, j int) bool {
-			return shown[i].Address < shown[j].Address
-		})
 		return shown
 	}
 

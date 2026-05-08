@@ -181,7 +181,7 @@ func TestModel_ScanComplete(t *testing.T) {
 }
 
 func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
-	resources := []terraform.Resource{
+	resources := []*terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_lambda_function.b", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},
@@ -205,7 +205,7 @@ func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
 }
 
 func TestModel_NewResourcesFilterMatch(t *testing.T) {
-	m := newTestModelWithResources([]terraform.Resource{
+	m := newTestModelWithResources([]*terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 	})
 	m.filterInput.SetValue("s3")
@@ -260,7 +260,7 @@ func TestModel_OutputCompleteMsg(t *testing.T) {
 }
 
 func TestModel_MouseWheelScrollsList(t *testing.T) {
-	resources := []terraform.Resource{
+	resources := []*terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionNoop},
 		{Address: "aws_s3_bucket.c", Action: terraform.ActionNoop},

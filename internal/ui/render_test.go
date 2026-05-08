@@ -70,9 +70,9 @@ func TestRenderListView_ShowsSelected(t *testing.T) {
 }
 
 func TestRenderListView_OnlyRendersVisibleSlice(t *testing.T) {
-	var resources []terraform.Resource
+	var resources []*terraform.Resource
 	for i := range 5 {
-		resources = append(resources, terraform.Resource{
+		resources = append(resources, &terraform.Resource{
 			Address: fmt.Sprintf("aws_s3_bucket.bucket_%d", i),
 			Action:  terraform.ActionNoop,
 		})
@@ -257,7 +257,7 @@ func TestRenderActionResourcesView_DifferentResourceStates(t *testing.T) {
 
 func TestRenderActionResourcesView_TruncatesLongAddress(t *testing.T) {
 	longAddr := "module.very_long_module_name.module.another_long_name.aws_s3_bucket.extremely_long_bucket_name_that_exceeds_width"
-	m := newTestModelWithResources([]terraform.Resource{
+	m := newTestModelWithResources([]*terraform.Resource{
 		{Address: longAddr},
 	})
 	m.viewWidth = 60
@@ -330,7 +330,7 @@ func TestRenderErrorView_ShowsDiagnosticsAndError(t *testing.T) {
 
 func TestRenderDetailView_NoAttributes(t *testing.T) {
 	r := terraform.Resource{Attributes: nil}
-	m := newTestModelWithResources([]terraform.Resource{r})
+	m := newTestModelWithResources([]*terraform.Resource{&r})
 	m.openDetail()
 
 	view := m.View()

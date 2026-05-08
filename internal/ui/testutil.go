@@ -8,11 +8,11 @@ import (
 )
 
 func newTestModelEmpty() Model {
-	return newTestModelWithResources([]terraform.Resource{})
+	return newTestModelWithResources([]*terraform.Resource{})
 }
 
 // Sorted by address since we sort them stably now in rendering rows
-var testResources = []terraform.Resource{
+var testResources = []*terraform.Resource{
 	{Address: "aws_db_instance.d", Action: terraform.ActionReplace, Reason: "cannot_update"},
 	{Address: "aws_iam_role.c", Action: terraform.ActionDelete, Reason: "delete_because_no_resource_config"},
 	{Address: "aws_s3_bucket.a", Action: terraform.ActionCreate},
@@ -26,10 +26,10 @@ func newTestModel() Model {
 	return newTestModelWithResources(testResources)
 }
 
-func newTestModelWithResources(resources []terraform.Resource) Model {
+func newTestModelWithResources(resources []*terraform.Resource) Model {
 	m := NewModel(&terraform.TerraformRunner{})
 	for i, r := range resources {
-		m.resources[r.Address] = &resources[i]
+		m.resources[r.Address] = resources[i]
 	}
 	m.selected = make(map[string]bool)
 	m.rebuildRows()
