@@ -62,15 +62,7 @@ func (m *Model) visibleResources() terraform.Resources {
 		return shown
 	}
 
-	// Sorting myself because there is a bug in fuzzy where it doesn't obey the input order
-	// https://github.com/sahilm/fuzzy/issues/27 (Raised issue)
-	filtered := fuzzy.FindFromNoSort(filter, shown)
-	sort.SliceStable(filtered, func(i, j int) bool {
-		if filtered[i].Score != filtered[j].Score {
-			return filtered[i].Score > filtered[j].Score
-		}
-		return filtered[i].Index < filtered[j].Index
-	})
+	filtered := fuzzy.FindFrom(filter, shown)
 
 	resources := make([]*terraform.Resource, len(filtered))
 	for i, r := range filtered {
