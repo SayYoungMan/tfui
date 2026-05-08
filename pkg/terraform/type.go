@@ -1,6 +1,9 @@
 package terraform
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"strings"
+)
 
 // StreamEvent is sent over the channel to be consumed.
 // Exactly one field will be non-nil per event.
@@ -104,6 +107,10 @@ type Resource struct {
 	Action          Action
 	Reason          string          // Why this change is happening, e.g. "tainted", "cannot_update"
 	Attributes      json.RawMessage // JSON detail about this resource populated by state pull
+}
+
+func (r *Resource) IsDataSource() bool {
+	return strings.HasPrefix(r.ResourceAddr, "data.")
 }
 
 // Implement these methods to satisfy interface of fuzzy matching

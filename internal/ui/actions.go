@@ -35,6 +35,10 @@ type ActionResource struct {
 
 // duration of how long it waited to be picked up for refresh
 func (ar *ActionResource) waitDuration(startTime time.Time) time.Duration {
+	// If resource is explicitly skipped (e.g. tainting data source), don't show wait time
+	if ar.Status == actionResourceSkipped {
+		return 0
+	}
 	// For taint / untaint it doesn't refresh state so wait time is until process start
 	if !ar.ProcessStartedAt.IsZero() {
 		return ar.ProcessStartedAt.Sub(startTime)
@@ -131,7 +135,19 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 		"taint":   m.runner.Taint,
 		"untaint": m.runner.Untaint,
 	}
+
 	addrs := m.selectedAddresses()
+	if action == "taint" || action == "untaint" {
+		// 'taint' and 'untaint' does not support -target module so we -target resources under it
+		addrs = addrs[:0]
+		for _, r := range resources {
+			if r.IsDataSource() {
+				m.actionResources[r.Address].Status = actionResourceSkipped
+				continue
+			}
+			addrs = append(addrs, r.Address)
+		}
+	}
 	ch := actionFuncs[action](ctx, addrs)
 	m.eventCh = ch
 
