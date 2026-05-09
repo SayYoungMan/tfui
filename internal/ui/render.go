@@ -134,7 +134,13 @@ func (m Model) renderInfoBar() string {
 		info = " Scanning..."
 	case workPlan:
 		adornment = infoBarStyle.Render(m.spinner.View())
-		info = fmt.Sprintf(" Scanning... (%d/%d resources scanned)", m.scannedResourcesCount(), len(m.resources))
+		var count int
+		for _, r := range m.resources {
+			if r.Action != terraform.ActionUncertain {
+				count++
+			}
+		}
+		info = fmt.Sprintf(" Scanning... (%d/%d resources scanned)", count, len(m.resources))
 	default:
 		adornment = lipgloss.NewStyle().Foreground(colorGreen).Render("✓")
 		info = fmt.Sprintf("  Scan Complete (%d resources scanned)", len(m.resources))
@@ -150,16 +156,6 @@ func (m Model) renderInfoBar() string {
 		info += fmt.Sprintf(" | %d warnings", len(m.diagnostics))
 	}
 	return " " + adornment + infoBarStyle.Render(info)
-}
-
-func (m *Model) scannedResourcesCount() int {
-	var count int
-	for _, r := range m.resources {
-		if r.Action != terraform.ActionUncertain {
-			count++
-		}
-	}
-	return count
 }
 
 func renderKeyHint(key, desc string) string {
@@ -218,16 +214,7 @@ func (m Model) renderActionPickerView() string {
 	fmt.Fprintln(&s)
 	fmt.Fprintln(&s, centered.Render(help))
 
-	modal := focusedBorderStyle.Render(s.String())
-	modalWidth := lipgloss.Width(modal)
-	modalHeight := lipgloss.Height(modal)
-	x := max(0, (m.viewWidth-modalWidth)/2)
-	y := max(0, (m.viewHeight-modalHeight)/2)
-
-	background := lipgloss.NewLayer(m.renderListView())
-	foreground := lipgloss.NewLayer(modal).X(x).Y(y).Z(1)
-
-	return lipgloss.NewCompositor(background, foreground).Render()
+	return m.renderModalWithBackground(s.String(), m.renderListView(), nil)
 }
 
 const (
@@ -297,16 +284,7 @@ func (m Model) renderConfirmView() string {
 	fmt.Fprint(&s, centered.Render(help))
 	fmt.Fprintln(&s)
 
-	modal := focusedBorderStyle.Render(s.String())
-	modalWidth := lipgloss.Width(modal)
-	modalHeight := lipgloss.Height(modal)
-	x := max(0, (m.viewWidth-modalWidth)/2)
-	y := max(0, (m.viewHeight-modalHeight)/2)
-
-	background := lipgloss.NewLayer(m.renderListView())
-	foreground := lipgloss.NewLayer(modal).X(x).Y(y).Z(1)
-
-	return lipgloss.NewCompositor(background, foreground).Render()
+	return m.renderModalWithBackground(s.String(), m.renderListView(), nil)
 }
 
 const (
@@ -428,20 +406,10 @@ func (m Model) renderOutputLayer(background string) string {
 		visualRows += lineRows
 	}
 
-	modal := resourceBorderStyle.
-		Width(m.viewWidth - 2).
-		Height(boxHeight).
-		Render(strings.TrimSuffix(content.String(), "\n"))
+	fg := strings.TrimSuffix(content.String(), "\n")
+	bg := dimStyle.Render(background)
 
-	modalWidth := lipgloss.Width(modal)
-	modalHeight := lipgloss.Height(modal)
-	x := max(0, (m.viewWidth-modalWidth)/2)
-	y := max(0, (m.viewHeight-modalHeight)/2)
-
-	bg := lipgloss.NewLayer(dimStyle.Render(background))
-	fg := lipgloss.NewLayer(modal).X(x).Y(y).Z(1)
-
-	return lipgloss.NewCompositor(bg, fg).Render()
+	return m.renderModalWithBackground(fg, bg, &modalOpts{width: m.viewWidth - 2, height: boxHeight})
 }
 
 func (m Model) renderDetailView() string {
@@ -502,13 +470,7 @@ func (m Model) renderQuitConfirmLayer() *lipgloss.Layer {
 	fmt.Fprint(&s, centered.Render(help))
 	fmt.Fprintln(&s)
 
-	modal := focusedBorderStyle.Render(s.String())
-	modalWidth := lipgloss.Width(modal)
-	modalHeight := lipgloss.Height(modal)
-	x := max(0, (m.viewWidth-modalWidth)/2)
-	y := max(0, (m.viewHeight-modalHeight)/2)
-
-	return lipgloss.NewLayer(modal).X(x).Y(y).Z(1)
+	return m.renderModal(s.String(), nil)
 }
 
 func (m Model) renderShutdownLayer() *lipgloss.Layer {
@@ -517,13 +479,7 @@ func (m Model) renderShutdownLayer() *lipgloss.Layer {
 		msg += "\n\nPress q or ctrl+c again to force quit"
 	}
 
-	modal := shutdownBorderStyle.Render(msg)
-	modalWidth := lipgloss.Width(modal)
-	modalHeight := lipgloss.Height(modal)
-	x := max(0, (m.viewWidth-modalWidth)/2)
-	y := max(0, (m.viewHeight-modalHeight)/2)
-
-	return lipgloss.NewLayer(modal).X(x).Y(y).Z(2)
+	return m.renderModal(msg, &modalOpts{contentStyle: &shutdownBorderStyle})
 }
 
 func (m Model) renderErrorView() string {
