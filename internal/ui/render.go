@@ -39,16 +39,14 @@ func (m Model) renderActionPickerView() string {
 	return m.renderModalWithBackground(s.String(), m.renderListView(), nil)
 }
 
-const (
-	maxConfirmResources        = 10
-	defaultConfirmReservedRows = 10 // borders + title + blanks + buttons + help
-)
-
 func (m Model) renderConfirmView() string {
 	chosenAction := actionChoices[m.actionCursor]
 	title := fmt.Sprintf("⚠  %s %d resource(s)?", chosenAction, len(m.selected))
 
-	maxResourceRows := max(min(maxConfirmResources, m.viewHeight-defaultConfirmReservedRows), 1)
+	// For viewHeight >= 20, show max 10 resource names
+	// For viewHeight 12~19, show max 1~9 resource names
+	// For viewHeight < 12, show just 1 resource name max
+	maxResourceRows := max(min(10, m.viewHeight-10), 1)
 
 	addrs := m.selectedAddresses()
 	if len(addrs) > maxResourceRows {
@@ -64,28 +62,21 @@ func (m Model) renderConfirmView() string {
 				line = style.Render(line)
 			}
 		} else {
-			line = fmt.Sprintf("  ▾ %s", addr)
-			line = dimStyle.Render(line)
+			line = fmt.Sprintf("    %s", addr)
 		}
 		resourceLines = append(resourceLines, line)
 	}
 
 	truncated := len(m.selected) - len(addrs)
 	if truncated > 0 {
-		dim := lipgloss.NewStyle().Foreground(colorDimGrey)
-		resourceLines = append(resourceLines, dim.Render(fmt.Sprintf("  ... and %d more", truncated)))
+		resourceLines = append(resourceLines, dimStyle.Render(fmt.Sprintf("  ... and %d more", truncated)))
 	}
 
-	cancelButton := buttonStyle.Render("Cancel")
-	confirmButton := buttonStyle.Render("Confirm")
-	if m.confirmCursor == 0 {
-		cancelButton = focusedButtonStyle.Render("Cancel")
-	} else {
-		confirmButton = focusedButtonStyle.Render("Confirm")
+	keyInfo := []keyInfo{
+		{key: "Enter", info: "select"},
+		{key: "Esc", info: "cancel"},
 	}
-	buttons := lipgloss.JoinHorizontal(lipgloss.Top, cancelButton, "  ", confirmButton)
-
-	help := "Enter to select | Esc to cancel"
+	help := m.renderKeyInfo(keyInfo)
 
 	var maxWidth int = 0
 	for _, line := range resourceLines {
@@ -101,7 +92,7 @@ func (m Model) renderConfirmView() string {
 		fmt.Fprintln(&s, line)
 	}
 	fmt.Fprintln(&s)
-	fmt.Fprintln(&s, centered.Render(buttons))
+	fmt.Fprintln(&s, centered.Render(m.renderConfirmCancelButtons()))
 	fmt.Fprintln(&s)
 	fmt.Fprint(&s, centered.Render(help))
 	fmt.Fprintln(&s)
@@ -270,15 +261,6 @@ func (m Model) renderDetailView() string {
 const quitConfirmTitle = "Do you want to quit?"
 
 func (m Model) renderQuitConfirmLayer() *lipgloss.Layer {
-	cancelButton := buttonStyle.Render("Cancel")
-	confirmButton := buttonStyle.Render("Confirm")
-	if m.confirmCursor == 0 {
-		cancelButton = focusedButtonStyle.Render("Cancel")
-	} else {
-		confirmButton = focusedButtonStyle.Render("Confirm")
-	}
-	buttons := lipgloss.JoinHorizontal(lipgloss.Top, cancelButton, "  ", confirmButton)
-
 	keyInfo := []keyInfo{
 		{key: "Enter", info: "select"},
 		{key: "Esc", info: "cancel"},
@@ -291,7 +273,7 @@ func (m Model) renderQuitConfirmLayer() *lipgloss.Layer {
 	var s strings.Builder
 	fmt.Fprintln(&s, centered.Render(quitConfirmTitle))
 	fmt.Fprintln(&s)
-	fmt.Fprintln(&s, centered.Render(buttons))
+	fmt.Fprintln(&s, centered.Render(m.renderConfirmCancelButtons()))
 	fmt.Fprintln(&s)
 	fmt.Fprint(&s, centered.Render(help))
 	fmt.Fprintln(&s)

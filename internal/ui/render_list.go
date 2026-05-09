@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-func (m *Model) renderListView() string {
+func (m Model) renderListView() string {
 	var s strings.Builder
 
 	fmt.Fprint(&s, m.renderFilterBox())
@@ -20,7 +20,7 @@ func (m *Model) renderListView() string {
 	return s.String()
 }
 
-func (m *Model) renderFilterBox() string {
+func (m Model) renderFilterBox() string {
 	var s strings.Builder
 
 	filterIcon := "⌕ "
@@ -37,13 +37,10 @@ func (m *Model) renderFilterBox() string {
 // filter box (3) + resource borders (2) + info bar (1) + help bar with margin (4)
 const listViewReservedRows = 10
 
-func (m *Model) visibleRows() int {
-	return max(1, m.viewHeight-listViewReservedRows)
-}
-
-func (m *Model) renderResourcesBox() string {
+func (m Model) renderResourcesBox() string {
+	visibleRows := max(1, m.viewHeight-listViewReservedRows)
 	var resources strings.Builder
-	end := min(m.offset+m.visibleRows(), len(m.rows))
+	end := min(m.offset+visibleRows, len(m.rows))
 	for i := m.offset; i < end; i++ {
 		row := m.rows[i]
 
@@ -63,7 +60,7 @@ func (m *Model) renderResourcesBox() string {
 	}
 
 	rendered := end - m.offset
-	for range m.visibleRows() - rendered {
+	for range visibleRows - rendered {
 		fmt.Fprintln(&resources)
 	}
 
@@ -71,7 +68,7 @@ func (m *Model) renderResourcesBox() string {
 	return borderStyle.Width(m.viewWidth).Render(renderString)
 }
 
-func (m *Model) renderResourceLine(idx int) string {
+func (m Model) renderResourceLine(idx int) string {
 	row := m.rows[idx]
 	addr := row.Item.Address()
 	r := m.resources[addr]
@@ -79,7 +76,6 @@ func (m *Model) renderResourceLine(idx int) string {
 	if r.Reason != "" {
 		addr += fmt.Sprintf(" (%s)", r.Reason)
 	}
-	adornment := r.Action.Symbol()
 
 	currentModule := m.currentCursorModule()
 	prefix := row.TreePrefix
@@ -89,7 +85,7 @@ func (m *Model) renderResourceLine(idx int) string {
 		prefix = treePrefixDefaultStyle.Render(prefix)
 	}
 
-	line := fmt.Sprintf("%s %s", adornment, addr)
+	line := fmt.Sprintf("%s %s", r.Action.Symbol(), addr)
 	switch {
 	case idx == m.cursor:
 		line = cursorStyle.Render(line)
@@ -103,7 +99,7 @@ func (m *Model) renderResourceLine(idx int) string {
 	return prefix + line
 }
 
-func (m *Model) renderModuleLine(idx int) string {
+func (m Model) renderModuleLine(idx int) string {
 	row := m.rows[idx]
 
 	symbol := "▾"
@@ -164,7 +160,7 @@ func (m Model) renderInfoBar() string {
 	return " " + adornment + infoBarStyle.Render(info)
 }
 
-func (m *Model) renderHelpBar() string {
+func (m Model) renderHelpBar() string {
 	var HKeyInfo string
 	if m.hideUnchanged {
 		HKeyInfo = "show unchanged"

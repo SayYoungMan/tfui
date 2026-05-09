@@ -78,7 +78,7 @@ func TestRenderListView_OnlyRendersVisibleSlice(t *testing.T) {
 		})
 	}
 	m := newTestModelWithResources(resources)
-	m.viewHeight = 3 + listViewReservedRows + 1 // Since the width is small
+	m.viewHeight = 3 + listViewReservedRows
 
 	view := m.View()
 
@@ -166,7 +166,6 @@ func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {
 	assert.Contains(t, view.Content, "destroy")
 	assert.Contains(t, view.Content, "taint")
 	assert.Contains(t, view.Content, "untaint")
-	assert.Contains(t, view.Content, "Esc to cancel")
 }
 
 func TestRenderConfirmView_ShowsResourcesAndButtons(t *testing.T) {

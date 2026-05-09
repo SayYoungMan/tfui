@@ -12,7 +12,7 @@ type modalOpts struct {
 	contentStyle *lipgloss.Style
 }
 
-func (m *Model) renderModal(content string, opts *modalOpts) *lipgloss.Layer {
+func (m Model) renderModal(content string, opts *modalOpts) *lipgloss.Layer {
 	modal := focusedBorderStyle.Render(content)
 	if opts != nil && opts.contentStyle != nil {
 		modal = opts.contentStyle.Render(content)
@@ -33,7 +33,7 @@ func (m *Model) renderModal(content string, opts *modalOpts) *lipgloss.Layer {
 	return lipgloss.NewLayer(modal).X(x).Y(y).Z(1)
 }
 
-func (m *Model) renderModalWithBackground(fg, bg string, opts *modalOpts) string {
+func (m Model) renderModalWithBackground(fg, bg string, opts *modalOpts) string {
 	modalLayer := m.renderModal(fg, opts)
 	background := lipgloss.NewLayer(bg)
 
@@ -45,7 +45,7 @@ type keyInfo struct {
 	info string
 }
 
-func (m *Model) renderKeyInfo(keyInfos []keyInfo) string {
+func (m Model) renderKeyInfo(keyInfos []keyInfo) string {
 	var styledKeyInfos []string
 	for _, k := range keyInfos {
 		key := helpKeyStyle.Render("'" + k.key + "'")
@@ -62,4 +62,15 @@ func (m *Model) renderKeyInfo(keyInfos []keyInfo) string {
 	}
 
 	return infoLines
+}
+
+func (m Model) renderConfirmCancelButtons() string {
+	cancelButton := buttonStyle.Render("Cancel")
+	confirmButton := buttonStyle.Render("Confirm")
+	if m.confirmCursor == 0 {
+		cancelButton = focusedButtonStyle.Render("Cancel")
+	} else {
+		confirmButton = focusedButtonStyle.Render("Confirm")
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, cancelButton, "  ", confirmButton)
 }
