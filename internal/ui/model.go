@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"time"
 
 	"charm.land/bubbles/v2/spinner"
@@ -237,11 +238,11 @@ func (m Model) View() tea.View {
 		viewString = m.renderActionPickerView()
 	case viewConfirm:
 		viewString = m.renderConfirmView()
-	case viewProgress, viewOutput:
+	case viewProgress:
 		viewString = m.renderProgressView()
-		if m.viewState == viewOutput {
-			viewString = m.renderOutputLayer(viewString)
-		}
+	case viewOutput:
+		action := actionChoices[m.actionCursor]
+		viewString = m.renderOutputView(fmt.Sprintf(" %s output", action))
 	case viewError:
 		viewString = m.renderErrorView()
 	case viewDetail:

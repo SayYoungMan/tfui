@@ -3,10 +3,8 @@ package ui
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"charm.land/lipgloss/v2"
-	"github.com/charmbracelet/x/ansi"
 )
 
 func (m Model) renderActionPickerView() string {
@@ -27,7 +25,7 @@ func (m Model) renderActionPickerView() string {
 
 	for i, choice := range actionChoices {
 		if i == m.actionCursor {
-			fmt.Fprintln(&s, cursorStyle.Render("  > "+choice))
+			fmt.Fprintln(&s, "  "+cursorStyle.Render("> "+choice))
 		} else {
 			fmt.Fprintln(&s, "    "+choice)
 		}
@@ -69,7 +67,7 @@ func (m Model) renderConfirmView() string {
 
 	truncated := len(m.selected) - len(addrs)
 	if truncated > 0 {
-		resourceLines = append(resourceLines, dimStyle.Render(fmt.Sprintf("  ... and %d more", truncated)))
+		resourceLines = append(resourceLines, dimStyle.Render(fmt.Sprintf("    ... and %d more", truncated)))
 	}
 
 	keyInfo := []keyInfo{
@@ -101,152 +99,22 @@ func (m Model) renderConfirmView() string {
 }
 
 const (
-	statusColWidth = 16
-	timeColWidth   = 10
+	defaultReservedOutputRows = 8
 )
-
-func (m Model) renderProgressView() string {
-	action := actionChoices[m.actionCursor]
-	title := fmt.Sprintf("%sing %d resources...", action, len(m.progresses))
-
-	addrColWidth := max(1, m.viewWidth-statusColWidth-timeColWidth*3-10)
-	header := fmt.Sprintf("  %-*s  %-*s  %-*s  %-*s  %-*s",
-		addrColWidth, "Resource",
-		statusColWidth, "Status",
-		timeColWidth, "Wait",
-		timeColWidth, "Read",
-		timeColWidth, "Process",
-	)
-
-	var rows strings.Builder
-	fmt.Fprintln(&rows, dimStyle.Render(header))
-	fmt.Fprintln(&rows, dimStyle.Render(strings.Repeat("─", m.viewWidth)))
-
-	var offset int
-	if m.viewState == viewProgress {
-		offset = m.offset
-	} else {
-		offset = 0
-	}
-
-	resources := m.selectedResources()
-	visibleRows := max(1, m.viewHeight-4)
-	end := min(offset+visibleRows, len(resources))
-
-	for _, resource := range resources[offset:end] {
-		addr := resource.Address
-		ar := m.progresses[addr]
-
-		displayAddr := addr
-		if lipgloss.Width(displayAddr) > addrColWidth {
-			displayAddr = ansi.Truncate(displayAddr, addrColWidth, "…")
-		}
-
-		var status string
-		wait := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.waitDuration(m.actionStartTime))))
-		read := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.readDuration())))
-		process := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
-		switch ar.Status {
-		case progressStatusPending:
-			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Pending"))
-			read = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
-		case progressStatusReadingState:
-			status = infoBarStyle.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" Reading"))
-			read = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.readDuration())))
-		case progressStatusWaitingForAction:
-			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Waiting"))
-		case progressStatusInProgress:
-			status = infoBarStyle.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" In Progress"))
-			process = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.processDuration())))
-		case progressStatusSuccessful:
-			status = successStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "✅ Complete"))
-			process = successStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.processDuration())))
-		case progressStatusFailed:
-			status = errorStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "❌ Failed"))
-			process = errorStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.processDuration())))
-		case progressStatusSkipped:
-			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "— No change"))
-			wait = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
-			read = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
-		}
-
-		fmt.Fprintf(&rows, "  %-*s  %s  %s  %s  %s\n", addrColWidth, displayAddr, status, wait, read, process)
-	}
-
-	var s strings.Builder
-	fmt.Fprintln(&s, title)
-	fmt.Fprintln(&s)
-	fmt.Fprint(&s, rows.String())
-	fmt.Fprintln(&s)
-
-	var help string
-	if m.isRunning() {
-		help = "'o' raw output | Running..."
-	} else {
-		help = "'o' raw output | Esc to close and re-plan"
-	}
-	fmt.Fprint(&s, help)
-
-	return s.String()
-}
-
-func (m *Model) formatElapsed(d time.Duration) string {
-	d = d.Truncate(time.Second)
-	if d < time.Minute {
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	}
-	return fmt.Sprintf("%dm %ds", int(d.Minutes()), int(d.Seconds())%60)
-}
-
-const (
-	defaultReservedOutputWidth = 6
-	defaultReservedOutputRows  = 8
-)
-
-func (m Model) renderOutputLayer(background string) string {
-	boxHeight := max(1, m.viewHeight-defaultReservedOutputRows)
-	contentWidth := max(1, m.viewWidth-defaultReservedOutputWidth)
-	innerHeight := boxHeight - 2 // subtract top and bottom border rows
-
-	var content strings.Builder
-	visualRows := 0
-	for i := m.offset; i < len(m.outputLines); i++ {
-		lineRows := max(1, (lipgloss.Width(m.outputLines[i])+contentWidth-1)/contentWidth)
-		if visualRows+lineRows > innerHeight {
-			break
-		}
-		fmt.Fprintln(&content, m.outputLines[i])
-		visualRows += lineRows
-	}
-
-	fg := strings.TrimSuffix(content.String(), "\n")
-	bg := dimStyle.Render(background)
-
-	return m.renderModalWithBackground(fg, bg, &modalOpts{width: m.viewWidth - 2, height: boxHeight})
-}
 
 func (m Model) renderDetailView() string {
 	addr := m.rows[m.cursor].Item.Address()
-	title := fmt.Sprintf("Detail (%s)", addr)
+	return m.renderOutputView(fmt.Sprintf(" Detail (%s)", addr))
+}
 
-	boxHeight := max(1, m.viewHeight-defaultReservedOutputRows)
-	contentWidth := max(1, m.viewWidth-defaultReservedOutputWidth)
-	innerHeight := boxHeight - 2 // subtract top and bottom border rows
+func (m Model) renderOutputView(title string) string {
+	box := m.renderScrollableBox(m.outputLines, m.viewWidth, m.viewHeight-6)
 
-	var content strings.Builder
-	visualRows := 0
-	for i := m.offset; i < len(m.outputLines); i++ {
-		lineRows := max(1, (lipgloss.Width(m.outputLines[i])+contentWidth-1)/contentWidth)
-		if visualRows+lineRows > innerHeight {
-			break
-		}
-		fmt.Fprintln(&content, m.outputLines[i])
-		visualRows += lineRows
+	keyInfo := []keyInfo{
+		{key: "↑/↓", info: "scroll"},
+		{key: "Esc", info: "close"},
 	}
-
-	box := borderStyle.Width(m.viewWidth - 2).Height(boxHeight).Render(strings.TrimSuffix(content.String(), "\n"))
-
-	help := "↑/↓ scroll | Esc to close"
+	help := " " + m.renderKeyInfo(keyInfo)
 
 	var s strings.Builder
 	fmt.Fprintln(&s, title)

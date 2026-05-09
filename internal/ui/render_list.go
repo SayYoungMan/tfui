@@ -161,12 +161,11 @@ func (m Model) renderInfoBar() string {
 }
 
 func (m Model) renderHelpBar() string {
-	var HKeyInfo string
+	HKeyInfo := "hide unchanged"
 	if m.hideUnchanged {
 		HKeyInfo = "show unchanged"
-	} else {
-		HKeyInfo = "hide unchanged"
 	}
+
 	keyInfos := []keyInfo{
 		{key: "/", info: "filter"},
 		{key: "Space", info: "select"},
@@ -176,5 +175,5 @@ func (m Model) renderHelpBar() string {
 		{key: "Ctrl+r", info: "refresh"},
 		{key: "q", info: "quit"},
 	}
-	return "\n" + m.renderKeyInfo(keyInfos)
+	return "\n " + m.renderKeyInfo(keyInfos)
 }

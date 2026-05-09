@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -13,9 +14,11 @@ type modalOpts struct {
 }
 
 func (m Model) renderModal(content string, opts *modalOpts) *lipgloss.Layer {
-	modal := focusedBorderStyle.Render(content)
+	var modal string
 	if opts != nil && opts.contentStyle != nil {
 		modal = opts.contentStyle.Render(content)
+	} else {
+		modal = focusedBorderStyle.Render(content)
 	}
 
 	modalWidth := lipgloss.Width(modal)
@@ -58,7 +61,7 @@ func (m Model) renderKeyInfo(keyInfos []keyInfo) string {
 		mid := (len(styledKeyInfos) + 1) / 2
 		line1 := strings.Join(styledKeyInfos[:mid], "  ")
 		line2 := strings.Join(styledKeyInfos[mid:], "  ")
-		infoLines = line1 + "\n" + line2
+		infoLines = line1 + "\n " + line2
 	}
 
 	return infoLines
@@ -73,4 +76,25 @@ func (m Model) renderConfirmCancelButtons() string {
 		confirmButton = focusedButtonStyle.Render("Confirm")
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, cancelButton, "  ", confirmButton)
+}
+
+func (m Model) renderScrollableBox(contents []string, width, height int) string {
+	// take borders and padding into account
+	innerHeight := height - 6
+	innerWidth := width - 6
+
+	var contentBuilder strings.Builder
+	visualRows := 0
+	for i := m.offset; i < len(contents); i++ {
+		// calculate how many rows this line occupies
+		lineRows := max(1, (lipgloss.Width(contents[i])+innerWidth-1)/innerWidth)
+		if visualRows+lineRows > innerHeight {
+			break
+		}
+		fmt.Fprintln(&contentBuilder, m.outputLines[i])
+		visualRows += lineRows
+	}
+
+	content := strings.TrimSuffix(contentBuilder.String(), "\n")
+	return borderStyle.Width(width).Height(height).Padding(1, 2).Render(content)
 }
