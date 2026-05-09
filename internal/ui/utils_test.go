@@ -55,7 +55,7 @@ func TestSelectedResources_NestedModules(t *testing.T) {
 }
 
 func TestAdjustOffset(t *testing.T) {
-	visible := 48 - defaultReservedRows - 1
+	visible := 48 - listViewReservedRows - 1
 	tests := []struct {
 		name     string
 		cursor   int

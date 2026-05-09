@@ -31,18 +31,6 @@ func (m *Model) updateFilter(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-// filter box (3) + resource borders (2) + info bar (1) + blank + help bar
-const defaultReservedRows = 8
-
-func (m Model) visibleRows() int {
-	reserved := defaultReservedRows
-	if m.viewWidth < 90 {
-		reserved++
-	}
-
-	return max(1, m.viewHeight-reserved)
-}
-
 // returns slice of resources that matches the filter result, in rank order (if tie alphabetical)
 // if there is no filter applied, return the result in alphabetical order
 func (m *Model) visibleResources() terraform.Resources {

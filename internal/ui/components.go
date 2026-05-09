@@ -1,6 +1,10 @@
 package ui
 
-import "charm.land/lipgloss/v2"
+import (
+	"strings"
+
+	"charm.land/lipgloss/v2"
+)
 
 type modalOpts struct {
 	width        int
@@ -34,4 +38,28 @@ func (m *Model) renderModalWithBackground(fg, bg string, opts *modalOpts) string
 	background := lipgloss.NewLayer(bg)
 
 	return lipgloss.NewCompositor(background, modalLayer).Render()
+}
+
+type keyInfo struct {
+	key  string
+	info string
+}
+
+func (m *Model) renderKeyInfo(keyInfos []keyInfo) string {
+	var styledKeyInfos []string
+	for _, k := range keyInfos {
+		key := helpKeyStyle.Render("'" + k.key + "'")
+		info := helpInfoStyle.Render(" " + k.info)
+		styledKeyInfos = append(styledKeyInfos, key+info)
+	}
+
+	infoLines := strings.Join(styledKeyInfos, "  ")
+	if m.viewWidth <= lipgloss.Width(infoLines) {
+		mid := (len(styledKeyInfos) + 1) / 2
+		line1 := strings.Join(styledKeyInfos[:mid], "  ")
+		line2 := strings.Join(styledKeyInfos[mid:], "  ")
+		infoLines = line1 + "\n" + line2
+	}
+
+	return infoLines
 }
