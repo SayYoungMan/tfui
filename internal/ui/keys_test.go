@@ -426,7 +426,7 @@ func TestConfirmKeys_ConfirmToOutput(t *testing.T) {
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
-	assert.Equal(t, viewActionResources, m.viewState)
+	assert.Equal(t, viewProgress, m.viewState)
 }
 
 func TestConfirmKeys_EscToPicker(t *testing.T) {
@@ -500,9 +500,9 @@ func TestQuitConfirmKeys_Confirm(t *testing.T) {
 	assert.NotNil(t, cmd)
 }
 
-func TestActionResourcesKeys_Navigation(t *testing.T) {
+func TestProgressKeys_Navigation(t *testing.T) {
 	m := newActionTestModel()
-	m.viewState = viewActionResources
+	m.viewState = viewProgress
 	m.offset = 0
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
@@ -522,9 +522,9 @@ func TestActionResourcesKeys_Navigation(t *testing.T) {
 	assert.Equal(t, 0, m.offset)
 }
 
-func TestActionResourcesKeys_oToOutput(t *testing.T) {
+func TestProgressKeys_oToOutput(t *testing.T) {
 	m := newActionTestModel()
-	m.viewState = viewActionResources
+	m.viewState = viewProgress
 	m.offset = 1
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'o'})
@@ -534,7 +534,7 @@ func TestActionResourcesKeys_oToOutput(t *testing.T) {
 	assert.Equal(t, 0, m.offset)
 }
 
-func TestActionResourcesKeys_RescanWhenIdle(t *testing.T) {
+func TestProgressKeys_RescanWhenIdle(t *testing.T) {
 	tests := []struct {
 		name string
 		key  rune
@@ -546,7 +546,7 @@ func TestActionResourcesKeys_RescanWhenIdle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := newActionTestModel()
-			m.viewState = viewActionResources
+			m.viewState = viewProgress
 			m.workState = workIdle
 			m.runner = terraform.NewTerraformRunner(t.TempDir(), "true")
 
@@ -557,7 +557,7 @@ func TestActionResourcesKeys_RescanWhenIdle(t *testing.T) {
 	}
 }
 
-func TestOutputKeys_ToActionResources(t *testing.T) {
+func TestOutputKeys_ToProgress(t *testing.T) {
 	tests := []struct {
 		name string
 		key  rune
@@ -576,7 +576,7 @@ func TestOutputKeys_ToActionResources(t *testing.T) {
 			newModel, _ := m.Update(tea.KeyPressMsg{Code: tt.key})
 			m = newModel.(Model)
 
-			assert.Equal(t, viewActionResources, m.viewState)
+			assert.Equal(t, viewProgress, m.viewState)
 		})
 	}
 }

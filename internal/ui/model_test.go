@@ -330,14 +330,14 @@ func TestModel_MouseWheelScrollsOutput(t *testing.T) {
 
 func TestUpdate_StreamComplete_PendingToSkipped(t *testing.T) {
 	m := newActionTestModel()
-	m.actionResources["aws_s3_bucket.a"].Status = actionResourceSuccessful
+	m.progresses["aws_s3_bucket.a"].Status = progressStatusSuccessful
 	// aws_s3_bucket.b stays pending
 
 	newModel, _ := m.Update(streamCompleteMsg{})
 	m = newModel.(Model)
 
-	assert.Equal(t, actionResourceSuccessful, m.actionResources["aws_s3_bucket.a"].Status)
-	assert.Equal(t, actionResourceSkipped, m.actionResources["aws_s3_bucket.b"].Status)
+	assert.Equal(t, progressStatusSuccessful, m.progresses["aws_s3_bucket.a"].Status)
+	assert.Equal(t, progressStatusSkipped, m.progresses["aws_s3_bucket.b"].Status)
 }
 
 func TestUpdate_ActionTick_ReschedulesWhenRunning(t *testing.T) {

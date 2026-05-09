@@ -21,7 +21,7 @@ type Model struct {
 	quitState quitState
 
 	resources       map[string]*terraform.Resource
-	actionResources map[string]*ActionResource
+	progresses      map[string]*Progress
 	actionStartTime time.Time
 
 	rootItem  *Item
@@ -59,7 +59,7 @@ const (
 	viewFilter
 	viewActionPicker
 	viewConfirm
-	viewActionResources
+	viewProgress
 	viewOutput
 	viewError
 	viewDetail
@@ -140,8 +140,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.actionPickerKeys(msg)
 		case viewConfirm:
 			return m.confirmKeys(msg)
-		case viewActionResources:
-			return m.actionResourcesKeys(msg)
+		case viewProgress:
+			return m.progressKeys(msg)
 		case viewOutput:
 			return m.outputKeys(msg)
 		case viewError:
@@ -183,9 +183,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.workState = workIdle
 
 		// If some resources are still pending that means they have no change
-		for _, ar := range m.actionResources {
-			if ar.Status == actionResourcePending {
-				ar.Status = actionResourceSkipped
+		for _, ar := range m.progresses {
+			if ar.Status == progressStatusPending {
+				ar.Status = progressStatusSkipped
 			}
 		}
 
@@ -237,8 +237,8 @@ func (m Model) View() tea.View {
 		viewString = m.renderActionPickerView()
 	case viewConfirm:
 		viewString = m.renderConfirmView()
-	case viewActionResources, viewOutput:
-		viewString = m.renderActionResourcesView()
+	case viewProgress, viewOutput:
+		viewString = m.renderProgressView()
 		if m.viewState == viewOutput {
 			viewString = m.renderOutputLayer(viewString)
 		}

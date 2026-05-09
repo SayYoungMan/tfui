@@ -46,11 +46,11 @@ func newTestModelWithResources(resources []*terraform.Resource) Model {
 func newActionTestModel() Model {
 	m := newTestModel()
 	m.workState = workAction
-	m.viewState = viewActionResources
+	m.viewState = viewProgress
 	m.actionStartTime = time.Now().Add(-5 * time.Second)
-	m.actionResources = map[string]*ActionResource{
-		"aws_s3_bucket.a": {Address: "aws_s3_bucket.a", Status: actionResourcePending},
-		"aws_s3_bucket.b": {Address: "aws_s3_bucket.b", Status: actionResourcePending},
+	m.progresses = map[string]*Progress{
+		"aws_s3_bucket.a": {Address: "aws_s3_bucket.a", Status: progressStatusPending},
+		"aws_s3_bucket.b": {Address: "aws_s3_bucket.b", Status: progressStatusPending},
 	}
 	m.actionCursor = 1 // apply
 	m.eventCh = make(chan terraform.StreamEvent, 1)

@@ -314,9 +314,9 @@ const (
 	timeColWidth   = 10
 )
 
-func (m Model) renderActionResourcesView() string {
+func (m Model) renderProgressView() string {
 	action := actionChoices[m.actionCursor]
-	title := fmt.Sprintf("%sing %d resources...", action, len(m.actionResources))
+	title := fmt.Sprintf("%sing %d resources...", action, len(m.progresses))
 
 	addrColWidth := max(1, m.viewWidth-statusColWidth-timeColWidth*3-10)
 	header := fmt.Sprintf("  %-*s  %-*s  %-*s  %-*s  %-*s",
@@ -332,7 +332,7 @@ func (m Model) renderActionResourcesView() string {
 	fmt.Fprintln(&rows, dimStyle.Render(strings.Repeat("─", m.viewWidth)))
 
 	var offset int
-	if m.viewState == viewActionResources {
+	if m.viewState == viewProgress {
 		offset = m.offset
 	} else {
 		offset = 0
@@ -344,7 +344,7 @@ func (m Model) renderActionResourcesView() string {
 
 	for _, resource := range resources[offset:end] {
 		addr := resource.Address
-		ar := m.actionResources[addr]
+		ar := m.progresses[addr]
 
 		displayAddr := addr
 		if lipgloss.Width(displayAddr) > addrColWidth {
@@ -356,24 +356,24 @@ func (m Model) renderActionResourcesView() string {
 		read := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.readDuration())))
 		process := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
 		switch ar.Status {
-		case actionResourcePending:
+		case progressStatusPending:
 			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Pending"))
 			read = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
-		case actionResourceReadingState:
+		case progressStatusReadingState:
 			status = infoBarStyle.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" Reading"))
 			read = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.readDuration())))
-		case actionResourceWaitingForAction:
+		case progressStatusWaitingForAction:
 			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Waiting"))
-		case actionResourceInProgress:
+		case progressStatusInProgress:
 			status = infoBarStyle.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" In Progress"))
 			process = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.processDuration())))
-		case actionResourceSuccessful:
+		case progressStatusSuccessful:
 			status = successStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "✅ Complete"))
 			process = successStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.processDuration())))
-		case actionResourceFailed:
+		case progressStatusFailed:
 			status = errorStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "❌ Failed"))
 			process = errorStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(ar.processDuration())))
-		case actionResourceSkipped:
+		case progressStatusSkipped:
 			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "— No change"))
 			wait = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
 			read = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))

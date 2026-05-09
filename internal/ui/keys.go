@@ -187,14 +187,14 @@ func (m Model) quitConfirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) actionResourcesKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+func (m Model) progressKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "k", "up":
 		if m.offset > 0 {
 			m.offset--
 		}
 	case "j", "down":
-		if m.offset < len(m.actionResources)-1 {
+		if m.offset < len(m.progresses)-1 {
 			m.offset++
 		}
 	case "esc", "enter":
@@ -225,11 +225,11 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if !m.isRunning() {
 			return m.startRescan()
 		} else {
-			m.viewState = viewActionResources
+			m.viewState = viewProgress
 		}
 	case "o":
 		m.offset = 0
-		m.viewState = viewActionResources
+		m.viewState = viewProgress
 	case "q", "ctrl+c":
 		m.cancel.fn()
 		return m, tea.Quit

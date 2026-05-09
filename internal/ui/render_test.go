@@ -204,7 +204,7 @@ func TestRenderConfirmView_TruncatesLongSelections(t *testing.T) {
 	assert.NotContains(t, view.Content, "aws_s3_bucket.b_10")
 }
 
-func TestRenderActionResourcesView_ShowsContent(t *testing.T) {
+func TestRenderProgressView_ShowsContent(t *testing.T) {
 	m := newActionTestModel()
 	m.actionCursor = 1 // apply
 	m.selected = map[string]bool{"aws_s3_bucket.a": true, "aws_s3_bucket.b": true}
@@ -231,22 +231,22 @@ func TestRenderActionResourcesView_ShowsContent(t *testing.T) {
 	assert.NotContains(t, view.Content, "Running...")
 }
 
-func TestRenderActionResourcesView_DifferentResourceStates(t *testing.T) {
+func TestRenderProgressView_DifferentResourceStates(t *testing.T) {
 	tests := []struct {
-		status         string
-		actionResource ActionResource
+		status   string
+		progress Progress
 	}{
-		{status: "Pending", actionResource: ActionResource{}},
-		{status: "Complete", actionResource: ActionResource{Status: actionResourceSuccessful, ProcessStartedAt: time.Now().Add(-3 * time.Second), ProcessCompletedAt: time.Now()}},
-		{status: "Failed", actionResource: ActionResource{Status: actionResourceFailed}},
-		{status: "No change", actionResource: ActionResource{Status: actionResourceSkipped}},
+		{status: "Pending", progress: Progress{}},
+		{status: "Complete", progress: Progress{Status: progressStatusSuccessful, ProcessStartedAt: time.Now().Add(-3 * time.Second), ProcessCompletedAt: time.Now()}},
+		{status: "Failed", progress: Progress{Status: progressStatusFailed}},
+		{status: "No change", progress: Progress{Status: progressStatusSkipped}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.status, func(t *testing.T) {
 			m := newActionTestModel()
 			m.selected = map[string]bool{"aws_s3_bucket.a": true}
-			m.actionResources["aws_s3_bucket.a"] = &tt.actionResource
+			m.progresses["aws_s3_bucket.a"] = &tt.progress
 
 			view := m.View()
 
@@ -255,15 +255,15 @@ func TestRenderActionResourcesView_DifferentResourceStates(t *testing.T) {
 	}
 }
 
-func TestRenderActionResourcesView_TruncatesLongAddress(t *testing.T) {
+func TestRenderProgressView_TruncatesLongAddress(t *testing.T) {
 	longAddr := "module.very_long_module_name.module.another_long_name.aws_s3_bucket.extremely_long_bucket_name_that_exceeds_width"
 	m := newTestModelWithResources([]*terraform.Resource{
 		{Address: longAddr},
 	})
 	m.viewWidth = 60
 	m.selected = map[string]bool{longAddr: true}
-	m.actionResources = map[string]*ActionResource{
-		longAddr: {Address: longAddr, Status: actionResourcePending},
+	m.progresses = map[string]*Progress{
+		longAddr: {Address: longAddr, Status: progressStatusPending},
 	}
 
 	view := m.View()

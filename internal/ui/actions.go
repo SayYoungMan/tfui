@@ -12,21 +12,21 @@ import (
 	"github.com/alecthomas/chroma/v2/quick"
 )
 
-type actionResourceStatus int
+type progressStatus int
 
 const (
-	actionResourcePending          actionResourceStatus = iota // Before 'refresh_start' arrives
-	actionResourceReadingState                                 // While refreshing
-	actionResourceWaitingForAction                             // After 'refresh_complete' but before 'apply_start'
-	actionResourceInProgress                                   // During apply
-	actionResourceSuccessful
-	actionResourceFailed
-	actionResourceSkipped // This happens when you want to apply change to a resource with no change
+	progressStatusPending          progressStatus = iota // Before 'refresh_start' arrives
+	progressStatusReadingState                           // While refreshing
+	progressStatusWaitingForAction                       // After 'refresh_complete' but before 'apply_start'
+	progressStatusInProgress                             // During apply
+	progressStatusSuccessful
+	progressStatusFailed
+	progressStatusSkipped // This happens when you want to apply change to a resource with no change
 )
 
-type ActionResource struct {
+type Progress struct {
 	Address            string
-	Status             actionResourceStatus
+	Status             progressStatus
 	ReadStartedAt      time.Time
 	ReadCompletedAt    time.Time
 	ProcessStartedAt   time.Time
@@ -34,9 +34,9 @@ type ActionResource struct {
 }
 
 // duration of how long it waited to be picked up for refresh
-func (ar *ActionResource) waitDuration(startTime time.Time) time.Duration {
+func (ar *Progress) waitDuration(startTime time.Time) time.Duration {
 	// If resource is explicitly skipped (e.g. tainting data source), don't show wait time
-	if ar.Status == actionResourceSkipped {
+	if ar.Status == progressStatusSkipped {
 		return 0
 	}
 	// For taint / untaint it doesn't refresh state so wait time is until process start
@@ -50,7 +50,7 @@ func (ar *ActionResource) waitDuration(startTime time.Time) time.Duration {
 }
 
 // duration of how long the refresh took place
-func (ar *ActionResource) readDuration() time.Duration {
+func (ar *Progress) readDuration() time.Duration {
 	// For taint, there is no refreshing state
 	if ar.ReadStartedAt.IsZero() {
 		return 0
@@ -63,7 +63,7 @@ func (ar *ActionResource) readDuration() time.Duration {
 }
 
 // duration of how long the action took place
-func (ar *ActionResource) processDuration() time.Duration {
+func (ar *Progress) processDuration() time.Duration {
 	if ar.ProcessStartedAt.IsZero() {
 		return 0
 	}
@@ -91,7 +91,7 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	m.rows = m.rows[:0]
 	m.collapsed = make(map[string]bool)
 	m.selected = make(map[string]bool)
-	m.actionResources = nil
+	m.progresses = nil
 	m.cursor = 0
 	m.offset = 0
 	m.err = nil
@@ -113,17 +113,17 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 
 	m.outputLines = nil
 	m.workState = workAction
-	m.viewState = viewActionResources
+	m.viewState = viewProgress
 	m.offset = 0
 	m.actionStartTime = time.Now()
 
 	resources := m.selectedResources()
-	m.actionResources = make(map[string]*ActionResource, len(resources))
+	m.progresses = make(map[string]*Progress, len(resources))
 	for _, resource := range resources {
 		addr := resource.Address
-		m.actionResources[addr] = &ActionResource{
+		m.progresses[addr] = &Progress{
 			Address: addr,
-			Status:  actionResourcePending,
+			Status:  progressStatusPending,
 		}
 	}
 
@@ -142,7 +142,7 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 		addrs = addrs[:0]
 		for _, r := range resources {
 			if r.IsDataSource() {
-				m.actionResources[r.Address].Status = actionResourceSkipped
+				m.progresses[r.Address].Status = progressStatusSkipped
 				continue
 			}
 			addrs = append(addrs, r.Address)

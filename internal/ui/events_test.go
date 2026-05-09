@@ -20,8 +20,8 @@ func TestHandleActionEvent_RefreshStart(t *testing.T) {
 	}))
 	m = newModel.(Model)
 
-	ar := m.actionResources[testAddr]
-	assert.Equal(t, actionResourceReadingState, ar.Status)
+	ar := m.progresses[testAddr]
+	assert.Equal(t, progressStatusReadingState, ar.Status)
 	assert.False(t, ar.ReadStartedAt.IsZero())
 	assert.NotNil(t, cmd)
 }
@@ -30,18 +30,18 @@ func TestHandleActionEvent_RefreshComplete(t *testing.T) {
 	tests := []struct {
 		name         string
 		actionCursor int
-		status       actionResourceStatus
+		status       progressStatus
 	}{
-		{name: "Apply", actionCursor: 1, status: actionResourceWaitingForAction},
-		{name: "Plan", actionCursor: 0, status: actionResourceSuccessful},
+		{name: "Apply", actionCursor: 1, status: progressStatusWaitingForAction},
+		{name: "Plan", actionCursor: 0, status: progressStatusSuccessful},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := newActionTestModel()
 			m.actionCursor = tt.actionCursor
-			m.actionResources[testAddr].Status = actionResourceReadingState
-			m.actionResources[testAddr].ReadStartedAt = time.Now().Add(-2 * time.Second)
+			m.progresses[testAddr].Status = progressStatusReadingState
+			m.progresses[testAddr].ReadStartedAt = time.Now().Add(-2 * time.Second)
 
 			newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
 				Type:     terraform.MsgTypeRefreshComplete,
@@ -49,7 +49,7 @@ func TestHandleActionEvent_RefreshComplete(t *testing.T) {
 			}))
 			m = newModel.(Model)
 
-			ar := m.actionResources[testAddr]
+			ar := m.progresses[testAddr]
 			assert.Equal(t, tt.status, ar.Status)
 			assert.False(t, ar.ReadCompletedAt.IsZero())
 		})
@@ -58,7 +58,7 @@ func TestHandleActionEvent_RefreshComplete(t *testing.T) {
 
 func TestHandleActionEvent_ApplyStart(t *testing.T) {
 	m := newActionTestModel()
-	m.actionResources[testAddr].Status = actionResourceWaitingForAction
+	m.progresses[testAddr].Status = progressStatusWaitingForAction
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
 		Type:     terraform.MsgTypeApplyStart,
@@ -66,15 +66,15 @@ func TestHandleActionEvent_ApplyStart(t *testing.T) {
 	}))
 	m = newModel.(Model)
 
-	ar := m.actionResources[testAddr]
-	assert.Equal(t, actionResourceInProgress, ar.Status)
+	ar := m.progresses[testAddr]
+	assert.Equal(t, progressStatusInProgress, ar.Status)
 	assert.False(t, ar.ProcessStartedAt.IsZero())
 }
 
 func TestHandleActionEvent_ApplyComplete(t *testing.T) {
 	m := newActionTestModel()
-	m.actionResources[testAddr].Status = actionResourceInProgress
-	m.actionResources[testAddr].ProcessStartedAt = time.Now().Add(-3 * time.Second)
+	m.progresses[testAddr].Status = progressStatusInProgress
+	m.progresses[testAddr].ProcessStartedAt = time.Now().Add(-3 * time.Second)
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
 		Type:     terraform.MsgTypeApplyComplete,
@@ -82,15 +82,15 @@ func TestHandleActionEvent_ApplyComplete(t *testing.T) {
 	}))
 	m = newModel.(Model)
 
-	ar := m.actionResources[testAddr]
-	assert.Equal(t, actionResourceSuccessful, ar.Status)
+	ar := m.progresses[testAddr]
+	assert.Equal(t, progressStatusSuccessful, ar.Status)
 	assert.False(t, ar.ProcessCompletedAt.IsZero())
 }
 
 func TestHandleActionEvent_ApplyErrored(t *testing.T) {
 	m := newActionTestModel()
-	m.actionResources[testAddr].Status = actionResourceInProgress
-	m.actionResources[testAddr].ProcessStartedAt = time.Now().Add(-3 * time.Second)
+	m.progresses[testAddr].Status = progressStatusInProgress
+	m.progresses[testAddr].ProcessStartedAt = time.Now().Add(-3 * time.Second)
 
 	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
 		Type:     terraform.MsgTypeApplyErrored,
@@ -98,8 +98,8 @@ func TestHandleActionEvent_ApplyErrored(t *testing.T) {
 	}))
 	m = newModel.(Model)
 
-	ar := m.actionResources[testAddr]
-	assert.Equal(t, actionResourceFailed, ar.Status)
+	ar := m.progresses[testAddr]
+	assert.Equal(t, progressStatusFailed, ar.Status)
 	assert.False(t, ar.ProcessCompletedAt.IsZero())
 }
 
@@ -112,7 +112,7 @@ func TestHandleActionEvent_UnknownAddress(t *testing.T) {
 	}))
 	m = newModel.(Model)
 
-	assert.NotContains(t, m.actionResources, "aws_iam_role.unknown")
+	assert.NotContains(t, m.progresses, "aws_iam_role.unknown")
 	assert.NotNil(t, cmd)
 }
 

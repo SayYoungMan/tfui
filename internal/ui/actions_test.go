@@ -12,7 +12,7 @@ import (
 
 func TestWaitDuration_Pending(t *testing.T) {
 	start := time.Now().Add(-5 * time.Second)
-	ar := &ActionResource{Status: actionResourcePending}
+	ar := &Progress{Status: progressStatusPending}
 
 	d := ar.waitDuration(start)
 
@@ -21,7 +21,7 @@ func TestWaitDuration_Pending(t *testing.T) {
 
 func TestWaitDuration_ReadStarted(t *testing.T) {
 	start := time.Now().Add(-10 * time.Second)
-	ar := &ActionResource{
+	ar := &Progress{
 		ReadStartedAt: time.Now().Add(-7 * time.Second),
 	}
 
@@ -32,7 +32,7 @@ func TestWaitDuration_ReadStarted(t *testing.T) {
 
 func TestWaitDuration_NoRead_ProcessStarted(t *testing.T) {
 	start := time.Now().Add(-10 * time.Second)
-	ar := &ActionResource{
+	ar := &Progress{
 		ProcessStartedAt: time.Now().Add(-6 * time.Second),
 	}
 
@@ -42,13 +42,13 @@ func TestWaitDuration_NoRead_ProcessStarted(t *testing.T) {
 }
 
 func TestReadDuration_NoReadPhase(t *testing.T) {
-	ar := &ActionResource{}
+	ar := &Progress{}
 
 	assert.Equal(t, time.Duration(0), ar.readDuration())
 }
 
 func TestReadDuration_Reading(t *testing.T) {
-	ar := &ActionResource{
+	ar := &Progress{
 		ReadStartedAt: time.Now().Add(-3 * time.Second),
 	}
 
@@ -58,7 +58,7 @@ func TestReadDuration_Reading(t *testing.T) {
 }
 
 func TestReadDuration_ReadCompleted(t *testing.T) {
-	ar := &ActionResource{
+	ar := &Progress{
 		ReadStartedAt:   time.Now().Add(-5 * time.Second),
 		ReadCompletedAt: time.Now().Add(-2 * time.Second),
 	}
@@ -69,13 +69,13 @@ func TestReadDuration_ReadCompleted(t *testing.T) {
 }
 
 func TestProcessDuration_NotStarted(t *testing.T) {
-	ar := &ActionResource{}
+	ar := &Progress{}
 
 	assert.Equal(t, time.Duration(0), ar.processDuration())
 }
 
 func TestProcessDuration_InProgress(t *testing.T) {
-	ar := &ActionResource{
+	ar := &Progress{
 		ProcessStartedAt: time.Now().Add(-4 * time.Second),
 	}
 
@@ -85,7 +85,7 @@ func TestProcessDuration_InProgress(t *testing.T) {
 }
 
 func TestProcessDuration_Completed(t *testing.T) {
-	ar := &ActionResource{
+	ar := &Progress{
 		ProcessStartedAt:   time.Now().Add(-6 * time.Second),
 		ProcessCompletedAt: time.Now().Add(-1 * time.Second),
 	}
@@ -182,7 +182,7 @@ func TestGracefulQuit_CanCancelInitPull(t *testing.T) {
 	assert.NotNil(t, m.cancel.fn)
 }
 
-func TestStartAction_PopulatesActionResources(t *testing.T) {
+func TestStartAction_PopulatesProgress(t *testing.T) {
 	m := newTestModelWithResources([]*terraform.Resource{
 		{Address: "aws_s3_bucket.a", Action: terraform.ActionCreate},
 		{Address: "aws_s3_bucket.b", Action: terraform.ActionCreate},
@@ -200,13 +200,13 @@ func TestStartAction_PopulatesActionResources(t *testing.T) {
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
-	assert.Equal(t, viewActionResources, m.viewState)
+	assert.Equal(t, viewProgress, m.viewState)
 	assert.Equal(t, workAction, m.workState)
-	assert.Len(t, m.actionResources, 2)
-	assert.Contains(t, m.actionResources, "aws_s3_bucket.a")
-	assert.Contains(t, m.actionResources, "aws_s3_bucket.b")
-	assert.Equal(t, actionResourcePending, m.actionResources["aws_s3_bucket.a"].Status)
-	assert.Equal(t, actionResourcePending, m.actionResources["aws_s3_bucket.b"].Status)
+	assert.Len(t, m.progresses, 2)
+	assert.Contains(t, m.progresses, "aws_s3_bucket.a")
+	assert.Contains(t, m.progresses, "aws_s3_bucket.b")
+	assert.Equal(t, progressStatusPending, m.progresses["aws_s3_bucket.a"].Status)
+	assert.Equal(t, progressStatusPending, m.progresses["aws_s3_bucket.b"].Status)
 	assert.False(t, m.actionStartTime.IsZero())
 	assert.Nil(t, m.outputLines)
 	assert.Equal(t, 0, m.offset)
@@ -227,7 +227,7 @@ func TestStartAction_ExpandsModuleSelection(t *testing.T) {
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
-	assert.Len(t, m.actionResources, 2)
-	assert.Contains(t, m.actionResources, "module.a.aws_s3.x")
-	assert.Contains(t, m.actionResources, "module.a.aws_s3.y")
+	assert.Len(t, m.progresses, 2)
+	assert.Contains(t, m.progresses, "module.a.aws_s3.x")
+	assert.Contains(t, m.progresses, "module.a.aws_s3.y")
 }

@@ -102,7 +102,7 @@ func (m Model) handleActionEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 		return m, waitForEvent(m.eventCh)
 	}
 
-	ar, ok := m.actionResources[event.Resource.Address]
+	ar, ok := m.progresses[event.Resource.Address]
 	if !ok {
 		// There are some apply_start and apply_complete from data sources that are not selected
 		return m, waitForEvent(m.eventCh)
@@ -111,23 +111,23 @@ func (m Model) handleActionEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 	currentAction := actionChoices[m.actionCursor]
 	switch event.Type {
 	case terraform.MsgTypeRefreshStart:
-		ar.Status = actionResourceReadingState
+		ar.Status = progressStatusReadingState
 		ar.ReadStartedAt = time.Now()
 	case terraform.MsgTypeRefreshComplete:
 		if currentAction == "plan" {
-			ar.Status = actionResourceSuccessful
+			ar.Status = progressStatusSuccessful
 		} else {
-			ar.Status = actionResourceWaitingForAction
+			ar.Status = progressStatusWaitingForAction
 		}
 		ar.ReadCompletedAt = time.Now()
 	case terraform.MsgTypeApplyStart:
-		ar.Status = actionResourceInProgress
+		ar.Status = progressStatusInProgress
 		ar.ProcessStartedAt = time.Now()
 	case terraform.MsgTypeApplyComplete:
-		ar.Status = actionResourceSuccessful
+		ar.Status = progressStatusSuccessful
 		ar.ProcessCompletedAt = time.Now()
 	case terraform.MsgTypeApplyErrored:
-		ar.Status = actionResourceFailed
+		ar.Status = progressStatusFailed
 		ar.ProcessCompletedAt = time.Now()
 	}
 
