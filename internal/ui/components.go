@@ -91,7 +91,7 @@ func (m Model) renderScrollableBox(contents []string, width, height int) string 
 		if visualRows+lineRows > innerHeight {
 			break
 		}
-		fmt.Fprintln(&contentBuilder, m.outputLines[i])
+		fmt.Fprintln(&contentBuilder, contents[i])
 		visualRows += lineRows
 	}
 
