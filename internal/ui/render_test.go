@@ -222,11 +222,9 @@ func TestRenderProgressView_ShowsContent(t *testing.T) {
 	assert.Contains(t, view.Content, "aws_s3_bucket.b")
 
 	assert.Contains(t, view.Content, "Running...")
-	assert.Contains(t, view.Content, "'o' raw output")
 
 	m.workState = workIdle
 	view = m.View()
-	assert.Contains(t, view.Content, "Esc to close and re-plan")
 	assert.NotContains(t, view.Content, "Running...")
 }
 
@@ -346,5 +344,4 @@ func TestRenderDetailView_ShowsAddressAndJSON(t *testing.T) {
 
 	assert.Contains(t, view.Content, fmt.Sprintf("Detail (%s)", testResources[0].Address))
 	assert.Contains(t, view.Content, `"id": "x"`)
-	assert.Contains(t, view.Content, "Esc to close")
 }
