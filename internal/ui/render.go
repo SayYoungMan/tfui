@@ -104,10 +104,8 @@ const (
 
 func (m Model) renderDetailView() string {
 	addr := m.rows[m.cursor].Item.Address()
-	return m.renderOutputView(fmt.Sprintf(" Detail (%s)", addr))
-}
+	title := fmt.Sprintf(" Detail (%s)", addr)
 
-func (m Model) renderOutputView(title string) string {
 	box := m.renderScrollableBox(m.outputLines, m.viewWidth, m.viewHeight-6)
 
 	keyInfo := []keyInfo{
@@ -124,6 +122,31 @@ func (m Model) renderOutputView(title string) string {
 	fmt.Fprint(&s, help)
 
 	return s.String()
+}
+
+func (m Model) renderOutputView() string {
+	action := actionChoices[m.actionCursor]
+	title := fmt.Sprintf(" %s output", action)
+
+	box := m.renderScrollableBox(m.outputLines, m.viewWidth-4, m.viewHeight-10)
+	keyInfo := []keyInfo{
+		{key: "↑/↓", info: "scroll"},
+		{key: "o", info: "close output"},
+		{key: "Esc", info: "close"},
+	}
+	help := " " + m.renderKeyInfo(keyInfo)
+
+	var s strings.Builder
+	fmt.Fprintln(&s, title)
+	fmt.Fprintln(&s)
+	fmt.Fprintln(&s, box)
+	fmt.Fprintln(&s)
+	fmt.Fprint(&s, help)
+
+	bg := lipgloss.NewLayer(dimStyle.Render(m.renderProgressView()))
+	fg := m.renderModal(s.String(), &modalOpts{contentStyle: &lipgloss.Style{}})
+
+	return lipgloss.NewCompositor(bg, fg).Render()
 }
 
 const quitConfirmTitle = "Do you want to quit?"
