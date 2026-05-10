@@ -40,7 +40,7 @@ func (m Model) renderProgressView() string {
 	}
 
 	resources := m.selectedResources()
-	visibleRows := max(1, m.viewHeight-4)
+	visibleRows := max(1, m.viewHeight-7)
 	end := min(offset+visibleRows, len(resources))
 
 	for _, resource := range resources[offset:end] {
@@ -83,19 +83,28 @@ func (m Model) renderProgressView() string {
 		fmt.Fprintf(&rows, "  %-*s  %s  %s  %s  %s\n", addrColWidth, displayAddr, status, wait, read, process)
 	}
 
+	status := "  Running..."
+	if !m.isRunning() {
+		status = fmt.Sprintf("  ✅ Completed %sing", action)
+	}
+
+	keyInfos := []keyInfo{
+		{key: "↑/↓", info: "scroll"},
+		{key: "o", info: "open output"},
+	}
+	if !m.isRunning() {
+		keyInfos = append(keyInfos, keyInfo{key: "Enter/Esc", info: "close"})
+	}
+
 	var s strings.Builder
 	fmt.Fprintln(&s, title)
 	fmt.Fprintln(&s)
 	fmt.Fprint(&s, rows.String())
 	fmt.Fprintln(&s)
-
-	var help string
-	if m.isRunning() {
-		help = "'o' raw output | Running..."
-	} else {
-		help = "'o' raw output | Esc to close and re-plan"
-	}
-	fmt.Fprint(&s, help)
+	fmt.Fprintln(&s, status)
+	fmt.Fprintln(&s)
+	fmt.Fprintln(&s, "  "+m.renderKeyInfo(keyInfos))
+	fmt.Fprintln(&s)
 
 	return s.String()
 }
