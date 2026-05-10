@@ -237,11 +237,10 @@ func (m Model) View() tea.View {
 		viewString = m.renderActionPickerView()
 	case viewConfirm:
 		viewString = m.renderConfirmView()
-	case viewProgress, viewOutput:
+	case viewProgress:
 		viewString = m.renderProgressView()
-		if m.viewState == viewOutput {
-			viewString = m.renderOutputLayer(viewString)
-		}
+	case viewOutput:
+		viewString = m.renderOutputView()
 	case viewError:
 		viewString = m.renderErrorView()
 	case viewDetail:

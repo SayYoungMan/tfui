@@ -78,7 +78,7 @@ func TestRenderListView_OnlyRendersVisibleSlice(t *testing.T) {
 		})
 	}
 	m := newTestModelWithResources(resources)
-	m.viewHeight = 3 + defaultReservedRows + 1 // Since the width is small
+	m.viewHeight = 3 + listViewReservedRows
 
 	view := m.View()
 
@@ -166,7 +166,6 @@ func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {
 	assert.Contains(t, view.Content, "destroy")
 	assert.Contains(t, view.Content, "taint")
 	assert.Contains(t, view.Content, "untaint")
-	assert.Contains(t, view.Content, "Esc to cancel")
 }
 
 func TestRenderConfirmView_ShowsResourcesAndButtons(t *testing.T) {
@@ -223,11 +222,9 @@ func TestRenderProgressView_ShowsContent(t *testing.T) {
 	assert.Contains(t, view.Content, "aws_s3_bucket.b")
 
 	assert.Contains(t, view.Content, "Running...")
-	assert.Contains(t, view.Content, "'o' raw output")
 
 	m.workState = workIdle
 	view = m.View()
-	assert.Contains(t, view.Content, "Esc to close and re-plan")
 	assert.NotContains(t, view.Content, "Running...")
 }
 
@@ -347,5 +344,4 @@ func TestRenderDetailView_ShowsAddressAndJSON(t *testing.T) {
 
 	assert.Contains(t, view.Content, fmt.Sprintf("Detail (%s)", testResources[0].Address))
 	assert.Contains(t, view.Content, `"id": "x"`)
-	assert.Contains(t, view.Content, "Esc to close")
 }

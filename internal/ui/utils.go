@@ -7,7 +7,7 @@ import (
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 )
 
-func (m *Model) isRunning() bool {
+func (m Model) isRunning() bool {
 	return m.workState != workIdle
 }
 
@@ -128,7 +128,7 @@ func (m *Model) currentCursorModule() *Module {
 }
 
 func (m *Model) adjustOffset() {
-	visible := m.visibleRows()
+	visible := max(1, m.viewHeight-listViewReservedRows)
 
 	// Cursor went below visible area — scroll down
 	if m.cursor >= m.offset+visible {

@@ -73,7 +73,7 @@ func TestListKeys_CursorNavigation(t *testing.T) {
 
 func TestListKeys_ScrollsUpWithCursor(t *testing.T) {
 	m := newTestModelEmpty()
-	m.viewHeight = 3 + defaultReservedRows
+	m.viewHeight = 3 + listViewReservedRows
 
 	for i := range 10 {
 		addr := fmt.Sprintf("aws_s3_bucket.bucket_%d", i)

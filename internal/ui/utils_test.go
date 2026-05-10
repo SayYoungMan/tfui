@@ -55,15 +55,15 @@ func TestSelectedResources_NestedModules(t *testing.T) {
 }
 
 func TestAdjustOffset(t *testing.T) {
-	visible := 48 - defaultReservedRows - 1
+	visible := 48 - listViewReservedRows
 	tests := []struct {
 		name     string
 		cursor   int
 		offset   int
 		expected int
 	}{
-		{name: "cursor went below visible", cursor: visible, offset: 0, expected: 1},
-		{name: "cursor went above visible", cursor: 0, offset: 1, expected: 0},
+		{name: "cursor_went_below_visible", cursor: visible, offset: 0, expected: 1},
+		{name: "cursor_went_above_visible", cursor: 0, offset: 1, expected: 0},
 	}
 
 	for _, tt := range tests {

@@ -29,15 +29,12 @@ var (
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(colorCoral).
 				Padding(6, 6)
-	errorStyle          = lipgloss.NewStyle().Foreground(colorCoral)
-	warningStyle        = lipgloss.NewStyle().Foreground(colorAmber)
-	successStyle        = lipgloss.NewStyle().Foreground(colorGreen)
-	infoBarStyle        = lipgloss.NewStyle().Foreground(colorCreamWhite)
-	helpKeyStyle        = lipgloss.NewStyle().Foreground(colorCreamWhite)
-	helpDescStyle       = lipgloss.NewStyle().Foreground(colorSoftGrey)
-	resourceBorderStyle = lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(colorDimGrey).Padding(0, 1)
+	errorStyle    = lipgloss.NewStyle().Foreground(colorCoral)
+	warningStyle  = lipgloss.NewStyle().Foreground(colorAmber)
+	successStyle  = lipgloss.NewStyle().Foreground(colorGreen)
+	infoBarStyle  = lipgloss.NewStyle().Foreground(colorCreamWhite)
+	helpKeyStyle  = lipgloss.NewStyle().Foreground(colorCreamWhite)
+	helpInfoStyle = lipgloss.NewStyle().Foreground(colorSoftGrey)
 
 	moduleStyle            = lipgloss.NewStyle().Foreground(colorSoftGrey)
 	treePrefixDefaultStyle = lipgloss.NewStyle().Foreground(colorDimGrey)
