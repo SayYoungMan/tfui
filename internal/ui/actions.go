@@ -34,44 +34,44 @@ type Progress struct {
 }
 
 // duration of how long it waited to be picked up for refresh
-func (ar *Progress) waitDuration(startTime time.Time) time.Duration {
+func (p *Progress) waitDuration(startTime time.Time) time.Duration {
 	// If resource is explicitly skipped (e.g. tainting data source), don't show wait time
-	if ar.Status == progressStatusSkipped {
+	if p.Status == progressStatusSkipped {
 		return 0
 	}
 	// For taint / untaint it doesn't refresh state so wait time is until process start
-	if !ar.ProcessStartedAt.IsZero() {
-		return ar.ProcessStartedAt.Sub(startTime)
+	if !p.ProcessStartedAt.IsZero() {
+		return p.ProcessStartedAt.Sub(startTime)
 	}
-	if ar.ReadStartedAt.IsZero() {
+	if p.ReadStartedAt.IsZero() {
 		return time.Since(startTime)
 	}
-	return ar.ReadStartedAt.Sub(startTime)
+	return p.ReadStartedAt.Sub(startTime)
 }
 
 // duration of how long the refresh took place
-func (ar *Progress) readDuration() time.Duration {
+func (p *Progress) readDuration() time.Duration {
 	// For taint, there is no refreshing state
-	if ar.ReadStartedAt.IsZero() {
+	if p.ReadStartedAt.IsZero() {
 		return 0
 	}
 
-	if ar.ReadCompletedAt.IsZero() {
-		return time.Since(ar.ReadStartedAt)
+	if p.ReadCompletedAt.IsZero() {
+		return time.Since(p.ReadStartedAt)
 	}
-	return ar.ReadCompletedAt.Sub(ar.ReadStartedAt)
+	return p.ReadCompletedAt.Sub(p.ReadStartedAt)
 }
 
 // duration of how long the action took place
-func (ar *Progress) processDuration() time.Duration {
-	if ar.ProcessStartedAt.IsZero() {
+func (p *Progress) processDuration() time.Duration {
+	if p.ProcessStartedAt.IsZero() {
 		return 0
 	}
 
-	if ar.ProcessCompletedAt.IsZero() {
-		return time.Since(ar.ProcessStartedAt)
+	if p.ProcessCompletedAt.IsZero() {
+		return time.Since(p.ProcessStartedAt)
 	}
-	return ar.ProcessCompletedAt.Sub(ar.ProcessStartedAt)
+	return p.ProcessCompletedAt.Sub(p.ProcessStartedAt)
 }
 
 func (m Model) gracefulQuit() (tea.Model, tea.Cmd) {
