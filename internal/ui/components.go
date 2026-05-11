@@ -79,13 +79,14 @@ func (m Model) renderConfirmCancelButtons() string {
 }
 
 func (m Model) renderScrollableBox(contents []string, width, height int) string {
-	// take borders and padding into account
+	// take borders, padding and arrow into account
 	innerHeight := height - 6
 	innerWidth := width - 6
 
 	var contentBuilder strings.Builder
 	visualRows := 0
-	for i := m.offset; i < len(contents); i++ {
+	i := m.offset
+	for ; i < len(contents); i++ {
 		// calculate how many rows this line occupies
 		lineRows := max(1, (lipgloss.Width(contents[i])+innerWidth-1)/innerWidth)
 		if visualRows+lineRows > innerHeight {
@@ -95,6 +96,16 @@ func (m Model) renderScrollableBox(contents []string, width, height int) string 
 		visualRows += lineRows
 	}
 
-	content := strings.TrimSuffix(contentBuilder.String(), "\n")
-	return borderStyle.Width(width).Height(height).Padding(1, 2).Render(content)
+	upArrow, downArrow := " ", " "
+	if m.offset > 0 {
+		upArrow = "▲"
+	}
+	if i < len(contents) {
+		downArrow = "▼"
+	}
+
+	centered := lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Center)
+	content := centered.Render(upArrow) + "\n" + contentBuilder.String() + centered.Render(downArrow)
+
+	return borderStyle.Width(width).Height(height).Padding(0, 2).Render(content)
 }
