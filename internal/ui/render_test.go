@@ -143,7 +143,7 @@ func TestRenderListView_ShowsWarningCount(t *testing.T) {
 }
 
 func TestRenderListView_ShowsHideUnchangedInfo(t *testing.T) {
-	m := newTestModelEmpty()
+	m := newTestModel()
 
 	require.Contains(t, m.View().Content, "hide unchanged")
 

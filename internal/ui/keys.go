@@ -6,6 +6,11 @@ import (
 )
 
 func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if len(m.rows) == 0 {
+		return m, nil
+	}
+
+	item := m.rows[m.cursor].Item
 	switch msg.String() {
 	case "j", "down":
 		if m.cursor < len(m.rows)-1 {
@@ -18,10 +23,6 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.adjustOffset()
 		}
 	case "h", "left":
-		if len(m.rows) == 0 {
-			break
-		}
-		item := m.rows[m.cursor].Item
 		if item.IsModule() && !m.collapsed[item.Address()] {
 			m.collapsed[item.Module.Address] = true
 			m.rebuildRows()
@@ -40,19 +41,11 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case "l", "right":
-		if len(m.rows) == 0 {
-			break
-		}
-		item := m.rows[m.cursor].Item
 		if item.IsModule() && m.collapsed[item.Address()] {
 			delete(m.collapsed, item.Module.Address)
 			m.rebuildRows()
 		}
 	case "enter":
-		if len(m.rows) == 0 {
-			break
-		}
-		item := m.rows[m.cursor].Item
 		if item.IsModule() {
 			if m.collapsed[item.Module.Address] {
 				delete(m.collapsed, item.Module.Address)
@@ -67,10 +60,14 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "space":
 		m.toggleSelected()
 	case "tab":
-		if !m.isRunning() && len(m.selected) > 0 {
-			m.actionCursor = 0
-			m.viewState = viewActionPicker
+		if m.isRunning() {
+			break
 		}
+		if len(m.selected) == 0 {
+			m.selected[item.Address()] = true
+		}
+		m.actionCursor = 0
+		m.viewState = viewActionPicker
 	case "/":
 		m.viewState = viewFilter
 		m.filterInput.Focus()

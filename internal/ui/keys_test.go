@@ -81,6 +81,7 @@ func TestListKeys_ScrollsUpWithCursor(t *testing.T) {
 			Address: addr,
 			Action:  terraform.ActionNoop,
 		}
+		m.rebuildRows()
 	}
 
 	m.cursor = 5
@@ -171,14 +172,20 @@ func TestListKeys_ActionBlockedWhileScanning(t *testing.T) {
 	assert.Equal(t, viewList, m.viewState)
 }
 
-func TestListKeys_ActionBlockedWithNoSelection(t *testing.T) {
+func TestListKeys_ActionOnCursorIfNoSelection(t *testing.T) {
 	m := newTestModel()
 	m.workState = workIdle
+	m.cursor = 2
+
+	require.Empty(t, m.selected)
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = newModel.(Model)
 
-	assert.Equal(t, viewList, m.viewState)
+	assert.Equal(t, viewActionPicker, m.viewState)
+	assert.Equal(t, 0, m.actionCursor)
+	assert.Len(t, m.selected, 1)
+	assert.True(t, m.selected["aws_s3_bucket.a"])
 }
 
 func TestListKeys_RefreshRescan(t *testing.T) {
