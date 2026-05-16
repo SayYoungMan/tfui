@@ -5,6 +5,7 @@ import (
 
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSelectedResources_Empty(t *testing.T) {
@@ -32,6 +33,67 @@ func TestSelectedResources_OnlyResources(t *testing.T) {
 	assert.Len(t, resources, 2)
 	assert.Contains(t, addrs, "aws_s3.a")
 	assert.Contains(t, addrs, "aws_s3.c")
+}
+
+func TestSelectedResources_IndependentOfFilter(t *testing.T) {
+	m := newTestModelWithResources([]*terraform.Resource{
+		{Address: "aws_s3.a", Action: terraform.ActionCreate},
+		{Address: "aws_lambda.b", Action: terraform.ActionCreate},
+	})
+	m.selected = map[string]bool{"aws_s3.a": true}
+
+	m.filterInput.SetValue("lambda")
+	m.rebuildRows()
+	for _, row := range m.rows {
+		require.NotEqual(t, "aws_s3.a", row.Item.Address(), "filter should hide aws_s3.a from the visible tree")
+	}
+
+	resources := m.selectedResources()
+
+	require.Len(t, resources, 1)
+	assert.Equal(t, "aws_s3.a", resources[0].Address)
+}
+
+func TestSelectedResources_IndependentOfHideUnchanged(t *testing.T) {
+	m := newTestModelWithResources([]*terraform.Resource{
+		{Address: "aws_s3.a", Action: terraform.ActionNoop},
+	})
+	m.selected = map[string]bool{"aws_s3.a": true}
+
+	m.hideUnchanged = true
+	m.rebuildRows()
+	require.Empty(t, m.rows, "hideUnchanged should hide the no-op resource")
+
+	resources := m.selectedResources()
+
+	require.Len(t, resources, 1)
+	assert.Equal(t, "aws_s3.a", resources[0].Address)
+}
+
+func TestIsAddressInSelection(t *testing.T) {
+	m := newTestModelEmpty()
+	m.selected = map[string]bool{
+		"aws_s3.direct":          true,
+		"module.a":               true,
+		"module.b.module.nested": true,
+	}
+
+	tests := []struct {
+		addr     string
+		expected bool
+	}{
+		{"aws_s3.direct", true},
+		{"module.a.aws_s3.x", true},
+		{"module.a.module.b.aws_s3.y", true},
+		{"module.b.module.nested.aws_s3.z", true},
+		{"module.b.aws_s3.unrelated", false},
+		{"aws_s3.unselected", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.addr, func(t *testing.T) {
+			assert.Equal(t, tt.expected, m.isAddressInSelection(tt.addr))
+		})
+	}
 }
 
 func TestSelectedResources_NestedModules(t *testing.T) {

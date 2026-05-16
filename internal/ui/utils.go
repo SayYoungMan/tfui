@@ -33,33 +33,37 @@ func (m Model) selectedAddresses() []string {
 	return addrs
 }
 
+// selectedResources returns the resources that would actually be acted on,
+// independent of filter and "hide unchanged". Selection is resolved against
+// m.resources (the full known set), so the picker / confirm / progress views
+// and the terraform target list agree regardless of which rows are currently
+// visible.
 func (m Model) selectedResources() []*terraform.Resource {
-	var resources []*terraform.Resource
-	type stackElem struct {
-		item             *Item
-		ancestorSelected bool
-	}
-
-	stack := []stackElem{{item: m.rootItem, ancestorSelected: false}}
-	for len(stack) > 0 {
-		elem := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-
-		selected := elem.ancestorSelected || m.selected[elem.item.Address()]
-
-		if elem.item.IsResource() {
-			if selected {
-				resources = append(resources, elem.item.Resource)
-			}
+	resources := make([]*terraform.Resource, 0, len(m.selected))
+	for addr, r := range m.resources {
+		if !m.isAddressInSelection(addr) {
 			continue
 		}
+		resources = append(resources, r)
+	}
+	sort.Slice(resources, func(i, j int) bool {
+		return resources[i].Address < resources[j].Address
+	})
+	return resources
+}
 
-		for _, child := range elem.item.Module.Children {
-			stack = append(stack, stackElem{item: child, ancestorSelected: selected})
+// isAddressInSelection reports whether the resource at addr is selected
+// directly or sits under a selected ancestor module.
+func (m Model) isAddressInSelection(addr string) bool {
+	if m.selected[addr] {
+		return true
+	}
+	for parent := parentModuleAddr(addr); parent != ""; parent = parentModuleAddr(parent) {
+		if m.selected[parent] {
+			return true
 		}
 	}
-
-	return resources
+	return false
 }
 
 // returns if it or ancestor module is selected

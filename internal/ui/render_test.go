@@ -183,6 +183,54 @@ func TestRenderConfirmView_ShowsResourcesAndButtons(t *testing.T) {
 	assert.Contains(t, view.Content, "Confirm")
 }
 
+func TestRenderActionPickerView_CountExpandsModuleSelection(t *testing.T) {
+	m := newTestModelWithResources([]*terraform.Resource{
+		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
+		{Address: "module.a.aws_s3.y", Module: "module.a", Action: terraform.ActionCreate},
+		{Address: "module.a.aws_s3.z", Module: "module.a", Action: terraform.ActionCreate},
+	})
+	m.viewState = viewActionPicker
+	m.selected = map[string]bool{"module.a": true}
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "3 resource(s) selected")
+}
+
+func TestRenderConfirmView_ModuleSelectionListsExpandedResources(t *testing.T) {
+	m := newTestModelWithResources([]*terraform.Resource{
+		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
+		{Address: "module.a.aws_s3.y", Module: "module.a", Action: terraform.ActionCreate},
+	})
+	m.viewState = viewConfirm
+	m.actionCursor = 1 // apply
+	m.selected = map[string]bool{"module.a": true}
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "apply 2 resource(s)?")
+	assert.Contains(t, view.Content, "module.a.aws_s3.x")
+	assert.Contains(t, view.Content, "module.a.aws_s3.y")
+}
+
+func TestRenderConfirmView_HiddenSelectionStillCounted(t *testing.T) {
+	m := newTestModelWithResources([]*terraform.Resource{
+		{Address: "aws_s3.hidden", Action: terraform.ActionCreate},
+		{Address: "aws_lambda.visible", Action: terraform.ActionCreate},
+	})
+	m.viewState = viewConfirm
+	m.actionCursor = 1 // apply
+	m.selected = map[string]bool{"aws_s3.hidden": true}
+
+	m.filterInput.SetValue("lambda")
+	m.rebuildRows()
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "apply 1 resource(s)?")
+	assert.Contains(t, view.Content, "aws_s3.hidden")
+}
+
 func TestRenderConfirmView_TruncatesLongSelections(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewState = viewConfirm

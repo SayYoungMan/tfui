@@ -212,6 +212,28 @@ func TestStartAction_PopulatesProgress(t *testing.T) {
 	assert.Equal(t, 0, m.offset)
 }
 
+func TestStartAction_HiddenSelectionStillTracked(t *testing.T) {
+	m := newTestModelWithResources([]*terraform.Resource{
+		{Address: "aws_s3.hidden", Action: terraform.ActionCreate},
+		{Address: "aws_lambda.visible", Action: terraform.ActionCreate},
+	})
+	m.runner = terraform.NewTerraformRunner(t.TempDir(), "true")
+	m.selected = map[string]bool{"aws_s3.hidden": true}
+
+	m.filterInput.SetValue("lambda")
+	m.rebuildRows()
+
+	m.actionCursor = 1 // apply
+	m.viewState = viewConfirm
+	m.confirmCursor = 1
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewProgress, m.viewState)
+	assert.Len(t, m.progresses, 1)
+	assert.Contains(t, m.progresses, "aws_s3.hidden")
+}
+
 func TestStartAction_ExpandsModuleSelection(t *testing.T) {
 	m := newTestModelWithResources([]*terraform.Resource{
 		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},

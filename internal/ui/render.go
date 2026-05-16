@@ -8,7 +8,8 @@ import (
 )
 
 func (m Model) renderActionPickerView() string {
-	title := fmt.Sprintf("%d resource(s) selected", len(m.selected))
+	resolved := m.selectedResources()
+	title := fmt.Sprintf("%d resource(s) selected", len(resolved))
 	keyInfo := []keyInfo{
 		{key: "Enter", info: "select"},
 		{key: "Esc", info: "cancel"},
@@ -39,33 +40,29 @@ func (m Model) renderActionPickerView() string {
 
 func (m Model) renderConfirmView() string {
 	chosenAction := actionChoices[m.actionCursor]
-	title := fmt.Sprintf("⚠  %s %d resource(s)?", chosenAction, len(m.selected))
+	resolved := m.selectedResources()
+	title := fmt.Sprintf("⚠  %s %d resource(s)?", chosenAction, len(resolved))
 
 	// For viewHeight >= 20, show max 10 resource names
 	// For viewHeight 12~19, show max 1~9 resource names
 	// For viewHeight < 12, show just 1 resource name max
 	maxResourceRows := max(min(10, m.viewHeight-10), 1)
 
-	addrs := m.selectedAddresses()
-	if len(addrs) > maxResourceRows {
-		addrs = addrs[:maxResourceRows]
+	shown := resolved
+	if len(shown) > maxResourceRows {
+		shown = shown[:maxResourceRows]
 	}
 
 	var resourceLines []string
-	for _, addr := range addrs {
-		var line string
-		if r, isResource := m.resources[addr]; isResource {
-			line = fmt.Sprintf("  %s %s", r.Action.Symbol(), addr)
-			if style, ok := actionStyles[r.Action]; ok {
-				line = style.Render(line)
-			}
-		} else {
-			line = fmt.Sprintf("    %s", addr)
+	for _, r := range shown {
+		line := fmt.Sprintf("  %s %s", r.Action.Symbol(), r.Address)
+		if style, ok := actionStyles[r.Action]; ok {
+			line = style.Render(line)
 		}
 		resourceLines = append(resourceLines, line)
 	}
 
-	truncated := len(m.selected) - len(addrs)
+	truncated := len(resolved) - len(shown)
 	if truncated > 0 {
 		resourceLines = append(resourceLines, dimStyle.Render(fmt.Sprintf("    ... and %d more", truncated)))
 	}
