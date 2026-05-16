@@ -128,6 +128,126 @@ func TestHandleActionEvent_NilResource(t *testing.T) {
 	assert.NotNil(t, cmd)
 }
 
+func TestHandleActionEvent_PlannedChangeUpdatesResources(t *testing.T) {
+	m := newActionTestModel()
+	m.resources[testAddr] = &terraform.Resource{
+		Address: testAddr,
+		Action:  terraform.ActionNoop,
+	}
+
+	newModel, cmd := m.Update(streamEventMsg(terraform.StreamEvent{
+		Type: terraform.MsgTypePlannedChange,
+		Resource: &terraform.Resource{
+			Address: testAddr,
+			Action:  terraform.ActionUpdate,
+			Reason:  "drift",
+		},
+	}))
+	m = newModel.(Model)
+
+	require.NotNil(t, cmd)
+	assert.Equal(t, terraform.ActionUpdate, m.resources[testAddr].Action)
+	assert.Equal(t, "drift", m.resources[testAddr].Reason)
+}
+
+func TestHandleActionEvent_ResourceDriftUpdatesResources(t *testing.T) {
+	m := newActionTestModel()
+	m.resources[testAddr] = &terraform.Resource{
+		Address: testAddr,
+		Action:  terraform.ActionNoop,
+	}
+
+	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
+		Type: terraform.MsgTypeResourceDrift,
+		Resource: &terraform.Resource{
+			Address: testAddr,
+			Action:  terraform.ActionUpdate,
+		},
+	}))
+	m = newModel.(Model)
+
+	assert.Equal(t, terraform.ActionUpdate, m.resources[testAddr].Action)
+}
+
+func TestHandleActionEvent_PlannedChangeCreatesProgressForSelectedResource(t *testing.T) {
+	m := newActionTestModel()
+	newAddr := "aws_s3_bucket.brand_new"
+	m.selected = map[string]bool{newAddr: true}
+
+	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
+		Type: terraform.MsgTypePlannedChange,
+		Resource: &terraform.Resource{
+			Address: newAddr,
+			Action:  terraform.ActionCreate,
+		},
+	}))
+	m = newModel.(Model)
+
+	require.Contains(t, m.progresses, newAddr)
+	assert.Equal(t, progressStatusPending, m.progresses[newAddr].Status)
+	assert.Equal(t, newAddr, m.progresses[newAddr].Address)
+}
+
+func TestHandleActionEvent_PlannedChangeCreatesProgressUnderSelectedModule(t *testing.T) {
+	m := newActionTestModel()
+	newAddr := "module.foo.aws_s3.brand_new"
+	m.selected = map[string]bool{"module.foo": true}
+
+	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
+		Type: terraform.MsgTypePlannedChange,
+		Resource: &terraform.Resource{
+			Address: newAddr,
+			Module:  "module.foo",
+			Action:  terraform.ActionCreate,
+		},
+	}))
+	m = newModel.(Model)
+
+	require.Contains(t, m.progresses, newAddr)
+	assert.Equal(t, progressStatusPending, m.progresses[newAddr].Status)
+}
+
+func TestHandleActionEvent_PlannedChangeNoProgressForUnselectedResource(t *testing.T) {
+	m := newActionTestModel()
+	unrelated := "aws_s3_bucket.unrelated"
+
+	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
+		Type: terraform.MsgTypePlannedChange,
+		Resource: &terraform.Resource{
+			Address: unrelated,
+			Action:  terraform.ActionCreate,
+		},
+	}))
+	m = newModel.(Model)
+
+	// m.resources still updated so list view reflects the new plan after the action.
+	assert.Equal(t, terraform.ActionCreate, m.resources[unrelated].Action)
+	// No progress entry — resource isn't under the active selection.
+	assert.NotContains(t, m.progresses, unrelated)
+}
+
+func TestHandleActionEvent_PlannedChangePreservesAttributes(t *testing.T) {
+	m := newActionTestModel()
+	m.resources[testAddr] = &terraform.Resource{
+		Address:    testAddr,
+		Action:     terraform.ActionNoop,
+		Attributes: []byte(`{"id":"existing"}`),
+	}
+
+	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
+		Type: terraform.MsgTypePlannedChange,
+		Resource: &terraform.Resource{
+			Address: testAddr,
+			Action:  terraform.ActionUpdate,
+			// Attributes intentionally nil — should be preserved from existing
+		},
+	}))
+	m = newModel.(Model)
+
+	assert.Equal(t, terraform.ActionUpdate, m.resources[testAddr].Action)
+	assert.JSONEq(t, `{"id":"existing"}`, string(m.resources[testAddr].Attributes))
+}
+
 func TestHandleActionEvent_AppendsMessage(t *testing.T) {
 	m := newActionTestModel()
 

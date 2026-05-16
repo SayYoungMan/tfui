@@ -102,7 +102,28 @@ func (m Model) handleActionEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 		return m, waitForEvent(m.eventCh)
 	}
 
-	ar, ok := m.progresses[event.Resource.Address]
+	addr := event.Resource.Address
+
+	// planned_change / resource_drift carry the resource's new Action and Reason.
+	// Mirror those into m.resources so the list view reflects the latest plan,
+	// and create a Progress entry if the resource is under the active selection
+	// — e.g. a brand-new resource discovered inside a selected module that wasn't
+	// in state at startAction time.
+	if event.Type == terraform.MsgTypePlannedChange || event.Type == terraform.MsgTypeResourceDrift {
+		if existing, exists := m.resources[addr]; exists {
+			event.Resource.Attributes = existing.Attributes
+		}
+		m.resources[addr] = event.Resource
+		if _, tracked := m.progresses[addr]; !tracked && m.isUnderActiveSelection(addr) {
+			m.progresses[addr] = &Progress{
+				Address: addr,
+				Status:  progressStatusPending,
+			}
+		}
+		return m, waitForEvent(m.eventCh)
+	}
+
+	ar, ok := m.progresses[addr]
 	if !ok {
 		// There are some apply_start and apply_complete from data sources that are not selected
 		return m, waitForEvent(m.eventCh)

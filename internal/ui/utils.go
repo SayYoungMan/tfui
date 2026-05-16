@@ -24,6 +24,20 @@ func isUnchanged(r *terraform.Resource) bool {
 	return r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead || r.Action == terraform.ActionUncertain
 }
 
+// isUnderActiveSelection reports whether the resource at addr is selected
+// directly or sits under a selected ancestor module.
+func (m Model) isUnderActiveSelection(addr string) bool {
+	if m.selected[addr] {
+		return true
+	}
+	for parent := parentModuleAddr(addr); parent != ""; parent = parentModuleAddr(parent) {
+		if m.selected[parent] {
+			return true
+		}
+	}
+	return false
+}
+
 func (m Model) selectedAddresses() []string {
 	addrs := make([]string, 0, len(m.selected))
 	for addr := range m.selected {
