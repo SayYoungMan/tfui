@@ -98,6 +98,16 @@ func (m Model) handleActionEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 		m.outputLines = append(m.outputLines, event.Message)
 	}
 
+	if event.Error != nil {
+		m.err = event.Error
+		return m, waitForEvent(m.eventCh)
+	}
+
+	if event.Diagnostic != nil {
+		m.diagnostics = append(m.diagnostics, *event.Diagnostic)
+		return m, waitForEvent(m.eventCh)
+	}
+
 	if event.Resource == nil {
 		return m, waitForEvent(m.eventCh)
 	}

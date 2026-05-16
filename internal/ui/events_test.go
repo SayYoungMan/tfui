@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -126,6 +127,52 @@ func TestHandleActionEvent_NilResource(t *testing.T) {
 	m = newModel.(Model)
 
 	assert.NotNil(t, cmd)
+}
+
+func TestHandleActionEvent_RecordsError(t *testing.T) {
+	m := newActionTestModel()
+	wantErr := errors.New("terraform apply exited with error: exit status 1")
+
+	newModel, cmd := m.Update(streamEventMsg(terraform.StreamEvent{
+		Error: wantErr,
+	}))
+	m = newModel.(Model)
+
+	assert.Equal(t, wantErr, m.err)
+	assert.NotNil(t, cmd)
+}
+
+func TestHandleActionEvent_RecordsDiagnostic(t *testing.T) {
+	m := newActionTestModel()
+
+	newModel, cmd := m.Update(streamEventMsg(terraform.StreamEvent{
+		Diagnostic: &terraform.Diagnostic{
+			Severity: "error",
+			Summary:  "Invalid value for variable",
+			Detail:   "no value provided",
+		},
+	}))
+	m = newModel.(Model)
+
+	require.Len(t, m.diagnostics, 1)
+	assert.Equal(t, "error", m.diagnostics[0].Severity)
+	assert.Equal(t, "Invalid value for variable", m.diagnostics[0].Summary)
+	assert.NotNil(t, cmd)
+}
+
+func TestHandleActionEvent_ErrorRoutesToErrorView(t *testing.T) {
+	m := newActionTestModel()
+
+	newModel, _ := m.Update(streamEventMsg(terraform.StreamEvent{
+		Error: errors.New("apply failed"),
+	}))
+	m = newModel.(Model)
+
+	newModel, _ = m.Update(streamCompleteMsg{})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewError, m.viewState)
+	assert.True(t, m.hasError())
 }
 
 func TestHandleActionEvent_AppendsMessage(t *testing.T) {
