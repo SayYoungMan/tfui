@@ -163,6 +163,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.offset++
 				}
 			}
+		case viewProgress:
+			if msg.Button == tea.MouseWheelUp && m.offset > 0 {
+				m.offset--
+			} else if msg.Button == tea.MouseWheelDown {
+				if m.offset < len(m.progresses)-1 {
+					m.offset++
+				}
+			}
 		case viewList:
 			if msg.Button == tea.MouseWheelUp && m.cursor > 0 {
 				m.cursor--
