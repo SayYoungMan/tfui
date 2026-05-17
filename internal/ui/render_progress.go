@@ -40,7 +40,7 @@ func (m Model) renderProgressView() string {
 	}
 
 	resources := m.selectedResources()
-	visibleRows := max(1, m.viewHeight-7)
+	visibleRows := max(1, m.viewHeight-9)
 	end := min(offset+visibleRows, len(resources))
 
 	for _, resource := range resources[offset:end] {
