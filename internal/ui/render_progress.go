@@ -16,10 +16,6 @@ const (
 
 func (m Model) renderProgressView() string {
 	action := actionChoices[m.actionCursor]
-	title := fmt.Sprintf("  %sing %d resources...", action, len(m.progresses))
-	if !m.isRunning() {
-		title = fmt.Sprintf("  Finished %sing %d resources", action, len(m.progresses))
-	}
 
 	addrColWidth := max(1, m.viewWidth-statusColWidth-timeColWidth*3-10)
 	header := fmt.Sprintf("  %-*s  %-*s  %-*s  %-*s  %-*s",
@@ -40,7 +36,7 @@ func (m Model) renderProgressView() string {
 	}
 
 	resources := m.selectedResources()
-	visibleRows := max(1, m.viewHeight-9)
+	visibleRows := max(1, m.viewHeight-8)
 	end := min(offset+visibleRows, len(resources))
 
 	for _, resource := range resources[offset:end] {
@@ -85,7 +81,7 @@ func (m Model) renderProgressView() string {
 
 	status := "  Running..."
 	if !m.isRunning() {
-		status = fmt.Sprintf("  ✅ Completed %sing", action)
+		status = fmt.Sprintf("  ✅ %s Completed", action)
 	}
 
 	keyInfos := []keyInfo{
@@ -97,7 +93,6 @@ func (m Model) renderProgressView() string {
 	}
 
 	var s strings.Builder
-	fmt.Fprintln(&s, title)
 	fmt.Fprintln(&s)
 	fmt.Fprint(&s, rows.String())
 	fmt.Fprintln(&s)
