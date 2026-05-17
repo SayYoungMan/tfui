@@ -58,8 +58,9 @@ func newActionTestModel() Model {
 }
 
 const (
-	cursorAnsiString = "\x1b[38;5;234;48;5;230"
 	ansiString       = "\x1b["
+	cursorAnsiString = "\x1b[38;5;234;48;5;230"
+	dimAnsiString    = "\x1b[38;5;245"
 )
 
 var actionAnsiStrings = map[terraform.Action]string{

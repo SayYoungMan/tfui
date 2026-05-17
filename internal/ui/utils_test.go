@@ -54,6 +54,15 @@ func TestSelectedResources_NestedModules(t *testing.T) {
 	assert.Contains(t, addrs, "module.a.aws_s3.z")
 }
 
+func TestSelectedResources_SelectAll(t *testing.T) {
+	m := newTestModel()
+	m.selectAll = true
+
+	resources := m.selectedResources()
+
+	assert.Len(t, resources, len(m.resources))
+}
+
 func TestAdjustOffset(t *testing.T) {
 	visible := 48 - listViewReservedRows
 	tests := []struct {

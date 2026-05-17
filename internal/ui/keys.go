@@ -58,12 +58,35 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.openDetail()
 		}
 	case "space":
-		m.toggleSelected()
+		row := m.rows[m.cursor]
+		addr := row.Item.Address()
+
+		// If selectAll is true, turn it off and select that item only
+		if m.selectAll {
+			m.selectAll = false
+		}
+
+		if m.selected[addr] {
+			delete(m.selected, addr)
+		} else {
+			// This is case where parent module is selected but this resource was not so skip
+			if m.isSelectedOrAncestor(row.Item) {
+				break
+			}
+			// Remove from selected map if there is a child row that was selected
+			for selectedAddr := range m.selected {
+				if isAncestor(addr, selectedAddr) {
+					delete(m.selected, selectedAddr)
+				}
+			}
+			m.selected[addr] = true
+		}
+
 	case "tab":
 		if m.isRunning() {
 			break
 		}
-		if len(m.selected) == 0 {
+		if len(m.selected) == 0 && !m.selectAll {
 			m.selected[item.Address()] = true
 		}
 		m.actionCursor = 0
@@ -81,32 +104,12 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if !m.isRunning() {
 			return m.startRescan()
 		}
+	case "ctrl+a":
+		m.selectAll = !m.selectAll
+		m.selected = make(map[string]bool)
 	}
 
 	return m, nil
-}
-
-func (m *Model) toggleSelected() {
-	if len(m.rows) <= 0 {
-		return
-	}
-	row := m.rows[m.cursor]
-	addr := row.Item.Address()
-	if m.selected[addr] {
-		delete(m.selected, addr)
-	} else {
-		// This is case where parent module is selected but this resource was not so skip
-		if m.isSelectedOrAncestor(row.Item) {
-			return
-		}
-		// Remove from selected map if there is a child row that was selected
-		for selectedAddr := range m.selected {
-			if isAncestor(addr, selectedAddr) {
-				delete(m.selected, selectedAddr)
-			}
-		}
-		m.selected[addr] = true
-	}
 }
 
 func (m Model) filterKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -134,6 +137,10 @@ func (m Model) actionPickerKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.actionCursor++
 		m.actionCursor %= len(actionChoices)
 	case "enter":
+		// Ignore if selectAll is on and action is 'taint' or 'untaint'
+		if m.selectAll && m.actionCursor > 2 {
+			break
+		}
 		m.viewState = viewConfirm
 		m.confirmCursor = 0
 	case "esc":

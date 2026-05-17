@@ -138,6 +138,17 @@ func TestListKeys_SelectEmptyList(t *testing.T) {
 	assert.Empty(t, m.selected)
 }
 
+func TestListKeys_SelectTurnsOffSelectAll(t *testing.T) {
+	m := newTestModel()
+	m.selectAll = true
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
+	m = newModel.(Model)
+
+	assert.False(t, m.selectAll)
+	assert.NotEmpty(t, m.selected)
+}
+
 func TestListKeys_RemoveSelectionIfParentSelected(t *testing.T) {
 	resources := []*terraform.Resource{
 		{Address: "module.a.aws_s3.x", Module: "module.a", Action: terraform.ActionCreate},
@@ -186,6 +197,21 @@ func TestListKeys_ActionOnCursorIfNoSelection(t *testing.T) {
 	assert.Equal(t, 0, m.actionCursor)
 	assert.Len(t, m.selected, 1)
 	assert.True(t, m.selected["aws_s3_bucket.a"])
+}
+
+func TestListKeys_NoActionOnCursorIfSelectAll(t *testing.T) {
+	m := newTestModel()
+	m.selectAll = true
+	m.workState = workIdle
+	m.cursor = 2
+
+	require.Empty(t, m.selected)
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	m = newModel.(Model)
+
+	assert.Empty(t, m.selected)
+	assert.Equal(t, viewActionPicker, m.viewState)
 }
 
 func TestListKeys_RefreshRescan(t *testing.T) {
@@ -267,6 +293,21 @@ func TestListKeys_EnterResourceDetail(t *testing.T) {
 	m = newModel.(Model)
 
 	assert.Equal(t, viewDetail, m.viewState)
+}
+
+func TestListKeys_CtrlASelectAll(t *testing.T) {
+	m := newTestModel()
+	m.selected = map[string]bool{"a": true}
+	require.False(t, m.selectAll)
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'a', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.True(t, m.selectAll)
+	assert.Empty(t, m.selected)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'a', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.False(t, m.selectAll)
 }
 
 func TestFilterModeKeys_FilterFocusAndUnfocus(t *testing.T) {
@@ -369,6 +410,26 @@ func TestActionPickerKeys_EnterGoesConfirmView(t *testing.T) {
 	assert.Equal(t, "destroy", actionChoices[m.actionCursor])
 	assert.Equal(t, 0, m.confirmCursor)
 	assert.Equal(t, viewConfirm, m.viewState)
+}
+
+func TestActionPickerKeys_NoEnterTaintIfSelectAll(t *testing.T) {
+	m := newTestModel()
+	m.viewState = viewActionPicker
+	m.selectAll = true
+
+	m.actionCursor = 3
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+
+	assert.Equal(t, "taint", actionChoices[m.actionCursor])
+	assert.Equal(t, viewActionPicker, m.viewState)
+
+	m.actionCursor = 4
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+
+	assert.Equal(t, "untaint", actionChoices[m.actionCursor])
+	assert.Equal(t, viewActionPicker, m.viewState)
 }
 
 func TestConfirmKeys_DefaultsToCancel(t *testing.T) {

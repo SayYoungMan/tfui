@@ -28,6 +28,7 @@ type Model struct {
 	rows      []Row
 	collapsed map[string]bool
 	selected  map[string]bool
+	selectAll bool
 	cursor    int // indicates which resource idx we are pointing at
 	offset    int // indicates which resource is shown at the top
 

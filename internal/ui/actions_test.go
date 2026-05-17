@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -180,6 +181,43 @@ func TestGracefulQuit_CanCancelInitPull(t *testing.T) {
 	require.NotNil(t, cmd)
 
 	assert.NotNil(t, m.cancel.fn)
+}
+
+func TestStartRescan(t *testing.T) {
+	m := newTestModel()
+	m.rebuildRows()
+
+	m.collapsed = map[string]bool{"module.a": true}
+	m.selected = map[string]bool{"a": true}
+	m.selectAll = true
+	m.progresses = map[string]*Progress{"a": {}}
+	m.cursor = 5
+	m.offset = 3
+	m.err = errors.New("hi")
+	m.diagnostics = []terraform.Diagnostic{{Severity: "error"}}
+	m.workState = workAction
+	m.outputLines = []string{"hi"}
+	m.outputCh = make(<-chan string)
+	m.viewState = viewError
+
+	newModel, cmd := m.startRescan()
+	require.NotNil(t, cmd)
+	m = newModel.(Model)
+
+	assert.Empty(t, m.resources)
+	assert.Empty(t, m.rows)
+	assert.Empty(t, m.collapsed)
+	assert.Empty(t, m.selected)
+	assert.False(t, m.selectAll)
+	assert.Nil(t, m.progresses)
+	assert.Zero(t, m.cursor)
+	assert.Zero(t, m.offset)
+	assert.Nil(t, m.err)
+	assert.Nil(t, m.diagnostics)
+	assert.Equal(t, workStatePull, m.workState)
+	assert.Nil(t, m.outputLines)
+	assert.Nil(t, m.outputCh)
+	assert.Equal(t, viewList, m.viewState)
 }
 
 func TestStartAction_PopulatesProgress(t *testing.T) {

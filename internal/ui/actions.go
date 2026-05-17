@@ -91,6 +91,7 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	m.rows = m.rows[:0]
 	m.collapsed = make(map[string]bool)
 	m.selected = make(map[string]bool)
+	m.selectAll = false
 	m.progresses = nil
 	m.cursor = 0
 	m.offset = 0
@@ -136,7 +137,7 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 		"untaint": m.runner.Untaint,
 	}
 
-	addrs := m.selectedAddresses()
+	addrs := m.targetedAddresses()
 	if action == "taint" || action == "untaint" {
 		// 'taint' and 'untaint' does not support -target module so we -target resources under it
 		addrs = addrs[:0]

@@ -89,7 +89,7 @@ func (m Model) renderResourceLine(idx int) string {
 	switch {
 	case idx == m.cursor:
 		line = cursorStyle.Render(line)
-	case m.isSelectedOrAncestor(row.Item):
+	case m.selectAll || m.isSelectedOrAncestor(row.Item):
 		line = selectedStyle.Render(line)
 	}
 	if style, ok := actionStyles[r.Action]; ok {
@@ -154,6 +154,9 @@ func (m Model) renderInfoBar() string {
 	if len(m.selected) > 0 {
 		info += fmt.Sprintf(" | %d selected", len(m.selected))
 	}
+	if m.selectAll {
+		info += " | ALL selected"
+	}
 	if len(m.diagnostics) > 0 {
 		info += fmt.Sprintf(" | %d warnings", len(m.diagnostics))
 	}
@@ -169,6 +172,7 @@ func (m Model) renderHelpBar() string {
 	keyInfos := []keyInfo{
 		{key: "/", info: "filter"},
 		{key: "Space", info: "select"},
+		{key: "Ctrl+a", info: "select all"},
 		{key: "Enter", info: "detail"},
 		{key: "Tab", info: "action"},
 		{key: "H", info: HKeyInfo},

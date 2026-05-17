@@ -69,6 +69,21 @@ func TestRenderListView_ShowsSelected(t *testing.T) {
 	}
 }
 
+func TestRenderListView_SelectAllShowsAllSelected(t *testing.T) {
+	m := newTestModel()
+	m.selectAll = true
+
+	view := m.View()
+
+	for line := range strings.SplitSeq(view.Content, "\n") {
+		for _, r := range testResources {
+			if strings.Contains(line, r.Address) {
+				assert.Contains(t, line, ansiString)
+			}
+		}
+	}
+}
+
 func TestRenderListView_OnlyRendersVisibleSlice(t *testing.T) {
 	var resources []*terraform.Resource
 	for i := range 5 {
@@ -116,6 +131,15 @@ func TestRenderListView_ViewShowsSelectedCount(t *testing.T) {
 	view := m.View()
 
 	assert.Contains(t, view.Content, "1 selected")
+}
+
+func TestRenderListView_ViewShowsAllSelected(t *testing.T) {
+	m := newTestModel()
+	m.selectAll = true
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "ALL selected")
 }
 
 func TestRenderListView_ViewShowsFilterCount(t *testing.T) {
@@ -168,6 +192,31 @@ func TestRenderActionPickerView_ShowsActionPicker(t *testing.T) {
 	assert.Contains(t, view.Content, "untaint")
 }
 
+func TestRenderActionPickerView_SelectAllTitle(t *testing.T) {
+	m := newTestModel()
+	m.viewState = viewActionPicker
+	m.selectAll = true
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "ALL resources selected")
+	assert.NotContains(t, view.Content, "resource(s) selected")
+}
+
+func TestRenderActionPickerView_SelectAllDimsTaintUntaint(t *testing.T) {
+	m := newTestModel()
+	m.viewState = viewActionPicker
+	m.selectAll = true
+
+	view := m.View()
+
+	for line := range strings.SplitSeq(view.Content, "\n") {
+		if strings.Contains(line, "taint") {
+			assert.Contains(t, line, dimAnsiString)
+		}
+	}
+}
+
 func TestRenderConfirmView_ShowsResourcesAndButtons(t *testing.T) {
 	m := newTestModel()
 	m.selected = map[string]bool{testResources[0].Address: true, testResources[2].Address: true}
@@ -201,6 +250,18 @@ func TestRenderConfirmView_TruncatesLongSelections(t *testing.T) {
 	assert.Contains(t, view.Content, "aws_s3_bucket.b_00")
 	assert.Contains(t, view.Content, "aws_s3_bucket.b_09")
 	assert.NotContains(t, view.Content, "aws_s3_bucket.b_10")
+}
+
+func TestRenderConfirmView_SelectAllTitle(t *testing.T) {
+	m := newTestModel()
+	m.viewState = viewConfirm
+	m.selectAll = true
+	m.actionCursor = 1 // apply
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "ALL resource(s)?")
+	assert.NotContains(t, view.Content, "apply 0 resource(s)?")
 }
 
 func TestRenderProgressView_ShowsContent(t *testing.T) {

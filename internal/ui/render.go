@@ -9,6 +9,10 @@ import (
 
 func (m Model) renderActionPickerView() string {
 	title := fmt.Sprintf("%d resource(s) selected", len(m.selected))
+	if m.selectAll {
+		title = "ALL resources selected"
+	}
+
 	keyInfo := []keyInfo{
 		{key: "Enter", info: "select"},
 		{key: "Esc", info: "cancel"},
@@ -26,6 +30,8 @@ func (m Model) renderActionPickerView() string {
 	for i, choice := range actionChoices {
 		if i == m.actionCursor {
 			fmt.Fprintln(&s, "  "+cursorStyle.Render("> "+choice))
+		} else if m.selectAll && strings.Contains(choice, "taint") {
+			fmt.Fprintln(&s, "    "+dimStyle.Render(choice))
 		} else {
 			fmt.Fprintln(&s, "    "+choice)
 		}
@@ -40,13 +46,16 @@ func (m Model) renderActionPickerView() string {
 func (m Model) renderConfirmView() string {
 	chosenAction := actionChoices[m.actionCursor]
 	title := fmt.Sprintf("⚠  %s %d resource(s)?", chosenAction, len(m.selected))
+	if m.selectAll {
+		title = fmt.Sprintf("⚠  %s ALL resource(s)?", chosenAction)
+	}
 
 	// For viewHeight >= 20, show max 10 resource names
 	// For viewHeight 12~19, show max 1~9 resource names
 	// For viewHeight < 12, show just 1 resource name max
 	maxResourceRows := max(min(10, m.viewHeight-10), 1)
 
-	addrs := m.selectedAddresses()
+	addrs := m.targetedAddresses()
 	if len(addrs) > maxResourceRows {
 		addrs = addrs[:maxResourceRows]
 	}

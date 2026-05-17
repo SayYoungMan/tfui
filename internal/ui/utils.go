@@ -24,7 +24,9 @@ func isUnchanged(r *terraform.Resource) bool {
 	return r.Action == terraform.ActionNoop || r.Action == terraform.ActionRead || r.Action == terraform.ActionUncertain
 }
 
-func (m Model) selectedAddresses() []string {
+// Only return addresses of resources that are selected explicitly, not from selectAll
+// This is because empty target will do the action for all resources
+func (m Model) targetedAddresses() []string {
 	addrs := make([]string, 0, len(m.selected))
 	for addr := range m.selected {
 		addrs = append(addrs, addr)
@@ -33,6 +35,7 @@ func (m Model) selectedAddresses() []string {
 	return addrs
 }
 
+// return all resources that are either selected or selected via selectAll
 func (m Model) selectedResources() []*terraform.Resource {
 	var resources []*terraform.Resource
 	type stackElem struct {
@@ -45,7 +48,7 @@ func (m Model) selectedResources() []*terraform.Resource {
 		elem := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
 
-		selected := elem.ancestorSelected || m.selected[elem.item.Address()]
+		selected := elem.ancestorSelected || m.selected[elem.item.Address()] || m.selectAll
 
 		if elem.item.IsResource() {
 			if selected {
