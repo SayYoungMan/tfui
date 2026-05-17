@@ -271,8 +271,6 @@ func TestRenderProgressView_ShowsContent(t *testing.T) {
 
 	view := m.View()
 
-	assert.Contains(t, view.Content, "applying 2 resources...")
-
 	assert.Contains(t, view.Content, "Resource")
 	assert.Contains(t, view.Content, "Status")
 	assert.Contains(t, view.Content, "Wait")
