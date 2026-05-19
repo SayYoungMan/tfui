@@ -572,10 +572,6 @@ func TestProgressKeys_Navigation(t *testing.T) {
 	m := newActionTestModel()
 	m.viewState = viewProgress
 	m.cursor = 0
-	m.progresses = map[string]*Progress{
-		"a": {Address: "a"},
-		"b": {Address: "b"},
-	}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
 	m = newModel.(Model)
@@ -606,6 +602,19 @@ func TestProgressKeys_oToOutput(t *testing.T) {
 	assert.Equal(t, 0, m.offset)
 }
 
+func TestProgressKeys_EnterToResourceOutput(t *testing.T) {
+	m := newActionTestModel()
+	m.viewState = viewProgress
+	m.offset = 1
+	m.cursor = 0
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewResourceOutput, m.viewState)
+	assert.Equal(t, 0, m.offset)
+}
+
 func TestProgressKeys_RescanWhenIdle(t *testing.T) {
 	m := newActionTestModel()
 	m.viewState = viewProgress
@@ -627,9 +636,19 @@ func TestOutputKeys_ToProgress(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.name+"/Output", func(t *testing.T) {
 			m := newTestModel()
 			m.viewState = viewOutput
+			m.workState = workAction
+
+			newModel, _ := m.Update(tea.KeyPressMsg{Code: tt.key})
+			m = newModel.(Model)
+
+			assert.Equal(t, viewProgress, m.viewState)
+		})
+		t.Run(tt.name+"/ResourceOutput", func(t *testing.T) {
+			m := newTestModel()
+			m.viewState = viewResourceOutput
 			m.workState = workAction
 
 			newModel, _ := m.Update(tea.KeyPressMsg{Code: tt.key})

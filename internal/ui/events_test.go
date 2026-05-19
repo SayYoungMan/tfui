@@ -140,4 +140,6 @@ func TestHandleActionEvent_AppendsMessage(t *testing.T) {
 
 	require.Len(t, m.outputLines, 1)
 	assert.Equal(t, "aws_s3_bucket.a: Modifying...", m.outputLines[0])
+	assert.Equal(t, "aws_s3_bucket.a: Modifying...", m.progresses[testAddr].OutputLines[0])
+	assert.Empty(t, m.progresses["aws_s3_bucket.b"].OutputLines)
 }

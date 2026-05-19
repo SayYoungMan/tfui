@@ -52,6 +52,10 @@ func newActionTestModel() Model {
 		"aws_s3_bucket.a": {Address: "aws_s3_bucket.a", Status: progressStatusPending},
 		"aws_s3_bucket.b": {Address: "aws_s3_bucket.b", Status: progressStatusPending},
 	}
+	m.selected = map[string]bool{
+		"aws_s3_bucket.a": true,
+		"aws_s3_bucket.b": true,
+	}
 	m.actionCursor = 1 // apply
 	m.eventCh = make(chan terraform.StreamEvent, 1)
 	return m
