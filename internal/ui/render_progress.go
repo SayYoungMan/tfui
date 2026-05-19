@@ -39,7 +39,7 @@ func (m Model) renderProgressView() string {
 	visibleRows := max(1, m.viewHeight-8)
 	end := min(offset+visibleRows, len(resources))
 
-	for _, resource := range resources[offset:end] {
+	for i, resource := range resources[offset:end] {
 		addr := resource.Address
 		p := m.progresses[addr]
 
@@ -76,7 +76,11 @@ func (m Model) renderProgressView() string {
 			read = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
 		}
 
-		fmt.Fprintf(&rows, "  %-*s  %s  %s  %s  %s\n", addrColWidth, displayAddr, status, wait, read, process)
+		line := fmt.Sprintf("  %-*s  %s  %s  %s  %s", addrColWidth, displayAddr, status, wait, read, process)
+		if m.viewState == viewProgress && m.offset+i == m.cursor {
+			line = cursorStyle.Render(line)
+		}
+		fmt.Fprintln(&rows, line)
 	}
 
 	status := "  Running..."
@@ -86,10 +90,11 @@ func (m Model) renderProgressView() string {
 
 	keyInfos := []keyInfo{
 		{key: "↑/↓", info: "scroll"},
-		{key: "o", info: "open output"},
+		{key: "Enter", info: "resource output"},
+		{key: "o", info: "raw output"},
 	}
 	if !m.isRunning() {
-		keyInfos = append(keyInfos, keyInfo{key: "Enter/Esc", info: "close"})
+		keyInfos = append(keyInfos, keyInfo{key: "Esc", info: "close"})
 	}
 
 	var s strings.Builder

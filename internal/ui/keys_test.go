@@ -571,23 +571,27 @@ func TestQuitConfirmKeys_Confirm(t *testing.T) {
 func TestProgressKeys_Navigation(t *testing.T) {
 	m := newActionTestModel()
 	m.viewState = viewProgress
-	m.offset = 0
+	m.cursor = 0
+	m.progresses = map[string]*Progress{
+		"a": {Address: "a"},
+		"b": {Address: "b"},
+	}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
 	m = newModel.(Model)
-	assert.Equal(t, 1, m.offset)
+	assert.Equal(t, 1, m.cursor)
 
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = newModel.(Model)
-	assert.Equal(t, 1, m.offset)
+	assert.Equal(t, 1, m.cursor)
 
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
 	m = newModel.(Model)
-	assert.Equal(t, 0, m.offset)
+	assert.Equal(t, 0, m.cursor)
 
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = newModel.(Model)
-	assert.Equal(t, 0, m.offset)
+	assert.Equal(t, 0, m.cursor)
 }
 
 func TestProgressKeys_oToOutput(t *testing.T) {
@@ -603,26 +607,14 @@ func TestProgressKeys_oToOutput(t *testing.T) {
 }
 
 func TestProgressKeys_RescanWhenIdle(t *testing.T) {
-	tests := []struct {
-		name string
-		key  rune
-	}{
-		{name: "Esc", key: tea.KeyEscape},
-		{name: "Enter", key: tea.KeyEnter},
-	}
+	m := newActionTestModel()
+	m.viewState = viewProgress
+	m.workState = workIdle
+	m.runner = terraform.NewTerraformRunner(t.TempDir(), "true")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := newActionTestModel()
-			m.viewState = viewProgress
-			m.workState = workIdle
-			m.runner = terraform.NewTerraformRunner(t.TempDir(), "true")
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 
-			_, cmd := m.Update(tea.KeyPressMsg{Code: tt.key})
-
-			assert.NotNil(t, cmd)
-		})
-	}
+	assert.NotNil(t, cmd)
 }
 
 func TestOutputKeys_ToProgress(t *testing.T) {
@@ -630,7 +622,6 @@ func TestOutputKeys_ToProgress(t *testing.T) {
 		name string
 		key  rune
 	}{
-		{name: "Esc", key: tea.KeyEscape},
 		{name: "Enter", key: tea.KeyEnter},
 		{name: "o", key: 'o'},
 	}

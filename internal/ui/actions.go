@@ -27,6 +27,7 @@ const (
 type Progress struct {
 	Address            string
 	Status             progressStatus
+	OutputLines        []string
 	ReadStartedAt      time.Time
 	ReadCompletedAt    time.Time
 	ProcessStartedAt   time.Time
@@ -115,6 +116,7 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 	m.outputLines = nil
 	m.workState = workAction
 	m.viewState = viewProgress
+	m.cursor = 0
 	m.offset = 0
 	m.actionStartTime = time.Now()
 
