@@ -194,14 +194,19 @@ func (m Model) quitConfirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) progressKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "k", "up":
-		if m.offset > 0 {
-			m.offset--
+		if m.cursor > 0 {
+			m.cursor--
+			m.adjustOffset()
 		}
 	case "j", "down":
-		if m.offset < len(m.progresses)-1 {
-			m.offset++
+		if m.cursor < len(m.progressRows)-1 {
+			m.cursor++
+			m.adjustOffset()
 		}
-	case "esc", "enter":
+	case "enter":
+		m.offset = 0
+		m.viewState = viewResourceOutput
+	case "esc":
 		if !m.isRunning() {
 			return m.startRescan()
 		}
@@ -222,16 +227,19 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.offset--
 		}
 	case "j", "down":
-		if m.offset < len(m.outputLines)-1 {
+		contentLen := len(m.outputLines)
+		if m.viewState == viewResourceOutput {
+			contentLen = len(m.progressRows[m.cursor].OutputLines)
+		}
+
+		if m.offset < contentLen-1 {
 			m.offset++
 		}
-	case "esc", "enter":
+	case "esc":
 		if !m.isRunning() {
 			return m.startRescan()
-		} else {
-			m.viewState = viewProgress
 		}
-	case "o":
+	case "o", "enter":
 		m.offset = 0
 		m.viewState = viewProgress
 	case "q", "ctrl+c":

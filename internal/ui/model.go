@@ -22,6 +22,7 @@ type Model struct {
 
 	resources       map[string]*terraform.Resource
 	progresses      map[string]*Progress
+	progressRows    []*Progress // ordered slice of progress in which they are rendered
 	actionStartTime time.Time
 
 	rootItem  *Item
@@ -62,6 +63,7 @@ const (
 	viewConfirm
 	viewProgress
 	viewOutput
+	viewResourceOutput
 	viewError
 	viewDetail
 )
@@ -143,7 +145,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.confirmKeys(msg)
 		case viewProgress:
 			return m.progressKeys(msg)
-		case viewOutput:
+		case viewOutput, viewResourceOutput:
 			return m.outputKeys(msg)
 		case viewError:
 			return m.errorKeys(msg)
@@ -163,12 +165,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.offset++
 				}
 			}
-		case viewProgress:
+		case viewResourceOutput:
 			if msg.Button == tea.MouseWheelUp && m.offset > 0 {
 				m.offset--
 			} else if msg.Button == tea.MouseWheelDown {
-				if m.offset < len(m.progresses)-1 {
+				if m.offset < len(m.progressRows[m.cursor].OutputLines)-1 {
 					m.offset++
+				}
+			}
+		case viewProgress:
+			if msg.Button == tea.MouseWheelUp && m.cursor > 0 {
+				m.cursor--
+				m.adjustOffset()
+			} else if msg.Button == tea.MouseWheelDown {
+				if m.cursor < len(m.progresses)-1 {
+					m.cursor++
+					m.adjustOffset()
 				}
 			}
 		case viewList:
@@ -248,7 +260,7 @@ func (m Model) View() tea.View {
 		viewString = m.renderConfirmView()
 	case viewProgress:
 		viewString = m.renderProgressView()
-	case viewOutput:
+	case viewOutput, viewResourceOutput:
 		viewString = m.renderOutputView()
 	case viewError:
 		viewString = m.renderErrorView()

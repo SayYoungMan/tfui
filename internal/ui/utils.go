@@ -132,6 +132,9 @@ func (m *Model) currentCursorModule() *Module {
 
 func (m *Model) adjustOffset() {
 	visible := max(1, m.viewHeight-listViewReservedRows)
+	if m.viewState == viewProgress {
+		visible = max(1, m.viewHeight-8)
+	}
 
 	// Cursor went below visible area — scroll down
 	if m.cursor >= m.offset+visible {

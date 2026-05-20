@@ -96,6 +96,13 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 func (m Model) handleActionEvent(event terraform.StreamEvent) (tea.Model, tea.Cmd) {
 	if event.Message != "" {
 		m.outputLines = append(m.outputLines, event.Message)
+
+		// add output to progress for per resource output view
+		if event.Resource != nil {
+			if p, ok := m.progresses[event.Resource.Address]; ok {
+				p.OutputLines = append(p.OutputLines, event.Message)
+			}
+		}
 	}
 
 	if event.Resource == nil {

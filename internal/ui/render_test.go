@@ -303,6 +303,7 @@ func TestRenderProgressView_DifferentResourceStates(t *testing.T) {
 			m := newActionTestModel()
 			m.selected = map[string]bool{"aws_s3_bucket.a": true}
 			m.progresses["aws_s3_bucket.a"] = &tt.progress
+			m.progressRows[0] = &tt.progress
 
 			view := m.View()
 
@@ -328,6 +329,26 @@ func TestRenderProgressView_TruncatesLongAddress(t *testing.T) {
 	assert.Contains(t, view.Content, "…")
 }
 
+func TestRenderProgressView_Cursor(t *testing.T) {
+	m := newActionTestModel()
+	m.viewHeight = 9
+	m.cursor = 1
+	m.offset = 1
+	selectedAddr := m.progressRows[1].Address
+
+	view := m.View()
+
+	var selectedLine string
+	for line := range strings.SplitSeq(view.Content, "\n") {
+		if strings.Contains(line, selectedAddr) {
+			selectedLine = line
+		}
+	}
+
+	require.NotEmpty(t, selectedLine)
+	assert.Contains(t, selectedLine, cursorAnsiString)
+}
+
 func TestRenderOutputLayer_ShowsContent(t *testing.T) {
 	m := newTestModelEmpty()
 	m.viewState = viewOutput
@@ -343,6 +364,32 @@ func TestRenderOutputLayer_ShowsContent(t *testing.T) {
 
 	assert.Contains(t, view.Content, "aws_s3_bucket.uploads: Modifying...")
 	assert.Contains(t, view.Content, "Apply complete!")
+}
+
+func TestRenderOutputLayer_ShowsResourceOutputOnly(t *testing.T) {
+	m := newActionTestModel()
+	m.viewState = viewResourceOutput
+	m.cursor = 0
+	selected := m.progressRows[m.cursor]
+	selected.OutputLines = []string{"selected resource output"}
+	m.outputLines = []string{"full output"}
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, selected.Address)
+	assert.Contains(t, view.Content, "selected resource output")
+	assert.NotContains(t, view.Content, "full output")
+	assert.Contains(t, view.Content, "Enter")
+}
+
+func TestRenderOutputLayer_ShowsEmptyResourceOutputMessage(t *testing.T) {
+	m := newActionTestModel()
+	m.viewState = viewResourceOutput
+	m.cursor = 0
+
+	view := m.View()
+
+	assert.Contains(t, view.Content, "No output available yet.")
 }
 
 func TestRenderShutdownLayer_ShowsWaitingMessage(t *testing.T) {

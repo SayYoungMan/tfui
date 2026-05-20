@@ -135,15 +135,33 @@ func (m Model) renderDetailView() string {
 
 func (m Model) renderOutputView() string {
 	action := actionChoices[m.actionCursor]
-	title := fmt.Sprintf(" %s output", action)
 
-	box := m.renderScrollableBox(m.outputLines, m.viewWidth-4, m.viewHeight-10)
-	keyInfo := []keyInfo{
+	// If viewOutput, let content be the whole output lines
+	// if viewResourceOutput, content is just that resource's output lines
+	content := m.outputLines
+	title := fmt.Sprintf(" %s output", action)
+	if m.viewState == viewResourceOutput {
+		progress := m.progressRows[m.cursor]
+		title += fmt.Sprintf(" (%s)", progress.Address)
+		content = progress.OutputLines
+	}
+
+	if len(content) == 0 {
+		content = append(content, dimStyle.Render("No output available yet."))
+	}
+
+	box := m.renderScrollableBox(content, m.viewWidth-4, m.viewHeight-10)
+	keyInfos := []keyInfo{
 		{key: "↑/↓", info: "scroll"},
 		{key: "o", info: "close output"},
-		{key: "Esc", info: "close"},
 	}
-	help := " " + m.renderKeyInfo(keyInfo)
+	if m.viewState == viewResourceOutput {
+		keyInfos[1] = keyInfo{key: "Enter", info: "close output"}
+	}
+	if !m.isRunning() {
+		keyInfos = append(keyInfos, keyInfo{key: "Esc", info: "close"})
+	}
+	help := " " + m.renderKeyInfo(keyInfos)
 
 	var s strings.Builder
 	fmt.Fprintln(&s, title)
