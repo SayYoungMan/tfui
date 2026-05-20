@@ -22,6 +22,7 @@ type Model struct {
 
 	resources       map[string]*terraform.Resource
 	progresses      map[string]*Progress
+	progressRows    []*Progress // ordered slice of progress in which they are rendered
 	actionStartTime time.Time
 
 	rootItem  *Item
@@ -168,7 +169,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.Button == tea.MouseWheelUp && m.offset > 0 {
 				m.offset--
 			} else if msg.Button == tea.MouseWheelDown {
-				if m.offset < len(m.currentProgress().OutputLines)-1 {
+				if m.offset < len(m.progressRows[m.cursor].OutputLines)-1 {
 					m.offset++
 				}
 			}

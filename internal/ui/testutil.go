@@ -48,9 +48,13 @@ func newActionTestModel() Model {
 	m.workState = workAction
 	m.viewState = viewProgress
 	m.actionStartTime = time.Now().Add(-5 * time.Second)
+	m.progressRows = []*Progress{
+		{Address: "aws_s3_bucket.a", Status: progressStatusPending},
+		{Address: "aws_s3_bucket.b", Status: progressStatusPending},
+	}
 	m.progresses = map[string]*Progress{
-		"aws_s3_bucket.a": {Address: "aws_s3_bucket.a", Status: progressStatusPending},
-		"aws_s3_bucket.b": {Address: "aws_s3_bucket.b", Status: progressStatusPending},
+		"aws_s3_bucket.a": m.progressRows[0],
+		"aws_s3_bucket.b": m.progressRows[1],
 	}
 	m.selected = map[string]bool{
 		"aws_s3_bucket.a": true,

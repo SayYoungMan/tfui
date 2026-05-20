@@ -94,6 +94,7 @@ func (m Model) startRescan() (tea.Model, tea.Cmd) {
 	m.selected = make(map[string]bool)
 	m.selectAll = false
 	m.progresses = nil
+	m.progressRows = nil
 	m.cursor = 0
 	m.offset = 0
 	m.err = nil
@@ -122,12 +123,15 @@ func (m Model) startAction() (tea.Model, tea.Cmd) {
 
 	resources := m.selectedResources()
 	m.progresses = make(map[string]*Progress, len(resources))
+	m.progressRows = make([]*Progress, 0, len(resources))
 	for _, resource := range resources {
 		addr := resource.Address
-		m.progresses[addr] = &Progress{
+		p := &Progress{
 			Address: addr,
 			Status:  progressStatusPending,
 		}
+		m.progresses[addr] = p
+		m.progressRows = append(m.progressRows, p)
 	}
 
 	action := actionChoices[m.actionCursor]

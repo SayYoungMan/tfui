@@ -199,7 +199,7 @@ func (m Model) progressKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.adjustOffset()
 		}
 	case "j", "down":
-		if m.cursor < len(m.progresses)-1 {
+		if m.cursor < len(m.progressRows)-1 {
 			m.cursor++
 			m.adjustOffset()
 		}
@@ -229,7 +229,7 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "j", "down":
 		contentLen := len(m.outputLines)
 		if m.viewState == viewResourceOutput {
-			contentLen = len(m.currentProgress().OutputLines)
+			contentLen = len(m.progressRows[m.cursor].OutputLines)
 		}
 
 		if m.offset < contentLen-1 {

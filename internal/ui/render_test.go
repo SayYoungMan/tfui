@@ -303,6 +303,7 @@ func TestRenderProgressView_DifferentResourceStates(t *testing.T) {
 			m := newActionTestModel()
 			m.selected = map[string]bool{"aws_s3_bucket.a": true}
 			m.progresses["aws_s3_bucket.a"] = &tt.progress
+			m.progressRows[0] = &tt.progress
 
 			view := m.View()
 
@@ -333,7 +334,7 @@ func TestRenderProgressView_Cursor(t *testing.T) {
 	m.viewHeight = 9
 	m.cursor = 1
 	m.offset = 1
-	selectedAddr := m.selectedResources()[1].Address
+	selectedAddr := m.progressRows[1].Address
 
 	view := m.View()
 
@@ -369,7 +370,7 @@ func TestRenderOutputLayer_ShowsResourceOutputOnly(t *testing.T) {
 	m := newActionTestModel()
 	m.viewState = viewResourceOutput
 	m.cursor = 0
-	selected := m.currentProgress()
+	selected := m.progressRows[m.cursor]
 	selected.OutputLines = []string{"selected resource output"}
 	m.outputLines = []string{"full output"}
 

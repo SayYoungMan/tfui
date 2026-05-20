@@ -130,13 +130,6 @@ func (m *Model) currentCursorModule() *Module {
 	return cursorItem.Module
 }
 
-func (m *Model) currentProgress() *Progress {
-	resources := m.selectedResources()
-	addr := resources[m.cursor].Address
-
-	return m.progresses[addr]
-}
-
 func (m *Model) adjustOffset() {
 	visible := max(1, m.viewHeight-listViewReservedRows)
 	if m.viewState == viewProgress {

@@ -141,7 +141,7 @@ func (m Model) renderOutputView() string {
 	content := m.outputLines
 	title := fmt.Sprintf(" %s output", action)
 	if m.viewState == viewResourceOutput {
-		progress := m.currentProgress()
+		progress := m.progressRows[m.cursor]
 		title += fmt.Sprintf(" (%s)", progress.Address)
 		content = progress.OutputLines
 	}

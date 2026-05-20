@@ -35,15 +35,11 @@ func (m Model) renderProgressView() string {
 		offset = m.offset
 	}
 
-	resources := m.selectedResources()
 	visibleRows := max(1, m.viewHeight-8)
-	end := min(offset+visibleRows, len(resources))
+	end := min(offset+visibleRows, len(m.progressRows))
 
-	for i, resource := range resources[offset:end] {
-		addr := resource.Address
-		p := m.progresses[addr]
-
-		displayAddr := addr
+	for i, p := range m.progressRows[offset:end] {
+		displayAddr := p.Address
 		if lipgloss.Width(displayAddr) > addrColWidth {
 			displayAddr = ansi.Truncate(displayAddr, addrColWidth, "…")
 		}
