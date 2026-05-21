@@ -331,7 +331,7 @@ func TestRenderProgressView_TruncatesLongAddress(t *testing.T) {
 
 func TestRenderProgressView_Cursor(t *testing.T) {
 	m := newActionTestModel()
-	m.viewHeight = 9
+	m.viewHeight = m.getReservedRows() + 1
 	m.cursor = 1
 	m.offset = 1
 	selectedAddr := m.progressRows[1].Address
