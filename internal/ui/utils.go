@@ -131,10 +131,7 @@ func (m *Model) currentCursorModule() *Module {
 }
 
 func (m *Model) adjustOffset() {
-	visible := max(1, m.viewHeight-listViewReservedRows)
-	if m.viewState == viewProgress {
-		visible = max(1, m.viewHeight-8)
-	}
+	visible := max(1, m.viewHeight-m.getReservedRows())
 
 	// Cursor went below visible area — scroll down
 	if m.cursor >= m.offset+visible {
@@ -145,4 +142,22 @@ func (m *Model) adjustOffset() {
 	if m.cursor < m.offset {
 		m.offset = m.cursor
 	}
+}
+
+func (m *Model) getReservedRows() int {
+	switch m.viewState {
+	case viewList:
+		// filter box (3) + resource borders (2) + info bar (1) + help bar with margin (4)
+		return 10
+	case viewProgress:
+		return 8
+	case viewOutput:
+		return 10
+	case viewConfirm:
+		return 10
+	case viewDetail:
+		return 6
+	}
+
+	return 0
 }

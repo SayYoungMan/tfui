@@ -34,11 +34,8 @@ func (m Model) renderFilterBox() string {
 	return s.String()
 }
 
-// filter box (3) + resource borders (2) + info bar (1) + help bar with margin (4)
-const listViewReservedRows = 10
-
 func (m Model) renderResourcesBox() string {
-	visibleRows := max(1, m.viewHeight-listViewReservedRows)
+	visibleRows := max(1, m.viewHeight-m.getReservedRows())
 	var resources strings.Builder
 	end := min(m.offset+visibleRows, len(m.rows))
 	for i := m.offset; i < end; i++ {

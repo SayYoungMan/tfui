@@ -53,7 +53,7 @@ func (m Model) renderConfirmView() string {
 	// For viewHeight >= 20, show max 10 resource names
 	// For viewHeight 12~19, show max 1~9 resource names
 	// For viewHeight < 12, show just 1 resource name max
-	maxResourceRows := max(min(10, m.viewHeight-10), 1)
+	maxResourceRows := max(min(10, m.viewHeight-m.getReservedRows()), 1)
 
 	addrs := m.targetedAddresses()
 	if len(addrs) > maxResourceRows {
@@ -107,15 +107,11 @@ func (m Model) renderConfirmView() string {
 	return m.renderModalWithBackground(s.String(), m.renderListView(), nil)
 }
 
-const (
-	defaultReservedOutputRows = 8
-)
-
 func (m Model) renderDetailView() string {
 	addr := m.rows[m.cursor].Item.Address()
 	title := fmt.Sprintf(" Detail (%s)", addr)
 
-	box := m.renderScrollableBox(m.outputLines, m.viewWidth, m.viewHeight-6)
+	box := m.renderScrollableBox(m.outputLines, m.viewWidth, m.viewHeight-m.getReservedRows())
 
 	keyInfo := []keyInfo{
 		{key: "↑/↓", info: "scroll"},
@@ -150,7 +146,7 @@ func (m Model) renderOutputView() string {
 		content = append(content, dimStyle.Render("No output available yet."))
 	}
 
-	box := m.renderScrollableBox(content, m.viewWidth-4, m.viewHeight-10)
+	box := m.renderScrollableBox(content, m.viewWidth-4, m.viewHeight-m.getReservedRows())
 	keyInfos := []keyInfo{
 		{key: "↑/↓", info: "scroll"},
 		{key: "o", info: "close output"},

@@ -93,7 +93,7 @@ func TestRenderListView_OnlyRendersVisibleSlice(t *testing.T) {
 		})
 	}
 	m := newTestModelWithResources(resources)
-	m.viewHeight = 3 + listViewReservedRows
+	m.viewHeight = 3 + m.getReservedRows()
 
 	view := m.View()
 
