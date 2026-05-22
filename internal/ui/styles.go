@@ -1,52 +1,114 @@
 package ui
 
 import (
+	"image/color"
+
 	"charm.land/lipgloss/v2"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 )
 
-var (
-	colorBlue       = lipgloss.Color("111")
-	colorGreen      = lipgloss.Color("114")
-	colorCoral      = lipgloss.Color("167")
-	colorAmber      = lipgloss.Color("178")
-	colorCreamWhite = lipgloss.Color("230")
-	colorCharcoal   = lipgloss.Color("234")
-	colorLightGrey  = lipgloss.Color("240")
-	colorDimGrey    = lipgloss.Color("245")
-	colorSoftGrey   = lipgloss.Color("248")
-)
+type theme struct {
+	blue, green, coral, amber color.Color
+	cursorBg, cursorFg        color.Color
+	selectedBg, selectedFg    color.Color
+	border, focus, dim, soft  color.Color
+	chroma                    string
+}
 
-var (
-	cursorStyle         = lipgloss.NewStyle().Background(colorCreamWhite).Foreground(colorCharcoal)
-	selectedStyle       = lipgloss.NewStyle().Background(colorLightGrey)
-	borderStyle         = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorDimGrey).Padding(0, 1)
-	focusedBorderStyle  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorCreamWhite).Padding(0, 1)
-	buttonStyle         = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorDimGrey).Padding(0, 2)
-	focusedButtonStyle  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorCreamWhite).Padding(0, 2)
-	dimStyle            = lipgloss.NewStyle().Foreground(colorDimGrey)
-	shutdownBorderStyle = lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(colorCoral).
-				Padding(6, 6)
-	errorStyle    = lipgloss.NewStyle().Foreground(colorCoral)
-	warningStyle  = lipgloss.NewStyle().Foreground(colorAmber)
-	successStyle  = lipgloss.NewStyle().Foreground(colorGreen)
-	infoBarStyle  = lipgloss.NewStyle().Foreground(colorCreamWhite)
-	helpKeyStyle  = lipgloss.NewStyle().Foreground(colorCreamWhite)
-	helpInfoStyle = lipgloss.NewStyle().Foreground(colorSoftGrey)
+var darkTheme = theme{
+	blue:       lipgloss.Color("111"),
+	green:      lipgloss.Color("114"),
+	coral:      lipgloss.Color("167"),
+	amber:      lipgloss.Color("178"),
+	cursorBg:   lipgloss.Color("230"),
+	cursorFg:   lipgloss.Color("234"),
+	selectedBg: lipgloss.Color("240"),
+	border:     lipgloss.Color("245"),
+	focus:      lipgloss.Color("230"),
+	dim:        lipgloss.Color("245"),
+	soft:       lipgloss.Color("248"),
+	chroma:     "catppuccin-mocha",
+}
 
-	moduleStyle            = lipgloss.NewStyle().Foreground(colorSoftGrey)
-	treePrefixDefaultStyle = lipgloss.NewStyle().Foreground(colorDimGrey)
-	treePrefixCurrentStyle = lipgloss.NewStyle().Foreground(colorCreamWhite)
-)
+var lightTheme = theme{
+	blue:       lipgloss.Color("25"),
+	green:      lipgloss.Color("28"),
+	coral:      lipgloss.Color("160"),
+	amber:      lipgloss.Color("136"),
+	cursorBg:   lipgloss.Color("236"),
+	cursorFg:   lipgloss.Color("255"),
+	selectedBg: lipgloss.Color("254"),
+	selectedFg: lipgloss.Color("235"),
+	border:     lipgloss.Color("244"),
+	focus:      lipgloss.Color("236"),
+	dim:        lipgloss.Color("244"),
+	soft:       lipgloss.Color("242"),
+	chroma:     "github",
+}
 
-var actionStyles = map[terraform.Action]lipgloss.Style{
-	terraform.ActionCreate:    lipgloss.NewStyle().Foreground(colorGreen),
-	terraform.ActionDelete:    lipgloss.NewStyle().Foreground(colorCoral),
-	terraform.ActionUpdate:    lipgloss.NewStyle().Foreground(colorAmber),
-	terraform.ActionReplace:   lipgloss.NewStyle().Foreground(colorAmber),
-	terraform.ActionMove:      lipgloss.NewStyle().Foreground(colorBlue),
-	terraform.ActionImport:    lipgloss.NewStyle().Foreground(colorBlue),
-	terraform.ActionUncertain: dimStyle,
+type styles struct {
+	cursor, selected                             lipgloss.Style
+	border, focusedBorder                        lipgloss.Style
+	button, focusedButton                        lipgloss.Style
+	dim, shutdownBorder                          lipgloss.Style
+	error, warning, success                      lipgloss.Style
+	infoBar, helpKey, helpInfo                   lipgloss.Style
+	module, treePrefixDefault, treePrefixCurrent lipgloss.Style
+	actions                                      map[terraform.Action]lipgloss.Style
+	chromaTheme                                  string
+}
+
+func newStyles(isDark bool) styles {
+	if isDark {
+		return darkTheme.styles()
+	}
+	return lightTheme.styles()
+}
+
+func (t *theme) styles() styles {
+	selected := lipgloss.NewStyle().Background(t.selectedBg)
+	if t.selectedFg != nil {
+		selected = selected.Foreground(t.selectedFg)
+	}
+
+	return styles{
+		cursor:        lipgloss.NewStyle().Background(t.cursorBg).Foreground(t.cursorFg),
+		selected:      selected,
+		border:        lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(t.border).Padding(0, 1),
+		focusedBorder: lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(t.focus).Padding(0, 1),
+		button:        lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(t.border).Padding(0, 2),
+		focusedButton: lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(t.focus).Padding(0, 2),
+		dim:           lipgloss.NewStyle().Foreground(t.dim),
+
+		shutdownBorder: lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(t.coral).
+			Padding(6, 6),
+
+		error:   lipgloss.NewStyle().Foreground(t.coral),
+		warning: lipgloss.NewStyle().Foreground(t.amber),
+		success: lipgloss.NewStyle().Foreground(t.green),
+
+		infoBar:           lipgloss.NewStyle().Foreground(t.focus),
+		helpKey:           lipgloss.NewStyle().Foreground(t.focus),
+		helpInfo:          lipgloss.NewStyle().Foreground(t.soft),
+		module:            lipgloss.NewStyle().Foreground(t.soft),
+		treePrefixDefault: lipgloss.NewStyle().Foreground(t.dim),
+		treePrefixCurrent: lipgloss.NewStyle().Foreground(t.focus),
+
+		chromaTheme: t.chroma,
+		actions:     t.actionStyles(),
+	}
+}
+
+func (t *theme) actionStyles() map[terraform.Action]lipgloss.Style {
+	return map[terraform.Action]lipgloss.Style{
+		terraform.ActionCreate:    lipgloss.NewStyle().Foreground(t.green),
+		terraform.ActionDelete:    lipgloss.NewStyle().Foreground(t.coral),
+		terraform.ActionUpdate:    lipgloss.NewStyle().Foreground(t.amber),
+		terraform.ActionReplace:   lipgloss.NewStyle().Foreground(t.amber),
+		terraform.ActionMove:      lipgloss.NewStyle().Foreground(t.blue),
+		terraform.ActionImport:    lipgloss.NewStyle().Foreground(t.blue),
+		terraform.ActionUncertain: lipgloss.NewStyle().Foreground(t.dim),
+	}
 }

@@ -11,7 +11,9 @@ import (
 )
 
 type Model struct {
-	runner     *terraform.TerraformRunner
+	runner *terraform.TerraformRunner
+	styles styles
+
 	viewState  viewState
 	viewHeight int
 	viewWidth  int
@@ -92,6 +94,7 @@ func NewModel(runner *terraform.TerraformRunner) Model {
 
 	return Model{
 		runner:      runner,
+		styles:      newStyles(true),
 		resources:   make(map[string]*terraform.Resource),
 		collapsed:   make(map[string]bool),
 		selected:    make(map[string]bool),
@@ -105,6 +108,7 @@ func NewModel(runner *terraform.TerraformRunner) Model {
 
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
+		tea.RequestBackgroundColor,
 		m.spinner.Tick,
 		m.waitForState(),
 	)
@@ -246,6 +250,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.workState == workAction {
 			return m, tickEverySecond()
 		}
+
+	case tea.BackgroundColorMsg:
+		m.styles = newStyles(msg.IsDark())
+		return m, nil
 	}
 
 	return m, nil
@@ -272,9 +280,9 @@ func (m Model) View() tea.View {
 
 	switch m.quitState {
 	case confirmQuitState:
-		viewString = lipgloss.NewCompositor(lipgloss.NewLayer(dimStyle.Render(viewString)), m.renderQuitConfirmLayer()).Render()
+		viewString = lipgloss.NewCompositor(lipgloss.NewLayer(m.styles.dim.Render(viewString)), m.renderQuitConfirmLayer()).Render()
 	case quittingState, forceQuitReadyState:
-		viewString = lipgloss.NewCompositor(lipgloss.NewLayer(dimStyle.Render(viewString)), m.renderShutdownLayer()).Render()
+		viewString = lipgloss.NewCompositor(lipgloss.NewLayer(m.styles.dim.Render(viewString)), m.renderShutdownLayer()).Render()
 	}
 
 	v := tea.NewView(viewString)

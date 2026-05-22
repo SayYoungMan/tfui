@@ -18,7 +18,7 @@ func (m Model) renderModal(content string, opts *modalOpts) *lipgloss.Layer {
 	if opts != nil && opts.contentStyle != nil {
 		modal = opts.contentStyle.Render(content)
 	} else {
-		modal = focusedBorderStyle.Render(content)
+		modal = m.styles.focusedBorder.Render(content)
 	}
 
 	modalWidth := lipgloss.Width(modal)
@@ -51,8 +51,8 @@ type keyInfo struct {
 func (m Model) renderKeyInfo(keyInfos []keyInfo) string {
 	var styledKeyInfos []string
 	for _, k := range keyInfos {
-		key := helpKeyStyle.Render("'" + k.key + "'")
-		info := helpInfoStyle.Render(" " + k.info)
+		key := m.styles.helpKey.Render("'" + k.key + "'")
+		info := m.styles.helpInfo.Render(" " + k.info)
 		styledKeyInfos = append(styledKeyInfos, key+info)
 	}
 
@@ -68,12 +68,12 @@ func (m Model) renderKeyInfo(keyInfos []keyInfo) string {
 }
 
 func (m Model) renderConfirmCancelButtons() string {
-	cancelButton := buttonStyle.Render("Cancel")
-	confirmButton := buttonStyle.Render("Confirm")
+	cancelButton := m.styles.button.Render("Cancel")
+	confirmButton := m.styles.button.Render("Confirm")
 	if m.confirmCursor == 0 {
-		cancelButton = focusedButtonStyle.Render("Cancel")
+		cancelButton = m.styles.focusedButton.Render("Cancel")
 	} else {
-		confirmButton = focusedButtonStyle.Render("Confirm")
+		confirmButton = m.styles.focusedButton.Render("Confirm")
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, cancelButton, "  ", confirmButton)
 }
@@ -107,5 +107,5 @@ func (m Model) renderScrollableBox(contents []string, width, height int) string 
 	centered := lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Center)
 	content := centered.Render(upArrow) + "\n" + contentBuilder.String() + centered.Render(downArrow)
 
-	return borderStyle.Width(width).Height(height).Padding(0, 2).Render(content)
+	return m.styles.border.Width(width).Height(height).Padding(0, 2).Render(content)
 }

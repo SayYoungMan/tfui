@@ -27,8 +27,8 @@ func (m Model) renderProgressView() string {
 	)
 
 	var rows strings.Builder
-	fmt.Fprintln(&rows, dimStyle.Render(header))
-	fmt.Fprintln(&rows, dimStyle.Render(strings.Repeat("─", m.viewWidth)))
+	fmt.Fprintln(&rows, m.styles.dim.Render(header))
+	fmt.Fprintln(&rows, m.styles.dim.Render(strings.Repeat("─", m.viewWidth)))
 
 	offset := 0
 	if m.viewState == viewProgress {
@@ -45,36 +45,36 @@ func (m Model) renderProgressView() string {
 		}
 
 		var status string
-		wait := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(p.waitDuration(m.actionStartTime))))
-		read := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(p.readDuration())))
-		process := dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+		wait := m.styles.dim.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(p.waitDuration(m.actionStartTime))))
+		read := m.styles.dim.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(p.readDuration())))
+		process := m.styles.dim.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
 		switch p.Status {
 		case progressStatusPending:
-			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Pending"))
-			read = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+			status = m.styles.dim.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Pending"))
+			read = m.styles.dim.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
 		case progressStatusReadingState:
-			status = infoBarStyle.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" Reading"))
-			read = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(p.readDuration())))
+			status = m.styles.infoBar.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" Reading"))
+			read = m.styles.infoBar.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(p.readDuration())))
 		case progressStatusWaitingForAction:
-			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Waiting"))
+			status = m.styles.dim.Render(fmt.Sprintf("%-*s", statusColWidth, "⏳ Waiting"))
 		case progressStatusInProgress:
-			status = infoBarStyle.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" In Progress"))
-			process = infoBarStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(p.processDuration())))
+			status = m.styles.infoBar.Render(fmt.Sprintf("%-*s", statusColWidth, m.spinner.View()+" In Progress"))
+			process = m.styles.infoBar.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(p.processDuration())))
 		case progressStatusSuccessful:
-			status = successStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "✅ Complete"))
-			process = successStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(p.processDuration())))
+			status = m.styles.success.Render(fmt.Sprintf("%-*s", statusColWidth, "✅ Complete"))
+			process = m.styles.success.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(p.processDuration())))
 		case progressStatusFailed:
-			status = errorStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "❌ Failed"))
-			process = errorStyle.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(p.processDuration())))
+			status = m.styles.error.Render(fmt.Sprintf("%-*s", statusColWidth, "❌ Failed"))
+			process = m.styles.error.Render(fmt.Sprintf("%-*s", timeColWidth, m.formatElapsed(p.processDuration())))
 		case progressStatusSkipped:
-			status = dimStyle.Render(fmt.Sprintf("%-*s", statusColWidth, "— No change"))
-			wait = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
-			read = dimStyle.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+			status = m.styles.dim.Render(fmt.Sprintf("%-*s", statusColWidth, "— No change"))
+			wait = m.styles.dim.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
+			read = m.styles.dim.Render(fmt.Sprintf("%-*s", timeColWidth, "-"))
 		}
 
 		line := fmt.Sprintf("  %-*s  %s  %s  %s  %s", addrColWidth, displayAddr, status, wait, read, process)
 		if m.viewState == viewProgress && m.offset+i == m.cursor {
-			line = cursorStyle.Render(line)
+			line = m.styles.cursor.Render(line)
 		}
 		fmt.Fprintln(&rows, line)
 	}

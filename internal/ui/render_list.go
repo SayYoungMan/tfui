@@ -26,9 +26,9 @@ func (m Model) renderFilterBox() string {
 	filterIcon := "⌕ "
 	filterContent := filterIcon + m.filterInput.View()
 	if m.viewState == viewFilter {
-		fmt.Fprintln(&s, focusedBorderStyle.Width(m.viewWidth).Render(filterContent))
+		fmt.Fprintln(&s, m.styles.focusedBorder.Width(m.viewWidth).Render(filterContent))
 	} else {
-		fmt.Fprintln(&s, borderStyle.Width(m.viewWidth).Render(filterContent))
+		fmt.Fprintln(&s, m.styles.border.Width(m.viewWidth).Render(filterContent))
 	}
 
 	return s.String()
@@ -62,7 +62,7 @@ func (m Model) renderResourcesBox() string {
 	}
 
 	renderString := strings.TrimSuffix(resources.String(), "\n")
-	return borderStyle.Width(m.viewWidth).Render(renderString)
+	return m.styles.border.Width(m.viewWidth).Render(renderString)
 }
 
 func (m Model) renderResourceLine(idx int) string {
@@ -77,19 +77,19 @@ func (m Model) renderResourceLine(idx int) string {
 	currentModule := m.currentCursorModule()
 	prefix := row.TreePrefix
 	if currentModule == row.Item.Parent.Module {
-		prefix = treePrefixCurrentStyle.Render(prefix)
+		prefix = m.styles.treePrefixCurrent.Render(prefix)
 	} else {
-		prefix = treePrefixDefaultStyle.Render(prefix)
+		prefix = m.styles.treePrefixDefault.Render(prefix)
 	}
 
 	line := fmt.Sprintf("%s %s", r.Action.Symbol(), addr)
 	switch {
 	case idx == m.cursor:
-		line = cursorStyle.Render(line)
+		line = m.styles.cursor.Render(line)
 	case m.selectAll || m.isSelectedOrAncestor(row.Item):
-		line = selectedStyle.Render(line)
+		line = m.styles.selected.Render(line)
 	}
-	if style, ok := actionStyles[r.Action]; ok {
+	if style, ok := m.styles.actions[r.Action]; ok {
 		line = style.Render(line)
 	}
 
@@ -107,18 +107,18 @@ func (m Model) renderModuleLine(idx int) string {
 
 	switch {
 	case idx == m.cursor:
-		line = cursorStyle.Render(line)
+		line = m.styles.cursor.Render(line)
 	case m.isSelectedOrAncestor(row.Item):
-		line = selectedStyle.Render(line)
+		line = m.styles.selected.Render(line)
 	}
 
 	prefix := row.TreePrefix
 	if m.currentCursorModule() == row.Item.Module {
-		prefix = treePrefixCurrentStyle.Render(prefix)
-		line = treePrefixCurrentStyle.Render(line)
+		prefix = m.styles.treePrefixCurrent.Render(prefix)
+		line = m.styles.treePrefixCurrent.Render(line)
 	} else {
-		prefix = treePrefixDefaultStyle.Render(prefix)
-		line = moduleStyle.Render(line)
+		prefix = m.styles.treePrefixDefault.Render(prefix)
+		line = m.styles.module.Render(line)
 	}
 
 	return prefix + line
@@ -129,10 +129,10 @@ func (m Model) renderInfoBar() string {
 
 	switch m.workState {
 	case workStatePull:
-		adornment = infoBarStyle.Render(m.spinner.View())
+		adornment = m.styles.infoBar.Render(m.spinner.View())
 		info = " Scanning..."
 	case workPlan:
-		adornment = infoBarStyle.Render(m.spinner.View())
+		adornment = m.styles.infoBar.Render(m.spinner.View())
 		var count int
 		for _, r := range m.resources {
 			if r.Action != terraform.ActionUncertain {
@@ -141,7 +141,7 @@ func (m Model) renderInfoBar() string {
 		}
 		info = fmt.Sprintf(" Scanning... (%d/%d resources scanned)", count, len(m.resources))
 	default:
-		adornment = lipgloss.NewStyle().Foreground(colorGreen).Render("✓")
+		adornment = m.styles.success.Render("✓")
 		info = fmt.Sprintf("  Scan Complete (%d resources scanned)", len(m.resources))
 	}
 
@@ -157,7 +157,7 @@ func (m Model) renderInfoBar() string {
 	if len(m.diagnostics) > 0 {
 		info += fmt.Sprintf(" | %d warnings", len(m.diagnostics))
 	}
-	return " " + adornment + infoBarStyle.Render(info)
+	return " " + adornment + m.styles.infoBar.Render(info)
 }
 
 func (m Model) renderHelpBar() string {

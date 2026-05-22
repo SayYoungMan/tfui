@@ -179,7 +179,7 @@ func (m *Model) openDetail() {
 	}
 
 	var highlighted bytes.Buffer
-	if err := quick.Highlight(&highlighted, indented.String(), "json", "terminal256", "catppuccin-mocha"); err != nil {
+	if err := quick.Highlight(&highlighted, indented.String(), "json", "terminal256", m.styles.chromaTheme); err != nil {
 		m.outputLines = strings.Split(indented.String(), "\n")
 		return
 	}

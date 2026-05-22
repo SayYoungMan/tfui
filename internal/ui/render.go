@@ -29,9 +29,9 @@ func (m Model) renderActionPickerView() string {
 
 	for i, choice := range actionChoices {
 		if i == m.actionCursor {
-			fmt.Fprintln(&s, "  "+cursorStyle.Render("> "+choice))
+			fmt.Fprintln(&s, "  "+m.styles.cursor.Render("> "+choice))
 		} else if m.selectAll && strings.Contains(choice, "taint") {
-			fmt.Fprintln(&s, "    "+dimStyle.Render(choice))
+			fmt.Fprintln(&s, "    "+m.styles.dim.Render(choice))
 		} else {
 			fmt.Fprintln(&s, "    "+choice)
 		}
@@ -65,7 +65,7 @@ func (m Model) renderConfirmView() string {
 		var line string
 		if r, isResource := m.resources[addr]; isResource {
 			line = fmt.Sprintf("  %s %s", r.Action.Symbol(), addr)
-			if style, ok := actionStyles[r.Action]; ok {
+			if style, ok := m.styles.actions[r.Action]; ok {
 				line = style.Render(line)
 			}
 		} else {
@@ -76,7 +76,7 @@ func (m Model) renderConfirmView() string {
 
 	truncated := len(m.selected) - len(addrs)
 	if truncated > 0 {
-		resourceLines = append(resourceLines, dimStyle.Render(fmt.Sprintf("    ... and %d more", truncated)))
+		resourceLines = append(resourceLines, m.styles.dim.Render(fmt.Sprintf("    ... and %d more", truncated)))
 	}
 
 	keyInfo := []keyInfo{
@@ -144,7 +144,7 @@ func (m Model) renderOutputView() string {
 	}
 
 	if len(content) == 0 {
-		content = append(content, dimStyle.Render("No output available yet."))
+		content = append(content, m.styles.dim.Render("No output available yet."))
 	}
 
 	box := m.renderScrollableBox(content, m.viewWidth-4, m.viewHeight-m.getReservedRows())
@@ -168,7 +168,7 @@ func (m Model) renderOutputView() string {
 	fmt.Fprintln(&s)
 	fmt.Fprint(&s, help)
 
-	bg := lipgloss.NewLayer(dimStyle.Render(m.renderProgressView()))
+	bg := lipgloss.NewLayer(m.styles.dim.Render(m.renderProgressView()))
 	fg := m.renderModal(s.String(), &modalOpts{contentStyle: &lipgloss.Style{}})
 
 	return lipgloss.NewCompositor(bg, fg).Render()
@@ -203,19 +203,19 @@ func (m Model) renderShutdownLayer() *lipgloss.Layer {
 		msg += "\n\nPress q or ctrl+c again to force quit"
 	}
 
-	return m.renderModal(msg, &modalOpts{contentStyle: &shutdownBorderStyle})
+	return m.renderModal(msg, &modalOpts{contentStyle: &m.styles.shutdownBorder})
 }
 
 func (m Model) renderErrorView() string {
 	var s strings.Builder
-	fmt.Fprintln(&s, errorStyle.Render("Scanning Failed"))
+	fmt.Fprintln(&s, m.styles.error.Render("Scanning Failed"))
 	fmt.Fprintln(&s)
 
 	for _, d := range m.diagnostics {
 		if d.Severity == "error" {
-			fmt.Fprintln(&s, errorStyle.Render("Error: "+d.Summary))
+			fmt.Fprintln(&s, m.styles.error.Render("Error: "+d.Summary))
 		} else {
-			fmt.Fprintln(&s, warningStyle.Render("Warning: "+d.Summary))
+			fmt.Fprintln(&s, m.styles.warning.Render("Warning: "+d.Summary))
 		}
 		if d.Detail != "" {
 			fmt.Fprintln(&s, "  "+d.Detail)
@@ -224,13 +224,13 @@ func (m Model) renderErrorView() string {
 	}
 
 	if m.err != nil {
-		fmt.Fprintln(&s, errorStyle.Render(fmt.Sprintf("Error: %v", m.err)))
+		fmt.Fprintln(&s, m.styles.error.Render(fmt.Sprintf("Error: %v", m.err)))
 		fmt.Fprintln(&s)
 	}
 
 	fmt.Fprint(&s, "Press Esc or Enter to quit")
 
-	modalStyle := focusedBorderStyle.Width(m.viewWidth - 4)
+	modalStyle := m.styles.focusedBorder.Width(m.viewWidth - 4)
 	modal := modalStyle.Render(s.String())
 
 	return lipgloss.Place(m.viewWidth, m.viewHeight, lipgloss.Center, lipgloss.Center, modal)
