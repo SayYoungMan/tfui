@@ -74,10 +74,10 @@ func (t *theme) styles() styles {
 	return styles{
 		cursor:        lipgloss.NewStyle().Background(t.cursorBg).Foreground(t.cursorFg),
 		selected:      selected,
-		border:        lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderBottomForeground(t.border).Padding(0, 1),
-		focusedBorder: lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderBottomForeground(t.focus).Padding(0, 1),
-		button:        lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderBottomForeground(t.border).Padding(0, 2),
-		focusedButton: lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderBottomForeground(t.focus).Padding(0, 2),
+		border:        lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(t.border).Padding(0, 1),
+		focusedBorder: lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(t.focus).Padding(0, 1),
+		button:        lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(t.border).Padding(0, 2),
+		focusedButton: lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(t.focus).Padding(0, 2),
 		dim:           lipgloss.NewStyle().Foreground(t.dim),
 
 		shutdownBorder: lipgloss.NewStyle().
