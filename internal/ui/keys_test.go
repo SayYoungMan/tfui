@@ -121,12 +121,12 @@ func TestListKeys_PageNavigation(t *testing.T) {
 	assert.Equal(t, 3, m.cursor)
 	assert.Equal(t, 3, m.offset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgDown})
 	m = newModel.(Model)
 	assert.Equal(t, 6, m.cursor)
 	assert.Equal(t, 6, m.offset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgDown})
 	m = newModel.(Model)
 	assert.Equal(t, 9, m.cursor)
 	assert.Equal(t, 7, m.offset)
@@ -138,7 +138,7 @@ func TestListKeys_PageNavigation(t *testing.T) {
 	assert.Equal(t, 3, m.cursor)
 	assert.Equal(t, 3, m.offset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgUp})
 	m = newModel.(Model)
 	assert.Equal(t, 0, m.cursor)
 	assert.Equal(t, 0, m.offset)
@@ -648,7 +648,7 @@ func TestProgressKeys_PageNavigation(t *testing.T) {
 	assert.Equal(t, 4, m.cursor)
 	assert.Equal(t, 4, m.offset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgDown})
 	m = newModel.(Model)
 	assert.Equal(t, 8, m.cursor)
 	assert.Equal(t, 6, m.offset)
@@ -660,7 +660,7 @@ func TestProgressKeys_PageNavigation(t *testing.T) {
 	assert.Equal(t, 4, m.cursor)
 	assert.Equal(t, 2, m.offset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgUp})
 	m = newModel.(Model)
 	assert.Equal(t, 0, m.cursor)
 	assert.Equal(t, 0, m.offset)
@@ -768,7 +768,7 @@ func TestOutputKeys_PageNavigation(t *testing.T) {
 	m = newModel.(Model)
 	assert.Equal(t, 2, m.offset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgDown})
 	m = newModel.(Model)
 	assert.Equal(t, 4, m.offset)
 
@@ -776,7 +776,7 @@ func TestOutputKeys_PageNavigation(t *testing.T) {
 	m = newModel.(Model)
 	assert.Equal(t, 2, m.offset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgUp})
 	m = newModel.(Model)
 	assert.Equal(t, 0, m.offset)
 }
@@ -789,15 +789,15 @@ func TestOutputKeys_PageNavigationResourceOutput(t *testing.T) {
 	m.progressRows[m.cursor].OutputLines = []string{"line 0", "line 1", "line 2", "line 3"}
 	m.outputLines = []string{"full output line 0"}
 
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyPgDown})
 	m = newModel.(Model)
 	assert.Equal(t, 2, m.offset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgDown})
 	m = newModel.(Model)
 	assert.Equal(t, 3, m.offset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgUp})
 	m = newModel.(Model)
 	assert.Equal(t, 1, m.offset)
 }
@@ -884,7 +884,7 @@ func TestDetailKeys_PageNavigation(t *testing.T) {
 	m = newModel.(Model)
 	assert.Equal(t, 2, m.offset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgDown})
 	m = newModel.(Model)
 	assert.Equal(t, 4, m.offset)
 
@@ -892,7 +892,7 @@ func TestDetailKeys_PageNavigation(t *testing.T) {
 	m = newModel.(Model)
 	assert.Equal(t, 2, m.offset)
 
-	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModCtrl})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgUp})
 	m = newModel.(Model)
 	assert.Equal(t, 0, m.offset)
 }

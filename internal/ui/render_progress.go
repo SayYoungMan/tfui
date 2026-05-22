@@ -86,7 +86,7 @@ func (m Model) renderProgressView() string {
 
 	keyInfos := []keyInfo{
 		{key: "↑/↓", info: "scroll"},
-		{key: "Ctrl+↑/↓", info: "page scroll"},
+		{key: "PgUp/PgDn", info: "page scroll"},
 		{key: "Enter", info: "resource output"},
 		{key: "o", info: "raw output"},
 	}

@@ -115,7 +115,7 @@ func (m Model) renderDetailView() string {
 
 	keyInfo := []keyInfo{
 		{key: "↑/↓", info: "scroll"},
-		{key: "Ctrl+↑/↓", info: "page scroll"},
+		{key: "PgUp/PgDn", info: "page scroll"},
 		{key: "Esc", info: "close"},
 	}
 	help := " " + m.renderKeyInfo(keyInfo)
@@ -150,7 +150,7 @@ func (m Model) renderOutputView() string {
 	box := m.renderScrollableBox(content, m.viewWidth-4, m.viewHeight-m.getReservedRows())
 	keyInfos := []keyInfo{
 		{key: "↑/↓", info: "scroll"},
-		{key: "Ctrl+↑/↓", info: "page scroll"},
+		{key: "PgUp/PgDn", info: "page scroll"},
 		{key: "o", info: "close output"},
 	}
 	if m.viewState == viewResourceOutput {

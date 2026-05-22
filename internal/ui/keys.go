@@ -13,11 +13,11 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	item := m.rows[m.cursor].Item
 	visible := max(1, m.viewHeight-m.getReservedRows())
 	switch msg.String() {
-	case "ctrl+u", "ctrl+up":
+	case "ctrl+u", "pgup":
 		m.cursor = max(m.cursor-visible, 0)
 		m.offset = max(m.offset-visible, 0)
 		m.adjustOffset()
-	case "ctrl+d", "ctrl+down":
+	case "ctrl+d", "pgdown":
 		m.cursor = min(m.cursor+visible, len(m.rows)-1)
 		m.offset = min(m.offset+visible, max(0, len(m.rows)-visible))
 		m.adjustOffset()
@@ -203,13 +203,13 @@ func (m Model) quitConfirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) progressKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	visible := max(1, m.viewHeight-m.getReservedRows())
 	switch msg.String() {
-	case "ctrl+u", "ctrl+up":
+	case "ctrl+u", "pgup":
 		if len(m.progressRows) > 0 {
 			m.cursor = max(m.cursor-visible, 0)
 			m.offset = max(m.offset-visible, 0)
 			m.adjustOffset()
 		}
-	case "ctrl+d", "ctrl+down":
+	case "ctrl+d", "pgdown":
 		if len(m.progressRows) > 0 {
 			m.cursor = min(m.cursor+visible, len(m.progressRows)-1)
 			m.offset = min(m.offset+visible, max(0, len(m.progressRows)-visible))
@@ -249,9 +249,9 @@ func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		contentLen = len(m.progressRows[m.cursor].OutputLines)
 	}
 	switch msg.String() {
-	case "ctrl+u", "ctrl+up":
+	case "ctrl+u", "pgup":
 		m.offset = max(m.offset-visible, 0)
-	case "ctrl+d", "ctrl+down":
+	case "ctrl+d", "pgdown":
 		if contentLen > 0 {
 			m.offset = min(m.offset+visible, contentLen-1)
 		}
@@ -294,9 +294,9 @@ func (m Model) detailKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.viewState = viewList
 		m.outputLines = nil
 		m.offset = 0
-	case "ctrl+u", "ctrl+up":
+	case "ctrl+u", "pgup":
 		m.offset = max(m.offset-visible, 0)
-	case "ctrl+d", "ctrl+down":
+	case "ctrl+d", "pgdown":
 		if contentLen > 0 {
 			m.offset = min(m.offset+visible, contentLen-1)
 		}
