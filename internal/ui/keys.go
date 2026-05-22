@@ -11,7 +11,16 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 
 	item := m.rows[m.cursor].Item
+	visible := max(1, m.viewHeight-m.getReservedRows())
 	switch msg.String() {
+	case "ctrl+u", "ctrl+up":
+		m.cursor = max(m.cursor-visible, 0)
+		m.offset = max(m.offset-visible, 0)
+		m.adjustOffset()
+	case "ctrl+d", "ctrl+down":
+		m.cursor = min(m.cursor+visible, len(m.rows)-1)
+		m.offset = min(m.offset+visible, max(0, len(m.rows)-visible))
+		m.adjustOffset()
 	case "j", "down":
 		if m.cursor < len(m.rows)-1 {
 			m.cursor++
@@ -192,7 +201,20 @@ func (m Model) quitConfirmKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) progressKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	visible := max(1, m.viewHeight-m.getReservedRows())
 	switch msg.String() {
+	case "ctrl+u", "ctrl+up":
+		if len(m.progressRows) > 0 {
+			m.cursor = max(m.cursor-visible, 0)
+			m.offset = max(m.offset-visible, 0)
+			m.adjustOffset()
+		}
+	case "ctrl+d", "ctrl+down":
+		if len(m.progressRows) > 0 {
+			m.cursor = min(m.cursor+visible, len(m.progressRows)-1)
+			m.offset = min(m.offset+visible, max(0, len(m.progressRows)-visible))
+			m.adjustOffset()
+		}
 	case "k", "up":
 		if m.cursor > 0 {
 			m.cursor--
@@ -221,17 +243,23 @@ func (m Model) progressKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) outputKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	visible := max(1, m.viewHeight-m.getReservedRows())
+	contentLen := len(m.outputLines)
+	if m.viewState == viewResourceOutput && m.cursor < len(m.progressRows) {
+		contentLen = len(m.progressRows[m.cursor].OutputLines)
+	}
 	switch msg.String() {
+	case "ctrl+u", "ctrl+up":
+		m.offset = max(m.offset-visible, 0)
+	case "ctrl+d", "ctrl+down":
+		if contentLen > 0 {
+			m.offset = min(m.offset+visible, contentLen-1)
+		}
 	case "k", "up":
 		if m.offset > 0 {
 			m.offset--
 		}
 	case "j", "down":
-		contentLen := len(m.outputLines)
-		if m.viewState == viewResourceOutput {
-			contentLen = len(m.progressRows[m.cursor].OutputLines)
-		}
-
 		if m.offset < contentLen-1 {
 			m.offset++
 		}
@@ -259,17 +287,25 @@ func (m Model) errorKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) detailKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	visible := max(1, m.viewHeight-m.getReservedRows())
+	contentLen := len(m.outputLines)
 	switch msg.String() {
 	case "esc", "enter":
 		m.viewState = viewList
 		m.outputLines = nil
 		m.offset = 0
+	case "ctrl+u", "ctrl+up":
+		m.offset = max(m.offset-visible, 0)
+	case "ctrl+d", "ctrl+down":
+		if contentLen > 0 {
+			m.offset = min(m.offset+visible, contentLen-1)
+		}
 	case "k", "up":
 		if m.offset > 0 {
 			m.offset--
 		}
 	case "j", "down":
-		if m.offset < len(m.outputLines)-1 {
+		if m.offset < contentLen-1 {
 			m.offset++
 		}
 	}

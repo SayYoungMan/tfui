@@ -103,6 +103,47 @@ func TestListKeys_ScrollsUpWithCursor(t *testing.T) {
 	assert.Equal(t, 2, m.offset) // offset changes -> it scrolled up
 }
 
+func TestListKeys_PageNavigation(t *testing.T) {
+	m := newTestModelEmpty()
+	m.viewHeight = m.getReservedRows() + 3
+
+	for i := range 10 {
+		addr := fmt.Sprintf("aws_s3_bucket.bucket_%d", i)
+		m.resources[addr] = &terraform.Resource{
+			Address: addr,
+			Action:  terraform.ActionNoop,
+		}
+		m.rebuildRows()
+	}
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'd', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 3, m.cursor)
+	assert.Equal(t, 3, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 6, m.cursor)
+	assert.Equal(t, 6, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 9, m.cursor)
+	assert.Equal(t, 7, m.offset)
+
+	m.cursor = 6
+	m.offset = 6
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 3, m.cursor)
+	assert.Equal(t, 3, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.cursor)
+	assert.Equal(t, 0, m.offset)
+}
+
 func TestListKeys_ToggleHideUnchanged(t *testing.T) {
 	m := newTestModel()
 
@@ -590,6 +631,41 @@ func TestProgressKeys_Navigation(t *testing.T) {
 	assert.Equal(t, 0, m.cursor)
 }
 
+func TestProgressKeys_PageNavigation(t *testing.T) {
+	m := newActionTestModel()
+	m.viewHeight = m.getReservedRows() + 4
+	m.progressRows = nil
+	m.progresses = make(map[string]*Progress)
+	for i := range 10 {
+		addr := fmt.Sprintf("aws_s3_bucket.bucket_%d", i)
+		progress := &Progress{Address: addr, Status: progressStatusPending}
+		m.progressRows = append(m.progressRows, progress)
+		m.progresses[addr] = progress
+	}
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'd', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 4, m.cursor)
+	assert.Equal(t, 4, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 8, m.cursor)
+	assert.Equal(t, 6, m.offset)
+
+	m.cursor = 8
+	m.offset = 6
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 4, m.cursor)
+	assert.Equal(t, 2, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.cursor)
+	assert.Equal(t, 0, m.offset)
+}
+
 func TestProgressKeys_oToOutput(t *testing.T) {
 	m := newActionTestModel()
 	m.viewState = viewProgress
@@ -682,6 +758,50 @@ func TestOutputKeys_Navigation(t *testing.T) {
 	assert.Equal(t, 0, m.offset)
 }
 
+func TestOutputKeys_PageNavigation(t *testing.T) {
+	m := newTestModel()
+	m.viewState = viewOutput
+	m.viewHeight = m.getReservedRows() + 2
+	m.outputLines = []string{"line 0", "line 1", "line 2", "line 3", "line 4", "line 5"}
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'd', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 4, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.offset)
+}
+
+func TestOutputKeys_PageNavigationResourceOutput(t *testing.T) {
+	m := newActionTestModel()
+	m.viewState = viewResourceOutput
+	m.viewHeight = m.getReservedRows() + 2
+	m.cursor = 0
+	m.progressRows[m.cursor].OutputLines = []string{"line 0", "line 1", "line 2", "line 3"}
+	m.outputLines = []string{"full output line 0"}
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 3, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 1, m.offset)
+}
+
 func TestErrorKeys_Quit(t *testing.T) {
 	tests := []struct {
 		name string
@@ -750,6 +870,29 @@ func TestDetailKeys_Scroll(t *testing.T) {
 	assert.Equal(t, 1, m.offset)
 
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'k'})
+	m = newModel.(Model)
+	assert.Equal(t, 0, m.offset)
+}
+
+func TestDetailKeys_PageNavigation(t *testing.T) {
+	m := newTestModelEmpty()
+	m.viewState = viewDetail
+	m.viewHeight = m.getReservedRows() + 2
+	m.outputLines = []string{"a", "b", "c", "d", "e"}
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'd', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 4, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+	assert.Equal(t, 2, m.offset)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModCtrl})
 	m = newModel.(Model)
 	assert.Equal(t, 0, m.offset)
 }

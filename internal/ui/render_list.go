@@ -168,6 +168,7 @@ func (m Model) renderHelpBar() string {
 
 	keyInfos := []keyInfo{
 		{key: "/", info: "filter"},
+		{key: "Ctrl+↑/↓", info: "page scroll"},
 		{key: "Space", info: "select"},
 		{key: "Ctrl+a", info: "select all"},
 		{key: "Enter", info: "detail"},
