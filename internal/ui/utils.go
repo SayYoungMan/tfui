@@ -131,10 +131,7 @@ func (m *Model) currentCursorModule() *Module {
 }
 
 func (m *Model) adjustOffset() {
-	visible := max(1, m.viewHeight-listViewReservedRows)
-	if m.viewState == viewProgress {
-		visible = max(1, m.viewHeight-8)
-	}
+	visible := max(1, m.viewHeight-m.getReservedRows())
 
 	// Cursor went below visible area — scroll down
 	if m.cursor >= m.offset+visible {
@@ -145,4 +142,25 @@ func (m *Model) adjustOffset() {
 	if m.cursor < m.offset {
 		m.offset = m.cursor
 	}
+}
+
+// getReservedRows returns rows occupied by view chrome so scrollable content can use the rest.
+func (m *Model) getReservedRows() int {
+	switch m.viewState {
+	// For viewActionPicker and viewConfirm, this returns reservedRows of list view which is background
+	case viewList, viewFilter, viewActionPicker, viewConfirm:
+		// filter box (3) + resource borders (2) + info bar (1) + help bar with margin (4)
+		return 10
+	case viewProgress:
+		// top margin (1) + header (1) + separator (1) + table/status gap (1) + status (1) + help bar with margin (3)
+		return 8
+	case viewOutput, viewResourceOutput:
+		// title with margin (2) + extra gap (4) + help bar with margin (4)
+		return 10
+	case viewDetail:
+		// title with margin (2) + help bar with margin (4)
+		return 6
+	}
+
+	return 0
 }

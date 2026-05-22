@@ -93,7 +93,7 @@ func TestRenderListView_OnlyRendersVisibleSlice(t *testing.T) {
 		})
 	}
 	m := newTestModelWithResources(resources)
-	m.viewHeight = 3 + listViewReservedRows
+	m.viewHeight = 3 + m.getReservedRows()
 
 	view := m.View()
 
@@ -331,7 +331,7 @@ func TestRenderProgressView_TruncatesLongAddress(t *testing.T) {
 
 func TestRenderProgressView_Cursor(t *testing.T) {
 	m := newActionTestModel()
-	m.viewHeight = 9
+	m.viewHeight = m.getReservedRows() + 1
 	m.cursor = 1
 	m.offset = 1
 	selectedAddr := m.progressRows[1].Address

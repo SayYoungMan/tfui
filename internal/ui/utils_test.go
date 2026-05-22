@@ -64,7 +64,8 @@ func TestSelectedResources_SelectAll(t *testing.T) {
 }
 
 func TestAdjustOffset(t *testing.T) {
-	visible := 48 - listViewReservedRows
+	m := newTestModelEmpty()
+	visible := m.viewHeight - m.getReservedRows()
 	tests := []struct {
 		name     string
 		cursor   int

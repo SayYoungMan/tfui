@@ -220,7 +220,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case outputLineMsg:
 		m.outputLines = append(m.outputLines, string(msg))
-		visible := m.viewHeight - defaultReservedOutputRows
+		visible := m.viewHeight - m.getReservedRows()
 		if len(m.outputLines)-m.offset > visible {
 			m.offset = len(m.outputLines) - visible
 		}

@@ -73,7 +73,7 @@ func TestListKeys_CursorNavigation(t *testing.T) {
 
 func TestListKeys_ScrollsUpWithCursor(t *testing.T) {
 	m := newTestModelEmpty()
-	m.viewHeight = 3 + listViewReservedRows
+	m.viewHeight = 3 + m.getReservedRows()
 
 	for i := range 10 {
 		addr := fmt.Sprintf("aws_s3_bucket.bucket_%d", i)
@@ -662,7 +662,7 @@ func TestOutputKeys_ToProgress(t *testing.T) {
 func TestOutputKeys_Navigation(t *testing.T) {
 	m := newTestModel()
 	m.viewState = viewOutput
-	m.viewHeight = defaultReservedOutputRows + 2 // 2 visible rows
+	m.viewHeight = m.getReservedRows() + 2 // 2 visible rows
 	m.outputLines = []string{"line 0", "line 1", "line 2", "line 3"}
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'j'})

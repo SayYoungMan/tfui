@@ -35,7 +35,7 @@ func (m Model) renderProgressView() string {
 		offset = m.offset
 	}
 
-	visibleRows := max(1, m.viewHeight-8)
+	visibleRows := max(1, m.viewHeight-m.getReservedRows())
 	end := min(offset+visibleRows, len(m.progressRows))
 
 	for i, p := range m.progressRows[offset:end] {
