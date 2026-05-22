@@ -147,7 +147,8 @@ func (m *Model) adjustOffset() {
 // getReservedRows returns rows occupied by view chrome so scrollable content can use the rest.
 func (m *Model) getReservedRows() int {
 	switch m.viewState {
-	case viewList, viewFilter, viewActionPicker:
+	// For viewActionPicker and viewConfirm, this returns reservedRows of list view which is background
+	case viewList, viewFilter, viewActionPicker, viewConfirm:
 		// filter box (3) + resource borders (2) + info bar (1) + help bar with margin (4)
 		return 10
 	case viewProgress:
@@ -156,9 +157,6 @@ func (m *Model) getReservedRows() int {
 	case viewOutput, viewResourceOutput:
 		// title with margin (2) + extra gap (4) + help bar with margin (4)
 		return 10
-	case viewConfirm:
-		// title (1) + gaps (2) + buttons (3) + help bar with margin (3) + Box (2)
-		return 11
 	case viewDetail:
 		// title with margin (2) + help bar with margin (4)
 		return 6
