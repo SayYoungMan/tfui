@@ -107,6 +107,7 @@ type Resource struct {
 	Action          Action
 	Reason          string          // Why this change is happening, e.g. "tainted", "cannot_update"
 	Attributes      json.RawMessage // JSON detail about this resource populated by state pull
+	PlannedChange   *PlannedChange  // describes the changes to be made on the resource
 }
 
 func (r *Resource) IsDataSource() bool {
@@ -193,4 +194,14 @@ type OutputValue struct {
 	Value     any    `json:"value,omitempty"`
 	Type      any    `json:"type,omitempty"`
 	Sensitive bool   `json:"sensitive"`
+}
+
+// PlannedChange is the JSON objects given by changes in the plan file
+type PlannedChange struct {
+	Actions         []string        `json:"actions"`
+	Before          json.RawMessage `json:"before"`
+	After           json.RawMessage `json:"after"`
+	AfterUnknown    json.RawMessage `json:"after_unknown,omitempty"`
+	BeforeSensitive json.RawMessage `json:"before_sensitive,omitempty"`
+	AfterSensitive  json.RawMessage `json:"after_sensitive,omitempty"`
 }

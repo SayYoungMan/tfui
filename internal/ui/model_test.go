@@ -171,13 +171,10 @@ func TestModel_ScanComplete(t *testing.T) {
 	m := newTestModelEmpty()
 	m.workState = workPlan
 
-	assert.True(t, m.isRunning())
-
-	newModel, cmd := m.Update(streamCompleteMsg{})
+	newModel, _ := m.Update(streamCompleteMsg{})
 	m = newModel.(Model)
 
-	assert.False(t, m.isRunning())
-	assert.Nil(t, cmd)
+	assert.Equal(t, workShowPlan, m.workState)
 }
 
 func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
