@@ -240,9 +240,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if msg.err != nil {
-			m.err = msg.err
-			m.viewState = viewError
-			return m, nil
+			m.diagnostics = append(m.diagnostics, terraform.Diagnostic{
+				Severity: "warning",
+				Summary:  "failed to fetch diffs",
+				Detail:   msg.err.Error(),
+			})
 		}
 
 		for addr, change := range msg.changes {

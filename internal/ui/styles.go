@@ -8,17 +8,17 @@ import (
 )
 
 type theme struct {
-	blue, green, coral, amber color.Color
-	cursorBg, cursorFg        color.Color
-	selectedBg, selectedFg    color.Color
-	border, focus, dim, soft  color.Color
-	chroma                    string
+	blue, green, red, amber  color.Color
+	cursorBg, cursorFg       color.Color
+	selectedBg, selectedFg   color.Color
+	border, focus, dim, soft color.Color
+	chroma                   string
 }
 
 var darkTheme = theme{
 	blue:       lipgloss.Color("111"),
 	green:      lipgloss.Color("114"),
-	coral:      lipgloss.Color("167"),
+	red:        lipgloss.Color("167"),
 	amber:      lipgloss.Color("178"),
 	cursorBg:   lipgloss.Color("230"),
 	cursorFg:   lipgloss.Color("234"),
@@ -33,7 +33,7 @@ var darkTheme = theme{
 var lightTheme = theme{
 	blue:       lipgloss.Color("25"),
 	green:      lipgloss.Color("28"),
-	coral:      lipgloss.Color("160"),
+	red:        lipgloss.Color("160"),
 	amber:      lipgloss.Color("136"),
 	cursorBg:   lipgloss.Color("236"),
 	cursorFg:   lipgloss.Color("255"),
@@ -82,10 +82,10 @@ func (t *theme) styles() styles {
 
 		shutdownBorder: lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(t.coral).
+			BorderForeground(t.red).
 			Padding(6, 6),
 
-		error:   lipgloss.NewStyle().Foreground(t.coral),
+		error:   lipgloss.NewStyle().Foreground(t.red),
 		warning: lipgloss.NewStyle().Foreground(t.amber),
 		success: lipgloss.NewStyle().Foreground(t.green),
 
@@ -104,7 +104,7 @@ func (t *theme) styles() styles {
 func (t *theme) actionStyles() map[terraform.Action]lipgloss.Style {
 	return map[terraform.Action]lipgloss.Style{
 		terraform.ActionCreate:    lipgloss.NewStyle().Foreground(t.green),
-		terraform.ActionDelete:    lipgloss.NewStyle().Foreground(t.coral),
+		terraform.ActionDelete:    lipgloss.NewStyle().Foreground(t.red),
 		terraform.ActionUpdate:    lipgloss.NewStyle().Foreground(t.amber),
 		terraform.ActionReplace:   lipgloss.NewStyle().Foreground(t.amber),
 		terraform.ActionMove:      lipgloss.NewStyle().Foreground(t.blue),
