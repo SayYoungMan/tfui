@@ -6,10 +6,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
-const MB = 1024 * 1024
+const (
+	MB           = 1024 * 1024
+	planFilePath = ".tfui/latest.tfplan"
+)
 
 // Provides ability to override exec.CommandContext for mock testing
 type CommandFactory func(ctx context.Context, name string, args ...string) *exec.Cmd
@@ -36,6 +40,20 @@ func (tr *TerraformRunner) Plan(ctx context.Context, targets []string) <-chan St
 	for _, t := range targets {
 		args = append(args, fmt.Sprintf("-target=%s", t))
 	}
+	return tr.streamJsonEvents(ctx, args)
+}
+
+// PlanAll plans for all resources and save the state in local file cache
+func (tr *TerraformRunner) PlanAll(ctx context.Context) <-chan StreamEvent {
+	planPath := filepath.Join(tr.workdir, planFilePath)
+	if err := os.MkdirAll(filepath.Dir(planPath), 0o700); err != nil {
+		ch := make(chan StreamEvent, 1)
+		ch <- StreamEvent{Error: err}
+		close(ch)
+		return ch
+	}
+
+	args := []string{"plan", "-json", fmt.Sprintf("-out=%s", planFilePath)}
 	return tr.streamJsonEvents(ctx, args)
 }
 

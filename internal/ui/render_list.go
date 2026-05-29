@@ -140,6 +140,9 @@ func (m Model) renderInfoBar() string {
 			}
 		}
 		info = fmt.Sprintf(" Scanning... (%d/%d resources scanned)", count, len(m.resources))
+	case workShowPlan:
+		adornment = m.styles.infoBar.Render(m.spinner.View())
+		info = fmt.Sprintf(" Fetching diffs... (%d resources scanned)", len(m.resources))
 	default:
 		adornment = m.styles.success.Render("✓")
 		info = fmt.Sprintf("  Scan Complete (%d resources scanned)", len(m.resources))

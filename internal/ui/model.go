@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"time"
 
 	"charm.land/bubbles/v2/spinner"
@@ -76,6 +77,7 @@ const (
 	workIdle      workState = iota // Not doing any terraform work
 	workStatePull                  // doing `terraform state pull` for inital population of resources
 	workPlan                       // doing `terraform plan` to scan resource states
+	workShowPlan                   // doing `terraform show planfile` to get diffs
 	workAction                     // doing action chosen by user
 )
 
@@ -205,8 +207,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleStreamEvent(terraform.StreamEvent(msg))
 
 	case streamCompleteMsg:
-		m.workState = workIdle
-
 		// If some resources are still pending that means they have no change
 		for _, ar := range m.progresses {
 			if ar.Status == progressStatusPending {
@@ -218,7 +218,40 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		if m.hasError() {
+			m.workState = workIdle
 			m.viewState = viewError
+		}
+
+		if m.workState == workPlan {
+			ctx, cancel := context.WithCancel(context.Background())
+			m.cancel.fn = cancel
+			m.workState = workShowPlan
+			return m, waitForPlanChanges(ctx, m.runner)
+		}
+
+		m.workState = workIdle
+		return m, nil
+
+	case planChangesReadyMsg:
+		m.workState = workIdle
+
+		if m.quitState == quittingState || m.quitState == forceQuitReadyState {
+			return m, tea.Quit
+		}
+
+		if msg.err != nil {
+			m.diagnostics = append(m.diagnostics, terraform.Diagnostic{
+				Severity: "warning",
+				Summary:  "failed to fetch diffs",
+				Detail:   msg.err.Error(),
+			})
+		}
+
+		for addr, change := range msg.changes {
+			if r, ok := m.resources[addr]; ok {
+				plannedChange := change
+				r.PlannedChange = &plannedChange
+			}
 		}
 		return m, nil
 

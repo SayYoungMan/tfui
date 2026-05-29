@@ -44,14 +44,18 @@ func (m Model) handleStatePulled(msg statePulledMsg) (Model, tea.Cmd) {
 	m.cancel.fn = cancel
 	m.workState = workPlan
 
-	ch := m.runner.Plan(ctx, nil)
+	ch := m.runner.PlanAll(ctx)
 	m.eventCh = ch
 	return m, waitForEvent(ch)
 }
 
 type (
-	streamEventMsg    terraform.StreamEvent
-	streamCompleteMsg struct{}
+	streamEventMsg      terraform.StreamEvent
+	streamCompleteMsg   struct{}
+	planChangesReadyMsg struct {
+		changes map[string]terraform.PlannedChange
+		err     error
+	}
 )
 
 func waitForEvent(ch <-chan terraform.StreamEvent) tea.Cmd {
@@ -81,6 +85,7 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 
 	if event.Resource != nil {
 		addr := event.Resource.Address
+		// Preserve attributes because they will be replaced by new resource pointers from plan action
 		if existing, exists := m.resources[addr]; exists {
 			event.Resource.Attributes = existing.Attributes
 		}
@@ -91,6 +96,16 @@ func (m Model) handleStreamEvent(event terraform.StreamEvent) (tea.Model, tea.Cm
 
 	m.adjustOffset()
 	return m, waitForEvent(m.eventCh)
+}
+
+func waitForPlanChanges(ctx context.Context, runner *terraform.TerraformRunner) tea.Cmd {
+	return func() tea.Msg {
+		changes, err := runner.PlannedChanges(ctx)
+		return planChangesReadyMsg{
+			changes: changes,
+			err:     err,
+		}
+	}
 }
 
 func (m Model) handleActionEvent(event terraform.StreamEvent) (tea.Model, tea.Cmd) {

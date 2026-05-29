@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ import (
 const (
 	GO_TEST_HELPER_PROCESS = "GO_TEST_HELPER_PROCESS"
 	MOCK_OUTPUT            = "MOCK_OUTPUT"
+	MOCK_STDERR            = "MOCK_STDERR"
 	MOCK_EXIT_CODE         = "MOCK_EXIT_CODE"
 	MOCK_ARGS              = "MOCK_ARGS"
 )
@@ -292,4 +294,56 @@ func TestStreamPerResource_Error(t *testing.T) {
 
 	assert.Equal(t, MsgTypeApplyErrored, events[2].Type)
 	assert.Equal(t, "aws_s3_bucket.uploads", events[2].Resource.Address)
+}
+
+func TestPlanAll_CreatesPlanCacheDirAndUsesOutFile(t *testing.T) {
+	workdir := t.TempDir()
+
+	var gotName string
+	var gotArgs []string
+	runner := &TerraformRunner{
+		binary:  "terraform",
+		workdir: workdir,
+		cmdFactory: func(ctx context.Context, name string, args ...string) *exec.Cmd {
+			gotName = name
+			gotArgs = append([]string(nil), args...)
+			return mockCmdFactory("", 0)(ctx, name, args...)
+		},
+	}
+
+	ch := runner.PlanAll(context.Background())
+	for range ch {
+	}
+
+	info, err := os.Stat(filepath.Join(workdir, ".tfui"))
+	require.NoError(t, err)
+	assert.True(t, info.IsDir())
+
+	assert.Equal(t, "terraform", gotName)
+	assert.Equal(t, []string{"plan", "-json", "-out=.tfui/latest.tfplan"}, gotArgs)
+}
+
+func TestPlanAll_MkdirFailureReturnsErrorEvent(t *testing.T) {
+	workdir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(workdir, ".tfui"), []byte("not a dir"), 0o600))
+
+	called := false
+	runner := &TerraformRunner{
+		binary:  "terraform",
+		workdir: workdir,
+		cmdFactory: func(ctx context.Context, name string, args ...string) *exec.Cmd {
+			called = true
+			return mockCmdFactory("", 0)(ctx, name, args...)
+		},
+	}
+
+	ch := runner.PlanAll(context.Background())
+
+	event, ok := <-ch
+	require.True(t, ok)
+	require.Error(t, event.Error)
+
+	_, ok = <-ch
+	assert.False(t, ok)
+	assert.False(t, called)
 }

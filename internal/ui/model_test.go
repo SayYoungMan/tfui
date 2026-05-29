@@ -167,17 +167,17 @@ func TestModel_ScanComplete_WarningsOnly(t *testing.T) {
 	assert.Equal(t, viewList, m.viewState)
 }
 
-func TestModel_ScanComplete(t *testing.T) {
+func TestModel_PlanStreamCompleteStartsShowPlan(t *testing.T) {
 	m := newTestModelEmpty()
 	m.workState = workPlan
-
-	assert.True(t, m.isRunning())
 
 	newModel, cmd := m.Update(streamCompleteMsg{})
 	m = newModel.(Model)
 
-	assert.False(t, m.isRunning())
-	assert.Nil(t, cmd)
+	assert.Equal(t, workShowPlan, m.workState)
+	assert.True(t, m.isRunning())
+	assert.NotNil(t, m.cancel.fn)
+	assert.NotNil(t, cmd)
 }
 
 func TestModel_CursorOperatesOnFilteredList(t *testing.T) {
@@ -355,4 +355,60 @@ func TestUpdate_ActionTick_StopsWhenIdle(t *testing.T) {
 	_, cmd := m.Update(actionTickMsg(time.Now()))
 
 	assert.Nil(t, cmd)
+}
+
+func TestUpdate_PlanChangesReadyAttachesOnlyMatchingResources(t *testing.T) {
+	m := newTestModelWithResources([]*terraform.Resource{
+		{Address: "aws_s3_bucket.a", Action: terraform.ActionUpdate},
+		{Address: "aws_s3_bucket.b", Action: terraform.ActionCreate},
+	})
+
+	newModel, cmd := m.Update(planChangesReadyMsg{
+		changes: map[string]terraform.PlannedChange{
+			"aws_s3_bucket.a": {
+				Actions: []string{"update"},
+				Before:  []byte(`{"acl":"private"}`),
+				After:   []byte(`{"acl":"public-read"}`),
+			},
+			"aws_s3_bucket.b": {
+				Actions: []string{"create"},
+				Before:  []byte(`null`),
+				After:   []byte(`{"bucket":"b"}`),
+			},
+			"aws_iam_role.missing": {
+				Actions: []string{"delete"},
+			},
+		},
+	})
+	m = newModel.(Model)
+
+	assert.Nil(t, cmd)
+	assert.Equal(t, workIdle, m.workState)
+
+	require.NotNil(t, m.resources["aws_s3_bucket.a"].PlannedChange)
+	assert.Equal(t, []string{"update"}, m.resources["aws_s3_bucket.a"].PlannedChange.Actions)
+	assert.JSONEq(t, `{"acl":"private"}`, string(m.resources["aws_s3_bucket.a"].PlannedChange.Before))
+	assert.JSONEq(t, `{"acl":"public-read"}`, string(m.resources["aws_s3_bucket.a"].PlannedChange.After))
+
+	require.NotNil(t, m.resources["aws_s3_bucket.b"].PlannedChange)
+	assert.Equal(t, []string{"create"}, m.resources["aws_s3_bucket.b"].PlannedChange.Actions)
+
+	assert.NotContains(t, m.resources, "aws_iam_role.missing")
+}
+
+func TestUpdate_PlanChangesReadyErrorAddsWarning(t *testing.T) {
+	m := newTestModel()
+
+	newModel, cmd := m.Update(planChangesReadyMsg{err: assert.AnError})
+	m = newModel.(Model)
+
+	assert.Nil(t, cmd)
+	assert.Equal(t, workIdle, m.workState)
+	assert.Equal(t, viewList, m.viewState)
+	assert.False(t, m.hasError())
+
+	require.Len(t, m.diagnostics, 1)
+	assert.Equal(t, "warning", m.diagnostics[0].Severity)
+	assert.Equal(t, "failed to fetch diffs", m.diagnostics[0].Summary)
+	assert.Contains(t, m.diagnostics[0].Detail, assert.AnError.Error())
 }
