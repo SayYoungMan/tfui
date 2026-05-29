@@ -117,6 +117,11 @@ func TestRenderListView_ViewShowsScanning(t *testing.T) {
 	require.Contains(t, view.Content, "Scanning...")
 	require.Contains(t, view.Content, fmt.Sprintf("(%d/%d resources scanned)", len(m.resources), len(m.resources)))
 
+	m.workState = workShowPlan
+	view = m.View()
+	assert.Contains(t, view.Content, "Fetching diffs...")
+	assert.Contains(t, view.Content, fmt.Sprintf("%d resources scanned", len(m.resources)))
+
 	m.workState = workIdle
 	view = m.View()
 	assert.Contains(t, view.Content, "Scan Complete")
