@@ -175,6 +175,7 @@ func (m Model) renderHelpBar() string {
 		{key: "Space", info: "select"},
 		{key: "Ctrl+a", info: "select all"},
 		{key: "Enter", info: "detail"},
+		{key: "d", info: "diffs"},
 		{key: "Tab", info: "action"},
 		{key: "H", info: HKeyInfo},
 		{key: "Ctrl+r", info: "refresh"},

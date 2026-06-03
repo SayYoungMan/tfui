@@ -21,6 +21,10 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if !m.isRunning() {
 			return m.startRescan()
 		}
+	case "d":
+		if !m.isRunning() {
+			m.openDiff()
+		}
 	}
 
 	// Below will be cases that requires a row so return early if not
@@ -296,6 +300,32 @@ func (m Model) detailKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	contentLen := len(m.outputLines)
 	switch msg.String() {
 	case "esc", "enter":
+		m.viewState = viewList
+		m.outputLines = nil
+		m.offset = 0
+	case "ctrl+u", "pgup":
+		m.offset = max(m.offset-visible, 0)
+	case "ctrl+d", "pgdown":
+		if contentLen > 0 {
+			m.offset = min(m.offset+visible, contentLen-1)
+		}
+	case "k", "up":
+		if m.offset > 0 {
+			m.offset--
+		}
+	case "j", "down":
+		if m.offset < contentLen-1 {
+			m.offset++
+		}
+	}
+	return m, nil
+}
+
+func (m Model) diffKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	visible := max(1, m.viewHeight-m.getReservedRows())
+	contentLen := len(m.outputLines)
+	switch msg.String() {
+	case "esc", "enter", "d":
 		m.viewState = viewList
 		m.outputLines = nil
 		m.offset = 0

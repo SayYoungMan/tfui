@@ -311,3 +311,42 @@ func TestOpenDetail_PlannedChangeInvalidJSONShowsError(t *testing.T) {
 	require.Len(t, m.outputLines, 1)
 	assert.Contains(t, m.outputLines[0], "Failed to render diff")
 }
+
+func TestOpenDiff_UsualChange(t *testing.T) {
+	change := terraform.PlannedChange{
+		Actions: []string{"update"},
+		Before:  []byte(`{"acl":"private"}`),
+		After:   []byte(`{"acl":"public-read"}`),
+	}
+	resources := []*terraform.Resource{
+		{
+			Address:       "aws_s3_bucket.changed",
+			Action:        terraform.ActionUpdate,
+			PlannedChange: &change,
+		},
+		{
+			Address: "aws_s3_bucket.unchanged",
+			Action:  terraform.ActionNoop,
+		},
+	}
+	m := newTestModelWithResources(resources)
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'd'})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewDiff, m.viewState)
+	out := strings.Join(m.outputLines, "\n")
+	assert.Contains(t, out, "aws_s3_bucket.changed")
+	assert.Contains(t, out, `-   "acl": "private"`)
+	assert.Contains(t, out, `+   "acl": "public-read"`)
+	assert.NotContains(t, out, "aws_s3_bucket.unchanged")
+}
+
+func TestOpenDiff_NoDiffsAvailable(t *testing.T) {
+	m := newTestModel()
+
+	m.openDiff()
+
+	assert.Equal(t, viewDiff, m.viewState)
+	assert.Equal(t, []string{"No diffs available."}, m.outputLines)
+}
