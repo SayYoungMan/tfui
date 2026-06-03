@@ -59,8 +59,8 @@ tfui --binary tofu
 | Module tree view | ✅ Done (v0.1.0) |
 | Resource Detail Viewer | ✅ Done (v0.2.0) |
 | Per resource progress tracker | ✅ Done (v0.3.0) |
+| Diff viewer | ✅ Done (v0.4.0) |
 | Persistent resource state | 🔲 Planned |
-| Diff viewer | 🔲 Planned |
 | Workspace switcher | 🔲 Planned |
 | Stress test for large input | 🔲 Planned |
 | Analytics Report | 🔲 Planned |
