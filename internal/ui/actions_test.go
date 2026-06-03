@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -268,4 +269,45 @@ func TestStartAction_ExpandsModuleSelection(t *testing.T) {
 	assert.Len(t, m.progresses, 2)
 	assert.Contains(t, m.progresses, "module.a.aws_s3.x")
 	assert.Contains(t, m.progresses, "module.a.aws_s3.y")
+}
+
+func TestOpenDetail_PlannedChangeShowsDiff(t *testing.T) {
+	change := terraform.PlannedChange{
+		Actions: []string{"update"},
+		Before:  []byte(`{"acl":"private"}`),
+		After:   []byte(`{"acl":"public-read"}`),
+	}
+	r := terraform.Resource{
+		Address:       "aws_s3_bucket.uploads",
+		Action:        terraform.ActionUpdate,
+		Attributes:    []byte(`{"attributes_only":"old"}`),
+		PlannedChange: &change,
+	}
+	m := newTestModelWithResources([]*terraform.Resource{&r})
+
+	m.openDetail()
+
+	out := strings.Join(m.outputLines, "\n")
+	assert.Contains(t, out, `-   "acl": "private"`)
+	assert.Contains(t, out, `+   "acl": "public-read"`)
+	assert.NotContains(t, out, `"attributes_only": "old"`)
+}
+
+func TestOpenDetail_PlannedChangeInvalidJSONShowsError(t *testing.T) {
+	change := terraform.PlannedChange{
+		Actions: []string{"update"},
+		Before:  []byte(`{"acl":`),
+		After:   []byte(`{"acl":"public-read"}`),
+	}
+	r := terraform.Resource{
+		Address:       "aws_s3_bucket.uploads",
+		Action:        terraform.ActionUpdate,
+		PlannedChange: &change,
+	}
+	m := newTestModelWithResources([]*terraform.Resource{&r})
+
+	m.openDetail()
+
+	require.Len(t, m.outputLines, 1)
+	assert.Contains(t, m.outputLines[0], "Failed to render diff")
 }

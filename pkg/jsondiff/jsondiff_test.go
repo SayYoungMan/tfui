@@ -59,6 +59,30 @@ func TestRender_AppliesLineStyles(t *testing.T) {
 	assert.NotContains(t, out, `+ [add]`)
 }
 
+func TestRender_RootCreateDoesNotShowRemovedNull(t *testing.T) {
+	before := json.RawMessage(`null`)
+	after := json.RawMessage(`{"bucket":"b"}`)
+
+	out, err := Render(before, after, Options{})
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "+ {")
+	assert.Contains(t, out, `+   "bucket": "b"`)
+	assert.NotContains(t, out, "- null")
+}
+
+func TestRender_RootDeleteDoesNotShowAddedNull(t *testing.T) {
+	before := json.RawMessage(`{"bucket":"b"}`)
+	after := json.RawMessage(`null`)
+
+	out, err := Render(before, after, Options{})
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "- {")
+	assert.Contains(t, out, `-   "bucket": "b"`)
+	assert.NotContains(t, out, "+ null")
+}
+
 func TestRenderDocument_ReturnsLineKinds(t *testing.T) {
 	before := json.RawMessage(`{"env":"dev"}`)
 	after := json.RawMessage(`{"env":"prod"}`)
