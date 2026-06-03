@@ -69,6 +69,7 @@ const (
 	viewResourceOutput
 	viewError
 	viewDetail
+	viewDiff
 )
 
 type workState int
@@ -155,7 +156,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.outputKeys(msg)
 		case viewError:
 			return m.errorKeys(msg)
-		case viewDetail:
+		case viewDetail, viewDiff:
 			return m.detailKeys(msg)
 		default:
 			return m.listKeys(msg)
@@ -163,7 +164,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.MouseWheelMsg:
 		switch m.viewState {
-		case viewOutput, viewDetail:
+		case viewOutput, viewDetail, viewDiff:
 			if msg.Button == tea.MouseWheelUp && m.offset > 0 {
 				m.offset--
 			} else if msg.Button == tea.MouseWheelDown {
@@ -307,6 +308,8 @@ func (m Model) View() tea.View {
 		viewString = m.renderErrorView()
 	case viewDetail:
 		viewString = m.renderDetailView()
+	case viewDiff:
+		viewString = m.renderDiffView()
 	default:
 		viewString = m.renderListView()
 	}

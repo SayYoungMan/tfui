@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/SayYoungMan/tfui/pkg/jsondiff"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 	"github.com/alecthomas/chroma/v2/quick"
@@ -169,14 +171,47 @@ func (m *Model) openDetail() {
 	m.viewState = viewDetail
 
 	if r.PlannedChange != nil {
-		m.detailFromPlannedChange(*r.PlannedChange)
+		m.outputLines = m.detailFromPlannedChange(*r.PlannedChange)
 		return
 	}
 
-	m.detailFromAttributes(r.Attributes)
+	m.outputLines = m.detailFromAttributes(r.Attributes)
 }
 
-func (m *Model) detailFromPlannedChange(change terraform.PlannedChange) {
+func (m *Model) openDiff() {
+	m.offset = 0
+	m.viewState = viewDiff
+
+	var lines []string
+	for _, r := range m.visibleResources() {
+		if r.PlannedChange == nil {
+			continue
+		}
+
+		header := fmt.Sprintf("%s %s", r.Action.Symbol(), r.Address)
+		if r.Reason != "" {
+			header += fmt.Sprintf(" (%s)", r.Reason)
+		}
+		if style, ok := m.styles.actions[r.Action]; ok {
+			header = style.Render(header)
+		}
+
+		// add empty line between resources
+		if len(lines) > 0 {
+			lines = append(lines, "")
+		}
+		lines = append(lines, header)
+		lines = append(lines, strings.Repeat("─", lipgloss.Width(header)))
+		lines = append(lines, m.detailFromPlannedChange(*r.PlannedChange)...)
+	}
+
+	if len(lines) == 0 {
+		m.outputLines = []string{"No diffs available."}
+	}
+	m.outputLines = lines
+}
+
+func (m *Model) detailFromPlannedChange(change terraform.PlannedChange) []string {
 	detailWidth := max(0, m.viewWidth-8)
 	rendered, err := jsondiff.Render(change.Before, change.After, jsondiff.Options{
 		AddedStyle: func(s string) string {
@@ -190,32 +225,28 @@ func (m *Model) detailFromPlannedChange(change terraform.PlannedChange) {
 		},
 	})
 	if err != nil {
-		m.outputLines = []string{"Failed to render diff: " + err.Error()}
-		return
+		return []string{"Failed to render diff: " + err.Error()}
 	}
 
 	line := splitDetailString(rendered)
 	if len(line) == 0 {
-		m.outputLines = []string{"No diff available."}
-		return
+		return []string{"No diff available."}
 	}
 
-	m.outputLines = line
+	return line
 }
 
-func (m *Model) detailFromAttributes(attributes json.RawMessage) {
+func (m *Model) detailFromAttributes(attributes json.RawMessage) []string {
 	if len(attributes) == 0 {
-		m.outputLines = []string{"No details available."}
-		return
+		return []string{"No details available."}
 	}
 
 	var indented bytes.Buffer
 	if err := json.Indent(&indented, attributes, "", "  "); err != nil {
-		m.outputLines = strings.Split(string(attributes), "\n")
-		return
+		return strings.Split(string(attributes), "\n")
 	}
 
-	m.outputLines = splitDetailString(m.highlightJSON(indented.String()))
+	return splitDetailString(m.highlightJSON(indented.String()))
 }
 
 func (m *Model) highlightJSON(s string) string {

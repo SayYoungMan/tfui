@@ -130,6 +130,27 @@ func (m Model) renderDetailView() string {
 	return s.String()
 }
 
+func (m Model) renderDiffView() string {
+	title := " Diffs"
+	box := m.renderScrollableBox(m.outputLines, m.viewWidth, m.viewHeight-m.getReservedRows())
+
+	keyInfo := []keyInfo{
+		{key: "↑/↓", info: "scroll"},
+		{key: "PgUp/PgDn", info: "page scroll"},
+		{key: "Esc", info: "close"},
+	}
+	help := " " + m.renderKeyInfo(keyInfo)
+
+	var s strings.Builder
+	fmt.Fprintln(&s, title)
+	fmt.Fprintln(&s)
+	fmt.Fprintln(&s, box)
+	fmt.Fprintln(&s)
+	fmt.Fprint(&s, help)
+
+	return s.String()
+}
+
 func (m Model) renderOutputView() string {
 	action := actionChoices[m.actionCursor]
 

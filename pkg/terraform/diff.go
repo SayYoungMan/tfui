@@ -39,8 +39,22 @@ func (tr *TerraformRunner) PlannedChanges(ctx context.Context) (map[string]Plann
 
 	changes := make(map[string]PlannedChange, len(plan.ResourceChanges))
 	for _, rc := range plan.ResourceChanges {
-		changes[rc.Address] = rc.Change
+		if isMeaningfulChange(rc.Change) {
+			changes[rc.Address] = rc.Change
+		}
 	}
 
 	return changes, nil
+}
+
+func isMeaningfulChange(change PlannedChange) bool {
+	for _, action := range change.Actions {
+		switch action {
+		case "", "noop", "no-op", "read":
+			continue
+		default:
+			return true
+		}
+	}
+	return false
 }

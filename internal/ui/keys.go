@@ -21,6 +21,8 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if !m.isRunning() {
 			return m.startRescan()
 		}
+	case "d":
+		m.openDiff()
 	}
 
 	// Below will be cases that requires a row so return early if not
