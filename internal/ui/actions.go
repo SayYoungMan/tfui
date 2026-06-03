@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/SayYoungMan/tfui/pkg/jsondiff"
 	"github.com/SayYoungMan/tfui/pkg/terraform"
 	"github.com/alecthomas/chroma/v2/quick"
 )
@@ -167,14 +168,50 @@ func (m *Model) openDetail() {
 	m.offset = 0
 	m.viewState = viewDetail
 
-	if len(r.Attributes) == 0 {
+	if r.PlannedChange != nil {
+		m.detailFromPlannedChange(*r.PlannedChange)
+		return
+	}
+
+	m.detailFromAttributes(r.Attributes)
+}
+
+func (m *Model) detailFromPlannedChange(change terraform.PlannedChange) {
+	rendered, err := jsondiff.Render(change.Before, change.After, jsondiff.Options{
+		SyntaxHighlighter: m.styles.chromaTheme,
+		AddedStyle: func(s string) string {
+			return m.styles.diffAdded.Render("+ " + s)
+		},
+		RemovedStyle: func(s string) string {
+			return m.styles.diffRemoved.Render("- " + s)
+		},
+		NormalStyle: func(s string) string {
+			return "  " + s
+		},
+	})
+	if err != nil {
+		m.outputLines = []string{"Failed to render diff: " + err.Error()}
+		return
+	}
+
+	line := splitDetailString(rendered)
+	if len(line) == 0 {
+		m.outputLines = []string{"No diff available."}
+		return
+	}
+
+	m.outputLines = line
+}
+
+func (m *Model) detailFromAttributes(attributes json.RawMessage) {
+	if len(attributes) == 0 {
 		m.outputLines = []string{"No details available."}
 		return
 	}
 
 	var indented bytes.Buffer
-	if err := json.Indent(&indented, r.Attributes, "", "  "); err != nil {
-		m.outputLines = strings.Split(string(r.Attributes), "\n")
+	if err := json.Indent(&indented, attributes, "", "  "); err != nil {
+		m.outputLines = strings.Split(string(attributes), "\n")
 		return
 	}
 
@@ -184,5 +221,13 @@ func (m *Model) openDetail() {
 		return
 	}
 
-	m.outputLines = strings.Split(strings.TrimRight(highlighted.String(), "\n"), "\n")
+	m.outputLines = splitDetailString(highlighted.String())
+}
+
+func splitDetailString(s string) []string {
+	trimmed := strings.TrimRight(s, "\n")
+	if trimmed == "" {
+		return nil
+	}
+	return strings.Split(trimmed, "\n")
 }

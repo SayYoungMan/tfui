@@ -11,6 +11,7 @@ type theme struct {
 	blue, green, red, amber  color.Color
 	cursorBg, cursorFg       color.Color
 	selectedBg, selectedFg   color.Color
+	diffFg                   color.Color
 	border, focus, dim, soft color.Color
 	chroma                   string
 }
@@ -23,6 +24,7 @@ var darkTheme = theme{
 	cursorBg:   lipgloss.Color("230"),
 	cursorFg:   lipgloss.Color("234"),
 	selectedBg: lipgloss.Color("240"),
+	diffFg:     lipgloss.Color("0"),
 	border:     lipgloss.Color("245"),
 	focus:      lipgloss.Color("230"),
 	dim:        lipgloss.Color("245"),
@@ -39,6 +41,7 @@ var lightTheme = theme{
 	cursorFg:   lipgloss.Color("255"),
 	selectedBg: lipgloss.Color("254"),
 	selectedFg: lipgloss.Color("235"),
+	diffFg:     lipgloss.Color("255"),
 	border:     lipgloss.Color("244"),
 	focus:      lipgloss.Color("236"),
 	dim:        lipgloss.Color("244"),
@@ -54,6 +57,7 @@ type styles struct {
 	error, warning, success                      lipgloss.Style
 	infoBar, helpKey, helpInfo                   lipgloss.Style
 	module, treePrefixDefault, treePrefixCurrent lipgloss.Style
+	diffAdded, diffRemoved                       lipgloss.Style
 	actions                                      map[terraform.Action]lipgloss.Style
 	chromaTheme                                  string
 }
@@ -95,6 +99,8 @@ func (t *theme) styles() styles {
 		module:            lipgloss.NewStyle().Foreground(t.soft),
 		treePrefixDefault: lipgloss.NewStyle().Foreground(t.dim),
 		treePrefixCurrent: lipgloss.NewStyle().Foreground(t.focus),
+		diffAdded:         lipgloss.NewStyle().Background(t.green).Foreground(t.diffFg),
+		diffRemoved:       lipgloss.NewStyle().Background(t.red).Foreground(t.diffFg),
 
 		chromaTheme: t.chroma,
 		actions:     t.actionStyles(),
