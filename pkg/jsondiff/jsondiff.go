@@ -97,7 +97,7 @@ func RenderResult(before, after json.RawMessage, opts Options) (Result, error) {
 		return Result{}, fmt.Errorf("failed to parse after JSON: %w", err)
 	}
 
-	root := buildDiff(beforeVal, afterVal)
+	root := buildRoot(beforeVal, afterVal)
 	res := &Result{opts: opts}
 
 	err = res.renderNode(root, nil, 0, false)
@@ -122,6 +122,23 @@ func decodeJSON(raw json.RawMessage) (any, error) {
 	}
 
 	return value, nil
+}
+
+func buildRoot(before, after any) *diffNode {
+	if reflect.DeepEqual(before, after) {
+		return &diffNode{kind: diffSame, after: after}
+	}
+
+	// For the cases where whole resource is created/removed we don't want to show - null
+	// Therefore, explicitly drop the before/after if it's nil for the root node
+	if before != nil && after == nil {
+		return &diffNode{kind: diffRemoved, before: before}
+	}
+	if before == nil && after != nil {
+		return &diffNode{kind: diffAdded, after: after}
+	}
+
+	return buildDiff(before, after)
 }
 
 // construct tree of JSON diff object nodes recursively and return the root
