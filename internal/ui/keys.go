@@ -6,6 +6,24 @@ import (
 )
 
 func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	// These are the keys that should be triggered even if no row exists
+	switch msg.String() {
+	case "/":
+		m.viewState = viewFilter
+		m.filterInput.Focus()
+		return m, textinput.Blink
+	case "H":
+		m.hideUnchanged = !m.hideUnchanged
+		m.rebuildRows()
+		m.cursor = 0
+		m.offset = 0
+	case "ctrl+r":
+		if !m.isRunning() {
+			return m.startRescan()
+		}
+	}
+
+	// Below will be cases that requires a row so return early if not
 	if len(m.rows) == 0 {
 		return m, nil
 	}
@@ -100,19 +118,6 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		m.actionCursor = 0
 		m.viewState = viewActionPicker
-	case "/":
-		m.viewState = viewFilter
-		m.filterInput.Focus()
-		return m, textinput.Blink
-	case "H":
-		m.hideUnchanged = !m.hideUnchanged
-		m.rebuildRows()
-		m.cursor = 0
-		m.offset = 0
-	case "ctrl+r":
-		if !m.isRunning() {
-			return m.startRescan()
-		}
 	case "ctrl+a":
 		m.selectAll = !m.selectAll
 		m.selected = make(map[string]bool)

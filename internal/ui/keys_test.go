@@ -156,6 +156,19 @@ func TestListKeys_ToggleHideUnchanged(t *testing.T) {
 	assert.False(t, m.hideUnchanged)
 }
 
+func TestListKeys_ToggleHideUnchangedWorksEvenWhenRowsEmpty(t *testing.T) {
+	m := newTestModelEmpty()
+	require.Empty(t, m.rows)
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'H'})
+	m = newModel.(Model)
+	assert.True(t, m.hideUnchanged)
+
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'H'})
+	m = newModel.(Model)
+	assert.False(t, m.hideUnchanged)
+}
+
 func TestListKeys_ToggleSelect(t *testing.T) {
 	m := newTestModel()
 
