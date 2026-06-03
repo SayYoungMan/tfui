@@ -127,3 +127,58 @@ func TestPlannedChanges_ShowErrorIncludesStderr(t *testing.T) {
 	assert.Contains(t, err.Error(), "terraform show plan failed")
 	assert.Contains(t, err.Error(), "saved plan is stale")
 }
+
+func TestPlannedChanges_FiltersNonMeaningfulChanges(t *testing.T) {
+	output := `{
+		"resource_changes": [
+			{
+				"address": "aws_s3_bucket.noop",
+				"change": {
+					"actions": ["no-op"],
+					"before": {"acl": "private"},
+					"after": {"acl": "private"}
+				}
+			},
+			{
+				"address": "data.aws_region.current",
+				"change": {
+					"actions": ["read"],
+					"before": null,
+					"after": {"name": "us-east-1"}
+				}
+			},
+			{
+				"address": "aws_s3_bucket.changed",
+				"change": {
+					"actions": ["update"],
+					"before": {"acl": "private"},
+					"after": {"acl": "public-read"}
+				}
+			},
+			{
+				"address": "aws_instance.replaced",
+				"change": {
+					"actions": ["delete", "create"],
+					"before": {"ami": "old"},
+					"after": {"ami": "new"}
+				}
+			}
+		]
+	}`
+
+	var calls []string
+	runner := &TerraformRunner{
+		binary:     "terraform",
+		workdir:    t.TempDir(),
+		cmdFactory: mockShowCmdFactory(output, "", 0, &calls),
+	}
+
+	changes, err := runner.PlannedChanges(context.Background())
+
+	require.NoError(t, err)
+	require.Len(t, changes, 2)
+	assert.Contains(t, changes, "aws_s3_bucket.changed")
+	assert.Contains(t, changes, "aws_instance.replaced")
+	assert.NotContains(t, changes, "aws_s3_bucket.noop")
+	assert.NotContains(t, changes, "data.aws_region.current")
+}

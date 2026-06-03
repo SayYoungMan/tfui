@@ -22,7 +22,9 @@ func (m Model) listKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m.startRescan()
 		}
 	case "d":
-		m.openDiff()
+		if !m.isRunning() {
+			m.openDiff()
+		}
 	}
 
 	// Below will be cases that requires a row so return early if not

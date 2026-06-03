@@ -364,6 +364,16 @@ func TestListKeys_CtrlASelectAll(t *testing.T) {
 	assert.False(t, m.selectAll)
 }
 
+func TestListKeys_DiffBlockedWhileRunning(t *testing.T) {
+	m := newTestModel()
+	m.workState = workShowPlan
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'd'})
+	m = newModel.(Model)
+
+	assert.Equal(t, viewList, m.viewState)
+}
+
 func TestFilterModeKeys_FilterFocusAndUnfocus(t *testing.T) {
 	m := newTestModel()
 
@@ -908,4 +918,30 @@ func TestDetailKeys_PageNavigation(t *testing.T) {
 	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyPgUp})
 	m = newModel.(Model)
 	assert.Equal(t, 0, m.offset)
+}
+
+func TestDiffKeys_CloseWithDAndEsc(t *testing.T) {
+	tests := []struct {
+		name string
+		msg  tea.KeyPressMsg
+	}{
+		{"d", tea.KeyPressMsg{Code: 'd'}},
+		{"esc", tea.KeyPressMsg{Code: tea.KeyEscape}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newTestModel()
+			m.viewState = viewDiff
+			m.outputLines = []string{"diff"}
+			m.offset = 2
+
+			newModel, _ := m.Update(tt.msg)
+			m = newModel.(Model)
+
+			assert.Equal(t, viewList, m.viewState)
+			assert.Empty(t, m.outputLines)
+			assert.Zero(t, m.offset)
+		})
+	}
 }
