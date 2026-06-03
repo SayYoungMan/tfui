@@ -177,16 +177,16 @@ func (m *Model) openDetail() {
 }
 
 func (m *Model) detailFromPlannedChange(change terraform.PlannedChange) {
+	detailWidth := max(0, m.viewWidth-8)
 	rendered, err := jsondiff.Render(change.Before, change.After, jsondiff.Options{
-		SyntaxHighlighter: m.styles.chromaTheme,
 		AddedStyle: func(s string) string {
-			return m.styles.diffAdded.Render("+ " + s)
+			return m.styles.diffAdded.Width(detailWidth).Render("+ " + s)
 		},
 		RemovedStyle: func(s string) string {
-			return m.styles.diffRemoved.Render("- " + s)
+			return m.styles.diffRemoved.Width(detailWidth).Render("- " + s)
 		},
 		NormalStyle: func(s string) string {
-			return "  " + s
+			return "  " + m.highlightJSON(s)
 		},
 	})
 	if err != nil {
@@ -215,13 +215,30 @@ func (m *Model) detailFromAttributes(attributes json.RawMessage) {
 		return
 	}
 
-	var highlighted bytes.Buffer
-	if err := quick.Highlight(&highlighted, indented.String(), "json", "terminal256", m.styles.chromaTheme); err != nil {
-		m.outputLines = strings.Split(indented.String(), "\n")
-		return
+	m.outputLines = splitDetailString(m.highlightJSON(indented.String()))
+}
+
+func (m *Model) highlightJSON(s string) string {
+	// chroma colours the closing bracket alone, which shouldn't be so we escape explicitly
+	if isBracketToken(s) {
+		return s
 	}
 
-	m.outputLines = splitDetailString(highlighted.String())
+	var highlighted bytes.Buffer
+	if err := quick.Highlight(&highlighted, s, "json", "terminal256", m.styles.chromaTheme); err != nil {
+		return s
+	}
+	return strings.TrimRight(highlighted.String(), "\n")
+}
+
+func isBracketToken(s string) bool {
+	trimmed := strings.TrimSpace(s)
+	return trimmed == "{" ||
+		trimmed == "}" ||
+		trimmed == "}," ||
+		trimmed == "[" ||
+		trimmed == "]" ||
+		trimmed == "],"
 }
 
 func splitDetailString(s string) []string {
