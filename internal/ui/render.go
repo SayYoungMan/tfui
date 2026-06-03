@@ -137,7 +137,7 @@ func (m Model) renderDiffView() string {
 	keyInfo := []keyInfo{
 		{key: "↑/↓", info: "scroll"},
 		{key: "PgUp/PgDn", info: "page scroll"},
-		{key: "Esc", info: "close"},
+		{key: "d/Esc", info: "close"},
 	}
 	help := " " + m.renderKeyInfo(keyInfo)
 

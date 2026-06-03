@@ -157,7 +157,7 @@ func (m *Model) getReservedRows() int {
 	case viewOutput, viewResourceOutput:
 		// title with margin (2) + extra gap (4) + help bar with margin (4)
 		return 10
-	case viewDetail:
+	case viewDetail, viewDiff:
 		// title with margin (2) + help bar with margin (4)
 		return 6
 	}

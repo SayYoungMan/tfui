@@ -200,6 +200,8 @@ func (m *Model) openDiff() {
 		if len(lines) > 0 {
 			lines = append(lines, "")
 		}
+
+		// TODO: change to showing contexts around the change
 		lines = append(lines, header)
 		lines = append(lines, strings.Repeat("─", lipgloss.Width(header)))
 		lines = append(lines, m.detailFromPlannedChange(*r.PlannedChange)...)
@@ -207,6 +209,7 @@ func (m *Model) openDiff() {
 
 	if len(lines) == 0 {
 		m.outputLines = []string{"No diffs available."}
+		return
 	}
 	m.outputLines = lines
 }

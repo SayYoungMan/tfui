@@ -156,8 +156,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.outputKeys(msg)
 		case viewError:
 			return m.errorKeys(msg)
-		case viewDetail, viewDiff:
+		case viewDetail:
 			return m.detailKeys(msg)
+		case viewDiff:
+			return m.diffKeys(msg)
 		default:
 			return m.listKeys(msg)
 		}
